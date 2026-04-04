@@ -1,0 +1,27 @@
+{
+  "name": "canvas-exporter",
+  "version": "1.0.0",
+  "description": "Export Obsidian Canvas files to standalone, interactive HTML pages",
+  "main": "main.js",
+"scripts": {
+    "dev": "esbuild src/main.ts --bundle --outfile=main.js --external:obsidian --format=cjs --sourcemap --watch",
+    "build": "esbuild src/main.ts --bundle --outfile=main.js --external:obsidian --format=cjs --minify"
+},
+  "keywords": [
+    "obsidian",
+    "canvas",
+    "export",
+    "html",
+    "markdown",
+    "converter"
+  ],
+  "author": "Holger Kohlhoff",
+  "license": "MIT",
+  "devDependencies": {
+    "obsidian": "^1.5.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.3",
+    "esbuild": "^0.19.0"
+  },
+  "dependencies": {}
+}

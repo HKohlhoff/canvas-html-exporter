@@ -1,0 +1,11 @@
+{
+  "id": "canvas-exporter",
+  "name": "Canvas to HTML",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.0",
+  "description": "Export Obsidian Canvas files to standalone interactive HTML pages",
+  "author": "Holger Kohlhoff",
+  "authorUrl": "https://github.com/dein-user",
+  "fundingUrl": "",
+  "isDesktopOnly": false
+}
