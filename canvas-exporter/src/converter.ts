@@ -1,666 +1,459 @@
-// converter.ts
-// Obsidian Canvas → HTML Konverter (vollständig)
-// ─────────────────────────────────────────────────────────────
+type CanvasNode = any;
+type CanvasEdge = any;
 
-export interface CanvasNode {
-  id: string;
-  type: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  text?: string;
-  label?: string;
-  file?: string;
-  url?: string;
-  color?: string;
-  groupNodes?: string[];
-}
-
-export interface CanvasEdge {
-  id: string;
-  fromNode: string;
-  fromSide?: string;
-  toNode: string;
-  toSide?: string;
-  label?: string;
-  color?: string;
-}
-
-export interface CanvasData {
-  nodes: CanvasNode[];
-  edges: CanvasEdge[];
-  name?: string;
-  backgroundColor?: string;
-}
-
-export interface ExportOptions {
-  darkMode: boolean;
-  title: string;
-  exportImages: boolean;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Markdown → HTML
-// ─────────────────────────────────────────────────────────────
-
-export function markdownToHtml(md: string): string {
-  if (!md) return "";
-
-  let text = md;
-
-  // HTML escapen (aber keine existierenden Tags zerstören)
-  text = text
-    .replace(/&(?!#?\w+;)/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-  // Code-Blöcke zuerst (damit Inhalt nicht konvertiert wird)
-  text = text.replace(
-    /```(\w*)\n?([\s\S]*?)```/g,
-    (_m: string, lang: string, code: string) => {
-      return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
-    }
-  );
-
-  // Inline Code
-  text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
-
-  // Headers
-  text = text.replace(/^#### (.*$)/gm, "<h4>$1</h4>");
-  text = text.replace(/^### (.*$)/gm, "<h3>$1</h3>");
-  text = text.replace(/^## (.*$)/gm, "<h2>$1</h2>");
-  text = text.replace(/^# (.*$)/gm, "<h1>$1</h1>");
-
-  // Bold + Italic
-  text = text.replace(/\*\*\*(.*?)\*\*\*/g, "<strong><em>$1</em></strong>");
-  text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-  text = text.replace(/\*(.*?)\*/g, "<em>$1</em>");
-  text = text.replace(/___(.*?)___/g, "<strong><em>$1</em></strong>");
-  text = text.replace(/__(.*?)__/g, "<strong>$1</strong>");
-  text = text.replace(/_(.*?)_/g, "<em>$1</em>");
-
-  // Strikethrough
-  text = text.replace(/~~(.*?)~~/g, "<del>$1</del>");
-    // Obsidian Links [[link|text]]
-  text = text.replace(
-    /\[\[([^\]|]+)\|([^\]]+)\]\]/g,
-    '<a href="$1">$2</a>'
-  );
-  // Obsidian Links [[link]]
-  text = text.replace(/\[\[([^\]]+)\]\]/g, '<a href="$1">$1</a>');
-  // Markdown Links [text](url)
-  text = text.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank">$1</a>'
-  );
-
-  // Bilder ![alt](src)
-  text = text.replace(
-    /!\[([^\]]*)\]\(([^)]+)\)/g,
-    '<img src="$2" alt="$1" style="max-width:100%;">'
-  );
-  // Obsidian-Bilder ![[file]]
-  text = text.replace(
-    /!\[\[([^\]]+)\]\]/g,
-    '<img src="$1" alt="$1" style="max-width:100%;">'
-  );
-
-  // Blockquotes
-  text = text.replace(/^&gt; (.*)$/gm, "<blockquote>$1</blockquote>");
-
-  // Horizontale Linie
-  text = text.replace(/^---$/gm, "<hr>");
-
-  // Checkboxen
-  text = text.replace(
-    /^- \[x\] (.*)$/gm,
-    '<div class="checkbox checked">&#9744; $1</div>'
-  );
-  text = text.replace(
-    /^- \[ \] (.*)$/gm,
-    '<div class="checkbox">&#9745; $1</div>'
-  );
-
-  // Ungeordnete Listen
-  text = text.replace(/^[\s]*[-*] (.*)$/gm, "<li>$1</li>");
-  text = text.replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>");
-
-  // Geordnete Listen
-  text = text.replace(/^[\s]*\d+\. (.*)$/gm, "<li>$1</li>");
-
-  // Zeilenumbrüche
-  text = text.replace(/\n/g, "<br>\n");
-
-  // Doppelte <br> bereinigen
-  text = text.replace(/(<br>\s*){3,}/g, "<br><br>");
-
-  return text;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Obsidian Farbcodes → CSS-Werte
-// ─────────────────────────────────────────────────────────────
-
-const OBS_COLORS: Record<string, { bg: string; border: string }> = {
-  "1": { bg: "#d73a4a22", border: "#d73a4a" },
-  "2": { bg: "#e8a83822", border: "#e8a838" },
-  "3": { bg: "#3eb37022", border: "#3eb370" },
-  "4": { bg: "#4a90d922", border: "#4a90d9" },
-  "5": { bg: "#9b59b622", border: "#9b59b6" },
-  "6": { bg: "#eb6ca022", border: "#eb6ca0" },
+type CanvasData = {
+  nodes?: CanvasNode[];
+  edges?: CanvasEdge[];
 };
 
-function getNodeColors(color?: string, darkMode: boolean = true) {
-  if (color && OBS_COLORS[color]) {
-    return OBS_COLORS[color];
+type ExportOptions = {
+  darkMode?: boolean;
+};
+
+type RenderContext = {
+  nodeMap: Map<string, CanvasNode>;
+};
+
+type NormalizeResult = {
+  nodes: CanvasNode[];
+  offsetX: number;
+  offsetY: number;
+  width: number;
+  height: number;
+};
+
+export async function convertCanvasToHtml(
+  data: CanvasData,
+  options: ExportOptions = {}
+): Promise<string> {
+  const rawNodes = Array.isArray(data.nodes) ? data.nodes : [];
+  const rawEdges = Array.isArray(data.edges) ? data.edges : [];
+
+  const norm = normalizeNodes(rawNodes, 40);
+  const nodes = norm.nodes;
+  const edges = rawEdges;
+
+  const ctx: RenderContext = {
+    nodeMap: new Map(nodes.map((n) => [String(n.id), n])),
+  };
+
+  const renderedNodes = await Promise.all(nodes.map((n) => renderNode(n, ctx)));
+  const nodesHtml = renderedNodes.join("\n");
+  const edgesHtml = edges.map((e) => renderEdge(e, ctx)).join("\n");
+
+  return buildHtmlDocument({
+    nodesHtml,
+    edgesHtml,
+    width: norm.width,
+    height: norm.height,
+    darkMode: !!options.darkMode,
+  });
+}
+
+function normalizeNodes(nodes: CanvasNode[], margin = 40): NormalizeResult {
+  if (!nodes.length) {
+    return {
+      nodes: [],
+      offsetX: 0,
+      offsetY: 0,
+      width: 1200,
+      height: 800,
+    };
   }
-  if (color && color.startsWith("#")) {
-    return { bg: color + "22", border: color };
-  }
+
+  const minX = Math.min(...nodes.map((n) => num(n.x)));
+  const minY = Math.min(...nodes.map((n) => num(n.y)));
+  const maxX = Math.max(...nodes.map((n) => num(n.x) + num(n.width, 200)));
+  const maxY = Math.max(...nodes.map((n) => num(n.y) + num(n.height, 120)));
+
+  const offsetX = margin - minX;
+  const offsetY = margin - minY;
+
+  const shifted = nodes.map((n) => ({
+    ...n,
+    x: num(n.x) + offsetX,
+    y: num(n.y) + offsetY,
+  }));
+
+  const width = Math.max(1200, Math.ceil(maxX - minX + margin * 2));
+  const height = Math.max(800, Math.ceil(maxY - minY + margin * 2));
+
   return {
-    bg: darkMode ? "#2d2d2d" : "#ffffff",
-    border: darkMode ? "#555" : "#ccc",
+    nodes: shifted,
+    offsetX,
+    offsetY,
+    width,
+    height,
   };
 }
 
-// ─────────────────────────────────────────────────────────────
-// HTML-Escape
-// ─────────────────────────────────────────────────────────────
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+async function renderNode(node: CanvasNode, ctx: RenderContext): Promise<string> {
+  switch (String(node.type ?? "")) {
+    case "text":
+      return renderTextNode(node);
+    case "file":
+      return renderFileNode(node);
+    case "link":
+      return renderLinkNode(node);
+    case "group":
+      return renderGroupNode(node);
+    default:
+      return renderUnknownNode(node);
+  }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Hauptfunktion: CanvasData → HTML-String
-// ─────────────────────────────────────────────────────────────
+function renderTextNode(node: CanvasNode): string {
+  const text = escapeHtml(String(node.text ?? "")).replace(/\n/g, "<br>");
 
-export function convertCanvasToHtml(
-  data: CanvasData,
-  opts: ExportOptions
-): string {
-  const nodes = data.nodes || [];
-  const edges = data.edges || [];
+  return renderNodeShell({
+    node,
+    className: "canvas-node canvas-text-node",
+    innerHtml: `<div class="canvas-node-inner">${text}</div>`,
+  });
+}
 
-  // ── Canvas-Dimensionen berechnen ──
-  let minX = Infinity,
-    minY = Infinity,
-    maxX = -Infinity,
-    maxY = -Infinity;
+function renderLinkNode(node: CanvasNode): string {
+  const url = String(node.url ?? "");
+  const label = escapeHtml(String((node.title ?? url) || "Link"));
 
-  for (const n of nodes) {
-    minX = Math.min(minX, n.x);
-    minY = Math.min(minY, n.y);
-    maxX = Math.max(maxX, n.x + n.width);
-    maxY = Math.max(maxY, n.y + n.height);
+  return renderNodeShell({
+    node,
+    className: "canvas-node canvas-link-node",
+    innerHtml: `
+      <div class="canvas-node-inner">
+        <a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${label}</a>
+      </div>
+    `,
+  });
+}
+
+function renderGroupNode(node: CanvasNode): string {
+  const label = escapeHtml(String(node.label ?? node.text ?? ""));
+
+  return `
+    <div class="canvas-group"
+         style="${nodeBoxStyle(node)}">
+      <div class="canvas-group-title">${label}</div>
+    </div>
+  `;
+}
+
+async function renderFileNode(node: CanvasNode): Promise<string> {
+  const filePath = String(node.file ?? node.path ?? "");
+  const ext = getExtension(filePath);
+
+  if (isImageExtension(ext)) {
+    return renderImageFileNode(node, filePath);
   }
 
-  const pad = 120;
-  minX = Math.min(0, minX) - pad;
-  minY = Math.min(0, minY) - pad;
-  maxX += pad;
-  maxY += pad;
-
-  const canvasW = maxX - minX;
-  const canvasH = maxY - minY;
-  const offX = -minX;
-  const offY = -minY;
-    // ── Farben ──
-  const bg = opts.darkMode ? "#1e1e1e" : "#f0f0f0";
-  const txt = opts.darkMode ? "#e0e0e0" : "#333";
-  const titleC = opts.darkMode ? "#ffffff" : "#000";
-  const border = opts.darkMode ? "#444" : "#ccc";
-  const edgeC = opts.darkMode ? "#6ea8fe" : "#4a90d9";
-  const groupBg = opts.darkMode
-    ? "rgba(255,255,255,0.03)"
-    : "rgba(0,0,0,0.03)";
-  const groupBd = opts.darkMode ? "#555" : "#bbb";
-  const linkC = opts.darkMode ? "#4da6ff" : "#1a73e8";
-  const codeBg = opts.darkMode
-    ? "rgba(255,255,255,0.1)"
-    : "rgba(0,0,0,0.07)";
-  const preBg = opts.darkMode
-    ? "rgba(0,0,0,0.35)"
-    : "rgba(0,0,0,0.08)";
-
-  // ── Nodes HTML ──
-  const nodesHtmlParts: string[] = [];
-
-  for (const node of nodes) {
-    const nx = node.x + offX;
-    const ny = node.y + offY;
-    const isGroup =
-      node.type === "group" ||
-      (node.groupNodes && node.groupNodes.length > 0);
-
-    const colors = getNodeColors(node.color, opts.darkMode);
-    const bdStyle = isGroup ? "dashed" : "solid";
-    const pointerEvents = isGroup ? "none" : "auto";
-
-    // Inhalt konvertieren
-    let content = "";
-    if (node.text !== undefined && node.text !== null) {
-      const t = node.text.trim();
-      if (t.startsWith("<")) {
-        // Bereits HTML (von resolveNodeContents)
-        content = t;
-      } else {
-        content = markdownToHtml(t);
-      }
-    }
-
-    // Titel/Label
-    let titleHtml = "";
-    if (node.label) {
-      titleHtml = `<div class="node-title">${markdownToHtml(node.label)}</div>`;
-    }
-
-    const typeClass = node.type
-      ? node.type.replace(/[^a-z0-9]/gi, " ").trim().split(" ")[0]
-      : "text";
-    const colorClass = node.color ? `color-${node.color}` : "";
-
-    nodesHtmlParts.push(
-      `<div class="node ${typeClass} ${colorClass} ${isGroup ? "group" : ""}" ` +
-      `id="node-${node.id}" data-node-id="${node.id}" ` +
-      `style="left:${nx}px;top:${ny}px;width:${node.width}px;` +
-      `min-height:${Math.max(node.height, 60)}px;` +
-      `background:${isGroup ? groupBg : colors.bg};` +
-      `border:2px ${bdStyle} ${isGroup ? groupBd : colors.border};` +
-      `pointer-events:${pointerEvents};">` +
-      `${titleHtml}<div class="node-content">${content}</div></div>`
-    );
+  if (ext === "md") {
+    return renderSimpleFileCard(node, filePath, "Markdown");
   }
 
-  // ── Edges: Daten für JavaScript vorbereiten ──
-  const edgesJson: string[] = [];
-
-  for (const edge of edges) {
-    edgesJson.push(JSON.stringify({
-      fromId: edge.fromNode,
-      toId: edge.toNode,
-      fromSide: edge.fromSide || "right",
-      toSide: edge.toSide || "left",
-      label: edge.label || "",
-      color: edge.color || "",
-    }));
+  if (ext === "pdf") {
+    return renderSimpleFileCard(node, filePath, "PDF");
   }
 
-  const edgesDataArray = edgesJson.join(",\n    ");
-    // ── HTML-Template (CSS) ──
-  const htmlCss = `
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: ${bg};
+  return renderSimpleFileCard(node, filePath, "Datei");
+}
+
+function renderImageFileNode(node: CanvasNode, filePath: string): string {
+  const label = escapeHtml(basename(filePath));
+  const src = escapeAttr(filePath);
+
+  return renderNodeShell({
+    node,
+    className: "canvas-node canvas-file-node canvas-image-node",
+    innerHtml: `
+      <div class="canvas-node-inner canvas-image-wrap">
+        <a href="${src}" target="_blank" rel="noopener noreferrer">
+          <img src="${src}" alt="${label}" />
+        </a>
+        <div class="canvas-file-label">${label}</div>
+      </div>
+    `,
+  });
+}
+
+function renderSimpleFileCard(node: CanvasNode, filePath: string, kind: string): string {
+  const label = escapeHtml(basename(filePath));
+  const href = escapeAttr(filePath);
+
+  return renderNodeShell({
+    node,
+    className: "canvas-node canvas-file-node",
+    innerHtml: `
+      <div class="canvas-node-inner">
+        <div class="canvas-file-kind">${escapeHtml(kind)}</div>
+        <a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>
+      </div>
+    `,
+  });
+}
+
+function renderUnknownNode(node: CanvasNode): string {
+  const label = escapeHtml(`Unbekannter Knotentyp: ${String(node.type ?? "unknown")}`);
+
+  return renderNodeShell({
+    node,
+    className: "canvas-node canvas-unknown-node",
+    innerHtml: `<div class="canvas-node-inner">${label}</div>`,
+  });
+}
+
+function renderNodeShell(args: {
+  node: CanvasNode;
+  className: string;
+  innerHtml: string;
+}): string {
+  return `
+    <div class="${args.className}" style="${nodeBoxStyle(args.node)}">
+      ${args.innerHtml}
+    </div>
+  `;
+}
+
+function nodeBoxStyle(node: CanvasNode): string {
+  const x = num(node.x);
+  const y = num(node.y);
+  const w = num(node.width, 240);
+  const h = num(node.height, 120);
+
+  return [
+    "position:absolute",
+    `left:${x}px`,
+    `top:${y}px`,
+    `width:${w}px`,
+    `height:${h}px`,
+    "box-sizing:border-box",
+  ].join(";");
+}
+
+function renderEdge(edge: CanvasEdge, ctx: RenderContext): string {
+  const fromId = String(edge.fromNode ?? edge.from ?? "");
+  const toId = String(edge.toNode ?? edge.to ?? "");
+
+  const from = ctx.nodeMap.get(fromId);
+  const to = ctx.nodeMap.get(toId);
+
+  if (!from || !to) return "";
+
+  const x1 = num(from.x) + num(from.width, 200) / 2;
+  const y1 = num(from.y) + num(from.height, 120) / 2;
+  const x2 = num(to.x) + num(to.width, 200) / 2;
+  const y2 = num(to.y) + num(to.height, 120) / 2;
+
+  return `
+    <line
+      x1="${x1}"
+      y1="${y1}"
+      x2="${x2}"
+      y2="${y2}"
+      class="canvas-edge-line"
+    />
+  `;
+}
+
+function buildHtmlDocument(args: {
+  nodesHtml: string;
+  edgesHtml: string;
+  width: number;
+  height: number;
+  darkMode: boolean;
+}): string {
+  const themeClass = args.darkMode ? "theme-dark" : "theme-light";
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Canvas Export</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
       overflow: auto;
-      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    #canvas {
+
+    body.theme-light {
+      background: #f5f6f8;
+      color: #222;
+    }
+
+    body.theme-dark {
+      background: #1e1e1e;
+      color: #ddd;
+    }
+
+    .page {
+      min-width: 100%;
+      min-height: 100%;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+
+    .canvas-root {
       position: relative;
-      width: ${canvasW}px;
-      height: ${canvasH}px;
-      margin: 24px auto;
-      border-radius: 8px;
-    }
-    #edge-svg {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      pointer-events: none;
-      z-index: 1;
-      overflow: visible;
-    }
-    .node {
-      position: absolute;
-      border-radius: 8px;
-      padding: 12px 14px;
-      overflow: visible;
-      color: ${txt};
-      font-size: 14px;
-      line-height: 1.65;
-      z-index: 10;
-      cursor: grab;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.25);
-      user-select: none;
-      transition: box-shadow 0.15s;
-    }
-    .node:hover {
-      box-shadow: 0 4px 18px rgba(0,0,0,0.35);
-      z-index: 50;
-    }
-    .node.dragging {
-      cursor: grabbing;
-      opacity: 0.92;
-      z-index: 200;
-      box-shadow: 0 8px 28px rgba(0,0,0,0.45);
-    }
-    .node.group {
+      width: ${args.width}px;
+      height: ${args.height}px;
+      margin: 0 auto;
+      background: ${args.darkMode ? "#2a2a2a" : "#ffffff"};
+      border: 1px solid ${args.darkMode ? "#444" : "#d0d4da"};
       border-radius: 12px;
-      z-index: 2;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    }
+
+    .canvas-edges {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .canvas-edge-line {
+      stroke: ${args.darkMode ? "#8ab4f8" : "#5b6b87"};
+      stroke-width: 2;
+    }
+
+    .canvas-node {
+      position: absolute;
+      border: 1px solid ${args.darkMode ? "#555" : "#aeb7c2"};
+      border-radius: 10px;
+      background: ${args.darkMode ? "#303134" : "#fff"};
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .canvas-node-inner {
+      padding: 10px 12px;
+      line-height: 1.4;
+      font-size: 14px;
+    }
+
+    .canvas-group {
+      position: absolute;
+      border: 2px dashed ${args.darkMode ? "#777" : "#b7c0ca"};
+      border-radius: 14px;
+      background: ${args.darkMode ? "rgba(255,255,255,0.03)" : "rgba(80,120,180,0.05)"};
+      z-index: 0;
       pointer-events: none;
     }
-    .node-title {
-      font-weight: 700;
+
+    .canvas-group-title {
+      padding: 8px 12px;
       font-size: 13px;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    .canvas-text-node,
+    .canvas-file-node,
+    .canvas-link-node,
+    .canvas-unknown-node {
+      z-index: 2;
+    }
+
+    .canvas-link-node a,
+    .canvas-file-node a {
+      color: ${args.darkMode ? "#8ab4f8" : "#1f5fbf"};
+      text-decoration: none;
+      word-break: break-word;
+    }
+
+    .canvas-link-node a:hover,
+    .canvas-file-node a:hover {
+      text-decoration: underline;
+    }
+
+    .canvas-file-kind {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      opacity: 0.7;
       margin-bottom: 6px;
-      padding-bottom: 5px;
-      border-bottom: 1px solid ${border};
-      color: ${titleC};
+    }
+
+    .canvas-image-wrap {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+    }
+
+    .canvas-image-wrap a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: ${args.darkMode ? "#262626" : "#f8f9fb"};
+    }
+
+    .canvas-image-wrap img {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .canvas-file-label {
+      padding: 8px 10px;
+      font-size: 12px;
+      border-top: 1px solid ${args.darkMode ? "#444" : "#dde3ea"};
+      background: ${args.darkMode ? "#2b2b2b" : "#fafbfd"};
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .node-content { color: ${txt}; }
-    .node-content h1 { font-size: 1.35em; margin: 6px 0 4px; color: ${titleC}; }
-    .node-content h2 { font-size: 1.2em;  margin: 6px 0 4px; color: ${titleC}; }
-    .node-content h3 { font-size: 1.05em; margin: 4px 0 3px; color: ${titleC}; }
-    .node-content img { max-width: 100%; height: auto; border-radius: 4px; margin: 6px 0; display: block; }
-    .node-content a { color: ${linkC}; text-decoration: none; }
-    .node-content a:hover { text-decoration: underline; }
-    .node-content code { background: ${codeBg}; padding: 2px 5px; border-radius: 3px; font-family: Consolas, 'Courier New', monospace; font-size: 0.88em; }
-    .node-content pre { background: ${preBg}; padding: 10px 12px; border-radius: 4px; overflow-x: auto; margin: 8px 0; }
-    .node-content pre code { background: none; padding: 0; }
-    .node-content blockquote { border-left: 3px solid ${linkC}; padding-left: 10px; margin: 8px 0; opacity: 0.85; }
-    .node-content ul { margin-left: 18px; margin-bottom: 6px; }
-    .node-content ol { margin-left: 18px; margin-bottom: 6px; }
-    .node-content li { margin: 2px 0; }
-    .node-content hr { border: none; border-top: 1px solid ${border}; margin: 10px 0; }
-    .node-content table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-    .node-content td, .node-content th { border: 1px solid ${border}; padding: 5px 8px; }
-    .checkbox { margin: 3px 0; }
-    .checkbox.checked { text-decoration: line-through; opacity: 0.6; }
-
-    /* Obsidian Farben */
-    .color-1 { background: #d73a4a22 !important; border-color: #d73a4a !important; }
-    .color-2 { background: #e8a83822 !important; border-color: #e8a838 !important; }
-    .color-3 { background: #3eb37022 !important; border-color: #3eb370 !important; }
-    .color-4 { background: #4a90d922 !important; border-color: #4a90d9 !important; }
-    .color-5 { background: #9b59b622 !important; border-color: #9b59b6 !important; }
-    .color-6 { background: #eb6ca022 !important; border-color: #eb6ca0 !important; }
-
-    #controls {
-      position: fixed; top: 12px; right: 12px;
-      background: rgba(0,0,0,0.82); padding: 8px 12px;
-      border-radius: 8px; z-index: 9999;
-      display: flex; gap: 6px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
-    }
-    #controls button {
-      background: #4da6ff; border: none; color: white;
-      padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
-      transition: background 0.15s;
-    }
-    #controls button:hover { background: #66b3ff; }
-    #controls button:active { background: #3d8ae0; }
-
-    #info {
-      position: fixed; bottom: 12px; left: 12px;
-      background: rgba(0,0,0,0.65); color: #aaa;
-      padding: 6px 10px; border-radius: 6px; font-size: 12px; z-index: 9999;
-    }
   </style>
 </head>
-<body>
-
-<div id="controls">
-  <button onclick="zoomIn()" title="Zoom rein">+</button>
-  <button onclick="zoomOut()" title="Zoom raus">&#8722;</button>
-  <button onclick="resetView()" title="Ansicht zurücksetzen">Reset</button>
-  <button onclick="fitToScreen()" title="Alles anzeigen">Fit</button>
-</div>
-
-<div id="info">
-  <span id="node-count">${nodes.length}</span> Knoten &middot;
-  <span id="edge-count">${edges.length}</span> Verbindungen
-</div>
-
-<div id="canvas">
-  <svg id="edge-svg"></svg>
-  ${nodesHtmlParts.join("\n")}
-</div>
-<script>
-(function() {
-  "use strict";
-
-  const edgeColor = "${edgeC}";
-  const OFFSET_X  = ${offX};
-  const OFFSET_Y  = ${offY};
-
-  const OBS_COLORS = {
-    "1": "#d73a4a", "2": "#e8a838", "3": "#3eb370",
-    "4": "#4a90d9", "5": "#9b59b6", "6": "#eb6ca0"
-  };
-
-  const edgesRaw = [
-    ${edgesDataArray}
-  ];
-
-  const svg      = document.getElementById("edge-svg");
-  const canvas   = document.getElementById("canvas");
-
-  // ── Ankerpunkt berechnen ──
-  function getAnchor(el, side) {
-    const l = parseFloat(el.style.left);
-    const t = parseFloat(el.style.top);
-    const w = el.offsetWidth;
-    const h = el.offsetHeight;
-    switch (side) {
-      case "top":    return { x: l + w / 2, y: t };
-      case "bottom": return { x: l + w / 2, y: t + h };
-      case "left":   return { x: l,         y: t + h / 2 };
-      case "right":  return { x: l + w,     y: t + h / 2 };
-      default:       return { x: l + w / 2, y: t + h / 2 };
-    }
-  }
-
-  // ── Alle Kanten zeichnen ──
-  function drawEdges() {
-    svg.innerHTML = "";
-
-    // ── Marker-Definitionen programmatisch (kein innerHTML-Template) ──
-    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-    svg.appendChild(defs);
-
-    function makeMarker(id: string, fill: string) {
-      const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-      marker.setAttribute("id", id);
-      marker.setAttribute("markerWidth", "10");
-      marker.setAttribute("markerHeight", "7");
-      marker.setAttribute("refX", "9");
-      marker.setAttribute("refY", "3.5");
-      marker.setAttribute("orient", "auto");
-      defs.appendChild(marker);
-
-      const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-      poly.setAttribute("points", "0 0, 10 3.5, 0 7");
-      poly.setAttribute("fill", fill);
-      marker.appendChild(poly);
-    }
-
-    makeMarker("arrow",    edgeColor);
-    makeMarker("arrowg",   "#3eb370");
-    makeMarker("arrowr",   "#d73a4a");
-
-    // ── Kanten ──
-    for (const e of edgesRaw) {
-      const fromEl = document.getElementById("node-" + e.fromId);
-      const toEl   = document.getElementById("node-" + e.toId);
-      if (!fromEl || !toEl) continue;
-
-      const a = getAnchor(fromEl, e.fromSide);
-      const b = getAnchor(toEl,   e.toSide);
-
-      const dx = Math.max(Math.abs(b.x - a.x) * 0.4, 30);
-      const dy = Math.max(Math.abs(b.y - a.y) * 0.4, 30);
-      let c1x = a.x, c1y = a.y, c2x = b.x, c2y = b.y;
-
-      if (e.fromSide === "right")  c1x += dx;
-      if (e.fromSide === "left")   c1x -= dx;
-      if (e.fromSide === "top")    c1y -= dy;
-      if (e.fromSide === "bottom") c1y += dy;
-      if (e.toSide   === "right")  c2x += dx;
-      if (e.toSide   === "left")   c2x -= dx;
-      if (e.toSide   === "top")    c2y -= dy;
-      if (e.toSide   === "bottom") c2y += dy;
-
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d",
-        "M " + a.x + " " + a.y +
-        " C " + c1x + " " + c1y + ", " + c2x + " " + c2y + ", " + b.x + " " + b.y
-      );
-      const col = e.color
-        ? (OBS_COLORS[e.color] || e.color)
-        : edgeColor;
-      const markerId = col === "#3eb370" ? "arrowg"
-        : col === "#d73a4a" ? "arrowr"
-        : "arrow";
-      path.setAttribute("stroke", col);
-      path.setAttribute("stroke-width", "2");
-      path.setAttribute("fill", "none");
-      path.setAttribute("marker-end", "url(#" + markerId + ")");
-      path.style.transition = "stroke-width 0.15s";
-      path.addEventListener("mouseenter", () => path.setAttribute("stroke-width", "3"));
-      path.addEventListener("mouseleave", () => path.setAttribute("stroke-width", "2"));
-      svg.appendChild(path);
-
-      // Label
-      if (e.label) {
-        const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        txt.setAttribute("x", String((a.x + b.x) / 2));
-        txt.setAttribute("y", String((a.y + b.y) / 2 - 6));
-        txt.setAttribute("text-anchor", "middle");
-        txt.setAttribute("fill", txtColor);
-        txt.setAttribute("font-size", "12");
-        txt.setAttribute("font-family", "sans-serif");
-        txt.textContent = e.label;
-        svg.appendChild(txt);
-      }
-    }
-  }
-    // ── Drag & Drop (Desktop) ──
-  let dragEl = null;
-  let dragStartX = 0, dragStartY = 0;
-  let elStartX = 0, elStartY = 0;
-
-  document.querySelectorAll(".node:not(.group)").forEach(function(el) {
-    el.addEventListener("mousedown", function(ev) {
-      if (ev.target.tagName === "A"
-       || ev.target.tagName === "INPUT"
-       || ev.target.tagName === "TEXTAREA"
-       || ev.target.closest("pre")
-       || ev.target.closest("code")) return;
-      dragEl = el;
-      el.classList.add("dragging");
-      dragStartX = ev.clientX;
-      dragStartY = ev.clientY;
-      elStartX   = parseFloat(el.style.left);
-      elStartY   = parseFloat(el.style.top);
-      ev.preventDefault();
-    });
-  });
-
-  document.addEventListener("mousemove", function(ev) {
-    if (!dragEl) return;
-    const dx = (ev.clientX - dragStartX) / currentScale;
-    const dy = (ev.clientY - dragStartY) / currentScale;
-    dragEl.style.left = (elStartX + dx) + "px";
-    dragEl.style.top  = (elStartY + dy) + "px";
-    drawEdges();
-  });
-
-  document.addEventListener("mouseup", function() {
-    if (dragEl) dragEl.classList.remove("dragging");
-    dragEl = null;
-  });
-
-  // ── Touch-Support (Mobile) ──
-  document.querySelectorAll(".node:not(.group)").forEach(function(el) {
-    el.addEventListener("touchstart", function(ev) {
-      if (ev.target.tagName === "A"
-       || ev.target.closest("pre")
-       || ev.target.closest("code")) return;
-      const touch = ev.touches[0];
-      dragEl = el;
-      el.classList.add("dragging");
-      dragStartX = touch.clientX;
-      dragStartY = touch.clientY;
-      elStartX   = parseFloat(el.style.left);
-      elStartY   = parseFloat(el.style.top);
-      ev.preventDefault();
-    }, { passive: false });
-  });
-
-  document.addEventListener("touchmove", function(ev) {
-    if (!dragEl) return;
-    const touch = ev.touches[0];
-    const dx = (touch.clientX - dragStartX) / currentScale;
-    const dy = (touch.clientY - dragStartY) / currentScale;
-    dragEl.style.left = (elStartX + dx) + "px";
-    dragEl.style.top  = (elStartY + dy) + "px";
-    drawEdges();
-  }, { passive: true });
-
-  document.addEventListener("touchend", function() {
-    if (dragEl) dragEl.classList.remove("dragging");
-    dragEl = null;
-  });
-
-  // ── Zoom-Steuerung ──
-  let currentScale = 1;
-
-  window.zoomIn = function() {
-    currentScale = Math.min(5, currentScale * 1.15);
-    canvas.style.transform = "scale(" + currentScale + ")";
-    canvas.style.transformOrigin = "top left";
-  };
-
-  window.zoomOut = function() {
-    currentScale = Math.max(0.1, currentScale * 0.87);
-    canvas.style.transform = "scale(" + currentScale + ")";
-    canvas.style.transformOrigin = "top left";
-  };
-
-  window.resetView = function() {
-    currentScale = 1;
-    canvas.style.transform = "scale(1)";
-  };
-
-  window.fitToScreen = function() {
-    const cw = canvas.offsetWidth;
-    const ch = canvas.offsetHeight;
-    const vw = window.innerWidth  - 40;
-    const vh = window.innerHeight - 80;
-    const s  = Math.min(vw / cw, vh / ch, 1);
-    currentScale = s;
-    canvas.style.transform = "scale(" + s + ")";
-    canvas.style.transformOrigin = "top left";
-  };
-
-  // Mausrad-Zoom (Ctrl/Cmd + Scroll)
-  document.body.addEventListener("wheel", function(ev) {
-    if (ev.ctrlKey || ev.metaKey) {
-      ev.preventDefault();
-      if (ev.deltaY < 0) {
-        window.zoomIn();
-      } else {
-        window.zoomOut();
-      }
-    }
-  }, { passive: false });
-
-  // ── Initialisierung ──
-  drawEdges();
-  window.addEventListener("resize", drawEdges);
-})();
-</script>
-
+<body class="${themeClass}">
+  <div class="page">
+    <div class="canvas-root">
+      <svg class="canvas-edges" xmlns="http://www.w3.org/2000/svg">
+        ${args.edgesHtml}
+      </svg>
+      ${args.nodesHtml}
+    </div>
+  </div>
 </body>
 </html>`;
+}
+
+function num(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function getExtension(file: string): string {
+  const i = file.lastIndexOf(".");
+  return i >= 0 ? file.slice(i + 1).toLowerCase() : "";
+}
+
+function isImageExtension(ext: string): boolean {
+  return ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
+}
+
+function basename(file: string): string {
+  return file.split("/").pop()?.split("\\").pop() ?? file;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeAttr(value: string): string {
+  return escapeHtml(value);
 }

@@ -1,44 +1,64 @@
-# Canvas to HTML — Obsidian Plugin
+# Canvas to HTML
 
-Exportiert Obsidian Canvas-Dateien als vollständig eigenständige, interaktive HTML-Seiten.
+Stabile Arbeitsbasis für ein Obsidian-Plugin, das `.canvas`-Dateien als eigenständige HTML-Dateien exportiert.
 
----
+## Aktueller Stand
 
-## Features
+Diese überarbeitete Version ist bewusst reduziert und soll vor allem zuverlässig funktionieren.
 
-- **100 % portabel** — keine externen Abhängigkeiten, eine einzige HTML-Datei
-- **Alle Knotentypen** — Text, Dateien, Links, Bilder, Gruppen
-- **Verbindungen erhalten** — SVG-Pfade mit Pfeilspitzen zwischen allen Knoten
-- **Markdown-Support** — Überschriften, Listen, Code-Blöcke, Blockquotes, Tabellen, Aufgaben
-- **Inline-Formatierung** — Bold, Kursiv, Strikethrough, ==Hervorhebung==, Tags, Links
-- **Dark / Light Mode** — Toggle-Button, automatische Erkennung
-- **Zoom & Pan** — Mausrad zum Zoomen, Klicken+Ziehen zum Verschieben
-- **Suche** — Inhaltssuche mit Highlight und Navigation (Ctrl+F)
-- **Minimap** — Kleinübersicht mit Klick-Navigation
-- **Drag & Drop** — Knoten direkt in der HTML-Datei verschieben
-- **Link-Vorschau** — Buttons zum Ein-/Ausblenden eingebetteter Webseiten
+Unterstützt werden derzeit:
 
----
+- Export der **aktiven Canvas-Datei** als HTML
+- Export **aller Canvas-Dateien** im Vault
+- einfache Darstellung von
+  - Text-Knoten
+  - Gruppen-Knoten
+  - Link-Knoten
+  - Datei-Knoten
+- Kanten zwischen Knoten
+- schlichtes Zoom im exportierten HTML
+- ein einfaches Einstellungs-Panel
 
-## Installation
+Noch **nicht** stabil umgesetzt und deshalb bewusst entfernt oder nicht mehr behauptet:
 
-### Automatisch (Empfohlen)
+- echte Live-Vorschau in Obsidian
+- eingebettete Webseiten
+- Minimap
+- Suche
+- Drag & Drop im Export
+- echte Bild-Einbettung als Base64
+- vollständige Unterstützung aller denkbaren Canvas-Sonderfälle
 
-1. Öffne **Community Plugins** in den Obsidian-Einstellungen
-2. Suche nach **"Canvas to HTML"**
-3. Aktiviere das Plugin
+## Warum diese Fassung?
 
-### Manuell
+Die vorherige Version hatte bereits gute Ansätze, war aber an mehreren Stellen noch prototypisch. Ziel dieser Fassung ist eine verlässliche Grundlage, auf der man sauber weiterentwickeln kann.
 
-1. Lade die neueste `main.js` und `manifest.json` aus dem Release herunter
-2. Lege sie in `DeinVault/.obsidian/plugins/canvas-exporter/` ab
-3. Aktiviere das Plugin in den Community Plugins
+## Bedienung
 
-### Aus dem Quellcode bauen
+Nach dem Aktivieren des Plugins stehen zwei Commands zur Verfügung:
+
+- **Export: Aktuelles Canvas als HTML speichern**
+- **Export: Alle Canvas-Dateien als HTML speichern**
+
+Die erzeugten HTML-Dateien werden in den eingestellten Ausgabeordner im Vault geschrieben.
+
+## Entwicklung
 
 ```bash
-git clone https://github.com/dein-user/canvas-exporter.git
-cd canvas-exporter
 npm install
-npm run build    # für Entwicklungsversion
-npm run build -- --production   # für Produktion
+npm run build
+```
+
+Für die Entwicklung mit Watch-Modus:
+
+```bash
+npm run dev
+```
+
+## Nächste sinnvolle Schritte
+
+1. echte Behandlung von Bild-Dateiknoten
+2. bessere Markdown-Unterstützung
+3. relative Ressourcenpfade robuster machen
+4. optionale Vorschau im Browser
+5. später zusätzliche Interaktivität gezielt wieder einbauen
