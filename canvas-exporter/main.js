@@ -1,627 +1,734 @@
-"use strict";var y=Object.defineProperty;var z=Object.getOwnPropertyDescriptor;var F=Object.getOwnPropertyNames;var N=Object.prototype.hasOwnProperty;var I=(t,e)=>{for(var n in e)y(t,n,{get:e[n],enumerable:!0})},X=(t,e,n,a)=>{if(e&&typeof e=="object"||typeof e=="function")for(let i of F(e))!N.call(t,i)&&i!==n&&y(t,i,{get:()=>e[i],enumerable:!(a=z(e,i))||a.enumerable});return t};var Y=t=>X(y({},"__esModule",{value:!0}),t);var j={};I(j,{default:()=>b});module.exports=Y(j);var d=require("obsidian");var L={1:"#fb464c",2:"#e9973f",3:"#e0de71",4:"#44cf6e",5:"#53dfdd",6:"#a882ff"};function M(t){return t?L[t]??(t.startsWith("#")?t:""):""}function w(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}function u(t){let e=w(t).replace(/\n/g,"<br>");return e=e.replace(/\[\^(\w+)\]/g,'<sup class="footnote-ref">[$1]</sup>'),e=e.replace(/(?<!\w)#(\w[\w\/-]*)/g,'<span class="tag">#$1</span>'),e=e.replace(/==([^=]+)==/g,"<mark>$1</mark>"),e=e.replace(/~~(.+?)~~/g,"<del>$1</del>"),e=e.replace(/\*\*\*(.+?)\*\*\*/g,"<strong><em>$1</em></strong>"),e=e.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>"),e=e.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g,"<em>$1</em>"),e=e.replace(/__(.+?)__/g,"<strong>$1</strong>"),e=e.replace(/_(?![^_]*_)((?:[^_]|_(?!_))*?)_/g,"<em>$1</em>"),e=e.replace(/`([^`]+)`/g,"<code>$1</code>"),e=e.replace(/!\[\[([^\]]+?)(?:\|(\d+)(?:x(\d+))?)?\]\]/g,(n,a,i,s)=>{let r=[];i&&r.push(`width:${i}px`),s&&r.push(`height:${s}px`);let c=r.length?` style="${r.join(";")}"`:"";return`<img src="${a}" alt="${a}"${c}>`}),e=e.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1">'),e=e.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g,'<a class="internal-link" href="#n-$1">$2</a>'),e=e.replace(/\[\[([^\]]+)\]\]/g,'<a class="internal-link" href="#n-$1">$1</a>'),e=e.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'),e}function T(t){if(!t)return"";let e=t.split(`
-`),n=[],a=0;for(;a<e.length;){let i=e[a],s=i.trim();if(s.startsWith("```")){let o=s.slice(3).trim(),l=[];for(a++;a<e.length&&!e[a].trim().startsWith("```");)l.push(w(e[a])),a++;n.push(`<pre><code class="language-${o}">${l.join(`
-`)}</code></pre>`),a++;continue}let r=s.match(/^(#{1,6})\s+(.*)/);if(r){let o=r[1].length;n.push(`<h${o}>${u(r[2])}</h${o}>`),a++;continue}if(/^(-{3,}|\*{3,}|_{3,})$/.test(s)){n.push("<hr>"),a++;continue}if(s.match(/^(\s*)-\s\[([ xX])\]\s+(.*)/)){let o=[];for(;a<e.length;){let l=e[a].trim().match(/^(\s*)-\s\[([ xX])\]\s+(.*)/);if(!l)break;let g=l[2].toLowerCase()==="x"?"checked":"";o.push(`<li class="task-item"><input type="checkbox" ${g} disabled> ${u(l[3])}</li>`),a++}n.push(`<ul class="checklist">${o.join("")}</ul>`);continue}if(s.match(/^[-*+]\s/)){let o=[];for(;a<e.length&&e[a].trim().match(/^[-*+]\s/);){let l=e[a].trim().match(/^[-*+]\s+(.*)/);if(!l)break;o.push(`<li>${u(l[1])}</li>`),a++}n.push(`<ul>${o.join("")}</ul>`);continue}if(s.match(/^\d+\.\s/)){let o=[];for(;a<e.length&&e[a].trim().match(/^\d+\.\s/);){let l=e[a].trim().match(/^\d+\.\s+(.*)/);if(!l)break;o.push(`<li>${u(l[1])}</li>`),a++}n.push(`<ol>${o.join("")}</ol>`);continue}if(s.startsWith("> ")){let o=[];for(;a<e.length&&e[a].trim().startsWith("> ");)o.push(e[a].trim().slice(2)),a++;n.push(`<blockquote>${u(o.join(" "))}</blockquote>`);continue}if(s.startsWith("|")){let o=[];for(;a<e.length&&e[a].trim().startsWith("|");)o.push(e[a].trim()),a++;let g=o.map(p=>p.split("|").slice(1,-1).map(h=>h.trim())).filter(p=>p.length>0).filter(p=>!p.every(h=>/^[-:]+$/.test(h)));if(g.length>0){let p="<table>";g.forEach((h,f)=>{let m=f===0?"th":"td";p+=`<tr>${h.map(x=>`<${m}>${u(x)}</${m}>`).join("")}</tr>`}),p+="</table>",n.push(p)}continue}if(s===""){n.push(""),a++;continue}n.push(`<p>${u(i)}</p>`),a++}return n.join(`
-`)}function S(t,e){let n=t.x+t.width/2,a=t.y+t.height/2;switch(e){case"top":return{x:n,y:t.y};case"bottom":return{x:n,y:t.y+t.height};case"left":return{x:t.x,y:a};case"right":return{x:t.x+t.width,y:a};default:return{x:n,y:a}}}function H(t,e,n,a){let i=e.x-t.x,s=e.y-t.y,r=Math.sqrt(i*i+s*s),c=Math.min(r*.4,200),o={right:[c,0],left:[-c,0],bottom:[0,c],top:[0,-c]},l=o[n]??[c,0],g=o[a]??[-c,0];return`M ${t.x.toFixed(1)} ${t.y.toFixed(1)} C ${(t.x+l[0]).toFixed(1)} ${(t.y+l[1]).toFixed(1)}, ${(e.x+g[0]).toFixed(1)} ${(e.y+g[1]).toFixed(1)}, ${e.x.toFixed(1)} ${e.y.toFixed(1)}`}function A(t,e=80){if(t.nodes.length===0)return{width:1200,height:900};let n=Math.min(...t.nodes.map(r=>r.x)),a=Math.min(...t.nodes.map(r=>r.y));t.nodes.forEach(r=>{r.x+=e-n,r.y+=e-a});let i=Math.max(...t.nodes.map(r=>r.x+r.width))+e,s=Math.max(...t.nodes.map(r=>r.y+r.height))+e;return{width:i,height:s}}function O(t){let e=M(t.color),n=e?`border-left: 4px solid ${e};`:"",a=e?`background: linear-gradient(135deg, ${e}18 0%, transparent 60%);`:"",i=`node-type-${t.type||"text"}`,s=t.type==="group"?"node-group":"",r="";t.type==="file"&&t.file?r=`<em class="file-ref">[Datei: ${t.file}${t.subpath?" > "+t.subpath:""}]</em>`:t.type==="link"&&t.url?r=`<a href="${t.url}" target="_blank" rel="noopener noreferrer" class="external-link">${t.url}</a>
-               <iframe src="${t.url}" sandbox="allow-scripts allow-same-origin allow-same-origin" loading="lazy" class="link-iframe"></iframe>`:t.type==="image"&&t.file?r=`<img src="${t.file}" alt="Bild" style="max-width:100%;height:auto;border-radius:6px;">`:r=T(t.text??"");let c=t.label?`<div class="node-title">${u(t.label)}</div>`:"",o=t.type==="group"?`min-height: ${t.height}px;`:`min-height: ${Math.max(t.height,80)}px;`;return`<div class="node ${i} ${s}"
-     id="n-${t.id}"
-     data-node-id="${t.id}"
-     style="left:${t.x.toFixed(1)}px;top:${t.y.toFixed(1)}px;
-            width:${t.width}px;${o}
-            ${n}${a}">
-    ${c}
-    <div class="node-content">${r}</div>
-</div>`}function B(t,e,n,a){if(t.length===0)return"";let i=[],s=[],r=[];for(let o of t){let l=e.get(o.fromNode),g=e.get(o.toNode);if(!l||!g)continue;let p=S(l,o.fromSide),h=S(g,o.toSide),f=H(p,h,o.fromSide,o.toSide),m=M(o.color)||"var(--edge-color)",x="",k="",C=`arrow-${o.id}-start`,E=`arrow-${o.id}-end`;if(o.fromEnd==="arrow"&&(i.push(`<marker id="${C}" markerWidth="12" markerHeight="8" refX="1" refY="4" orient="auto"><polygon points="12 0, 0 4, 12 8" fill="${m}"/></marker>`),x=`marker-start="url(#${C})"`),o.toEnd==="arrow"&&(i.push(`<marker id="${E}" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><polygon points="0 0, 12 4, 0 8" fill="${m}"/></marker>`),k=`marker-end="url(#${E})"`),s.push(`<path d="${f}" stroke="${m}" stroke-width="2" fill="none" stroke-linecap="round" ${x} ${k}/>`),o.label){let D=(p.x+h.x)/2,P=(p.y+h.y)/2;r.push(`<div class="edge-label" style="left:${D.toFixed(1)}px;top:${P.toFixed(1)}px;">${u(o.label)}</div>`)}}let c=i.length>0?`<defs>${i.join("")}</defs>`:"";return`<svg class="edges-layer" width="${n}" height="${a}" style="position:absolute;top:0;left:0;pointer-events:none;z-index:5;">${c}${s.join("")}</svg>${r.join("")}`}function R(t,e={}){let n=e.darkMode!==!1,a=e.title||t.name||"Canvas Export",i=A(t),s=new Map(t.nodes.map(h=>[h.id,h])),r=t.nodes.length,c=t.edges.length,o=t.nodes.map(h=>O(h)).join(`
-`),l=B(t.edges,s,i.width,i.height),g=`
-:root {
-  --bg:            ${n?"#1a1a2e":"#f0f0f0"};
-  --surface:       ${n?"#16213e":"#ffffff"};
-  --surface-hover:${n?"#1a2744":"#f8f8ff"};
-  --border:        ${n?"#2a3a5c":"#d0d0d0"};
-  --text:          ${n?"#e0e0e0":"#333333"};
-  --text-muted:    ${n?"#8899aa":"#888888"};
-  --title:         ${n?"#ffffff":"#111111"};
-  --accent:        #4da6ff;
-  --accent-hover:  #66b8ff;
-  --edge-color:    ${n?"#5588bb":"#888888"};
-  --group-bg:      ${n?"rgba(100,140,200,0.08)":"rgba(100,140,200,0.06)"};
-  --group-border:  ${n?"#3a5a8a":"#aabbcc"};
-  --shadow:        ${n?"rgba(0,0,0,0.5)":"rgba(0,0,0,0.15)"};
-  --code-bg:       ${n?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.05)"};
-  --mark-bg:       ${n?"rgba(255,255,0,0.25)":"rgba(255,255,0,0.4)"};
-  --minimap-bg:    ${n?"rgba(0,0,0,0.6)":"rgba(255,255,255,0.85)"};
-}
+"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+// src/main.ts
+var main_exports = {};
+__export(main_exports, {
+  default: () => CanvasExporterPlugin
+});
+module.exports = __toCommonJS(main_exports);
+var import_obsidian = require("obsidian");
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  overflow: hidden;
-  height: 100vh;
-  user-select: none;
-}
-
-#viewport {
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
-  cursor: grab;
-}
-#viewport.grabbing { cursor: grabbing; }
-#world {
-  position: absolute;
-  transform-origin: 0 0;
-  will-change: transform;
-}
-
-.canvas-page {
-  position: relative;
-  width: ${i.width}px;
-  height: ${i.height}px;
-  background: repeating-linear-gradient(
-    0deg, transparent, transparent 49px,
-    ${n?"rgba(255,255,255,0.025)":"rgba(0,0,0,0.025)"} 50px
-  ),
-  repeating-linear-gradient(
-    90deg, transparent, transparent 49px,
-    ${n?"rgba(255,255,255,0.025)":"rgba(0,0,0,0.025)"} 50px
+// src/converter.ts
+function markdownToHtml(md) {
+  if (!md)
+    return "";
+  let text = md;
+  text = text.replace(/&(?!#?\w+;)/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  text = text.replace(
+    /```(\w*)\n?([\s\S]*?)```/g,
+    (_m, lang, code) => {
+      return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+    }
   );
+  text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+  text = text.replace(/^#### (.*$)/gm, "<h4>$1</h4>");
+  text = text.replace(/^### (.*$)/gm, "<h3>$1</h3>");
+  text = text.replace(/^## (.*$)/gm, "<h2>$1</h2>");
+  text = text.replace(/^# (.*$)/gm, "<h1>$1</h1>");
+  text = text.replace(/\*\*\*(.*?)\*\*\*/g, "<strong><em>$1</em></strong>");
+  text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  text = text.replace(/___(.*?)___/g, "<strong><em>$1</em></strong>");
+  text = text.replace(/__(.*?)__/g, "<strong>$1</strong>");
+  text = text.replace(/_(.*?)_/g, "<em>$1</em>");
+  text = text.replace(/~~(.*?)~~/g, "<del>$1</del>");
+  text = text.replace(
+    /\[\[([^\]|]+)\|([^\]]+)\]\]/g,
+    '<a href="$1">$2</a>'
+  );
+  text = text.replace(/\[\[([^\]]+)\]\]/g, '<a href="$1">$1</a>');
+  text = text.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank">$1</a>'
+  );
+  text = text.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    '<img src="$2" alt="$1" style="max-width:100%;">'
+  );
+  text = text.replace(
+    /!\[\[([^\]]+)\]\]/g,
+    '<img src="$1" alt="$1" style="max-width:100%;">'
+  );
+  text = text.replace(/^&gt; (.*)$/gm, "<blockquote>$1</blockquote>");
+  text = text.replace(/^---$/gm, "<hr>");
+  text = text.replace(
+    /^- \[x\] (.*)$/gm,
+    '<div class="checkbox checked">&#9744; $1</div>'
+  );
+  text = text.replace(
+    /^- \[ \] (.*)$/gm,
+    '<div class="checkbox">&#9745; $1</div>'
+  );
+  text = text.replace(/^[\s]*[-*] (.*)$/gm, "<li>$1</li>");
+  text = text.replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>");
+  text = text.replace(/^[\s]*\d+\. (.*)$/gm, "<li>$1</li>");
+  text = text.replace(/\n/g, "<br>\n");
+  text = text.replace(/(<br>\s*){3,}/g, "<br><br>");
+  return text;
 }
+var OBS_COLORS = {
+  "1": { bg: "#d73a4a22", border: "#d73a4a" },
+  "2": { bg: "#e8a83822", border: "#e8a838" },
+  "3": { bg: "#3eb37022", border: "#3eb370" },
+  "4": { bg: "#4a90d922", border: "#4a90d9" },
+  "5": { bg: "#9b59b622", border: "#9b59b6" },
+  "6": { bg: "#eb6ca022", border: "#eb6ca0" }
+};
+function getNodeColors(color, darkMode = true) {
+  if (color && OBS_COLORS[color]) {
+    return OBS_COLORS[color];
+  }
+  if (color && color.startsWith("#")) {
+    return { bg: color + "22", border: color };
+  }
+  return {
+    bg: darkMode ? "#2d2d2d" : "#ffffff",
+    border: darkMode ? "#555" : "#ccc"
+  };
+}
+function convertCanvasToHtml(data, opts) {
+  const nodes = data.nodes || [];
+  const edges = data.edges || [];
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + n.width);
+    maxY = Math.max(maxY, n.y + n.height);
+  }
+  const pad = 120;
+  minX = Math.min(0, minX) - pad;
+  minY = Math.min(0, minY) - pad;
+  maxX += pad;
+  maxY += pad;
+  const canvasW = maxX - minX;
+  const canvasH = maxY - minY;
+  const offX = -minX;
+  const offY = -minY;
+  const bg = opts.darkMode ? "#1e1e1e" : "#f0f0f0";
+  const txt = opts.darkMode ? "#e0e0e0" : "#333";
+  const titleC = opts.darkMode ? "#ffffff" : "#000";
+  const border = opts.darkMode ? "#444" : "#ccc";
+  const edgeC = opts.darkMode ? "#6ea8fe" : "#4a90d9";
+  const groupBg = opts.darkMode ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)";
+  const groupBd = opts.darkMode ? "#555" : "#bbb";
+  const linkC = opts.darkMode ? "#4da6ff" : "#1a73e8";
+  const codeBg = opts.darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.07)";
+  const preBg = opts.darkMode ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.08)";
+  const nodesHtmlParts = [];
+  for (const node of nodes) {
+    const nx = node.x + offX;
+    const ny = node.y + offY;
+    const isGroup = node.type === "group" || node.groupNodes && node.groupNodes.length > 0;
+    const colors = getNodeColors(node.color, opts.darkMode);
+    const bdStyle = isGroup ? "dashed" : "solid";
+    const pointerEvents = isGroup ? "none" : "auto";
+    let content = "";
+    if (node.text !== void 0 && node.text !== null) {
+      const t = node.text.trim();
+      if (t.startsWith("<")) {
+        content = t;
+      } else {
+        content = markdownToHtml(t);
+      }
+    }
+    let titleHtml = "";
+    if (node.label) {
+      titleHtml = `<div class="node-title">${markdownToHtml(node.label)}</div>`;
+    }
+    const typeClass = node.type ? node.type.replace(/[^a-z0-9]/gi, " ").trim().split(" ")[0] : "text";
+    const colorClass = node.color ? `color-${node.color}` : "";
+    nodesHtmlParts.push(
+      `<div class="node ${typeClass} ${colorClass} ${isGroup ? "group" : ""}" id="node-${node.id}" data-node-id="${node.id}" style="left:${nx}px;top:${ny}px;width:${node.width}px;min-height:${Math.max(node.height, 60)}px;background:${isGroup ? groupBg : colors.bg};border:2px ${bdStyle} ${isGroup ? groupBd : colors.border};pointer-events:${pointerEvents};">${titleHtml}<div class="node-content">${content}</div></div>`
+    );
+  }
+  const edgesJson = [];
+  for (const edge of edges) {
+    edgesJson.push(JSON.stringify({
+      fromId: edge.fromNode,
+      toId: edge.toNode,
+      fromSide: edge.fromSide || "right",
+      toSide: edge.toSide || "left",
+      label: edge.label || "",
+      color: edge.color || ""
+    }));
+  }
+  const edgesDataArray = edgesJson.join(",\n    ");
+  const htmlCss = `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: ${bg};
+      overflow: auto;
+      min-height: 100vh;
+    }
+    #canvas {
+      position: relative;
+      width: ${canvasW}px;
+      height: ${canvasH}px;
+      margin: 24px auto;
+      border-radius: 8px;
+    }
+    #edge-svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      overflow: visible;
+    }
+    .node {
+      position: absolute;
+      border-radius: 8px;
+      padding: 12px 14px;
+      overflow: visible;
+      color: ${txt};
+      font-size: 14px;
+      line-height: 1.65;
+      z-index: 10;
+      cursor: grab;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+      user-select: none;
+      transition: box-shadow 0.15s;
+    }
+    .node:hover {
+      box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+      z-index: 50;
+    }
+    .node.dragging {
+      cursor: grabbing;
+      opacity: 0.92;
+      z-index: 200;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+    }
+    .node.group {
+      border-radius: 12px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .node-title {
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 6px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid ${border};
+      color: ${titleC};
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .node-content { color: ${txt}; }
+    .node-content h1 { font-size: 1.35em; margin: 6px 0 4px; color: ${titleC}; }
+    .node-content h2 { font-size: 1.2em;  margin: 6px 0 4px; color: ${titleC}; }
+    .node-content h3 { font-size: 1.05em; margin: 4px 0 3px; color: ${titleC}; }
+    .node-content img { max-width: 100%; height: auto; border-radius: 4px; margin: 6px 0; display: block; }
+    .node-content a { color: ${linkC}; text-decoration: none; }
+    .node-content a:hover { text-decoration: underline; }
+    .node-content code { background: ${codeBg}; padding: 2px 5px; border-radius: 3px; font-family: Consolas, 'Courier New', monospace; font-size: 0.88em; }
+    .node-content pre { background: ${preBg}; padding: 10px 12px; border-radius: 4px; overflow-x: auto; margin: 8px 0; }
+    .node-content pre code { background: none; padding: 0; }
+    .node-content blockquote { border-left: 3px solid ${linkC}; padding-left: 10px; margin: 8px 0; opacity: 0.85; }
+    .node-content ul { margin-left: 18px; margin-bottom: 6px; }
+    .node-content ol { margin-left: 18px; margin-bottom: 6px; }
+    .node-content li { margin: 2px 0; }
+    .node-content hr { border: none; border-top: 1px solid ${border}; margin: 10px 0; }
+    .node-content table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+    .node-content td, .node-content th { border: 1px solid ${border}; padding: 5px 8px; }
+    .checkbox { margin: 3px 0; }
+    .checkbox.checked { text-decoration: line-through; opacity: 0.6; }
 
-.node {
-  position: absolute;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-  box-shadow: 0 2px 12px var(--shadow);
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  overflow: auto;
-  font-size: 14px;
-  line-height: 1.6;
-  z-index: 10;
-  cursor: move;
-  transition: box-shadow 0.2s, transform 0.15s;
-}
-.node:hover {
-  box-shadow: 0 6px 24px var(--shadow);
-  z-index: 100;
-}
-.node.dragging {
-  opacity: 0.85;
-  z-index: 999;
-  box-shadow: 0 12px 40px var(--shadow);
-}
-.node-group {
-  background: var(--group-bg);
-  border: 2px dashed var(--group-border);
-  z-index: 1;
-  cursor: default;
-}
-.node-type-link iframe {
-  width: 100%;
-  height: 200px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  margin-top: 8px;
-}
-.node-title {
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--title);
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-}
-.node-content { color: var(--text); }
-.node-content h1 { font-size: 1.4em; margin: 10px 0 5px; color: var(--title); }
-.node-content h2 { font-size: 1.2em; margin: 8px 0 4px;  color: var(--title); }
-.node-content h3 { font-size: 1.05em; margin: 6px 0 3px;  color: var(--title); }
-.node-content p  { margin: 6px 0; }
-.node-content img { max-width: 100%; height: auto; border-radius: 6px; margin: 8px 0; }
-.node-content a  { color: var(--accent); text-decoration: none; }
-.node-content a:hover { text-decoration: underline; color: var(--accent-hover); }
-.node-content code {
-  background: var(--code-bg);
-  padding: 2px 5px;
-  border-radius: 4px;
-  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
-  font-size: 0.88em;
-}
-.node-content pre {
-  background: ${n?"#0d1117":"#f6f8fa"};
-  padding: 12px;
-  border-radius: 6px;
-  overflow-x: auto;
-  margin: 10px 0;
-  border: 1px solid var(--border);
-}
-.node-content pre code { background: none; padding: 0; font-size: 0.85em; }
-.node-content blockquote {
-  border-left: 3px solid var(--accent);
-  padding: 4px 12px;
-  margin: 8px 0;
-  color: var(--text-muted);
-  font-style: italic;
-}
-.node-content ul, .node-content ol { margin: 4px 0 4px 20px; }
-.node-content li { margin: 2px 0; }
-.node-content table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-.node-content th, .node-content td {
-  border: 1px solid var(--border);
-  padding: 6px 10px;
-  text-align: left;
-  font-size: 0.9em;
-}
-.node-content th { background: var(--code-bg); font-weight: 600; }
-.node-content hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
-.node-content mark { background: var(--mark-bg); padding: 1px 3px; border-radius: 2px; }
-.node-content .tag {
-  background: var(--accent);
-  color: white;
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-size: 0.8em;
-  font-weight: 500;
-}
-.node-content .checklist { list-style: none; margin-left: 0; }
-.node-content .task-item { display: flex; align-items: center; gap: 6px; }
-.node-content .task-item input { margin: 0; }
-.node-content .footnote-ref { color: var(--accent); cursor: pointer; }
-.node-content .file-ref {
-  font-size: 0.85em;
-  color: var(--text-muted);
-  font-style: italic;
-}
-.node-content .external-link {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-bottom: 6px;
-}
-.node-content .link-iframe { display: none; }
-.node-content .link-iframe.visible { display: block; }
+    /* Obsidian Farben */
+    .color-1 { background: #d73a4a22 !important; border-color: #d73a4a !important; }
+    .color-2 { background: #e8a83822 !important; border-color: #e8a838 !important; }
+    .color-3 { background: #3eb37022 !important; border-color: #3eb370 !important; }
+    .color-4 { background: #4a90d922 !important; border-color: #4a90d9 !important; }
+    .color-5 { background: #9b59b622 !important; border-color: #9b59b6 !important; }
+    .color-6 { background: #eb6ca022 !important; border-color: #eb6ca0 !important; }
 
-.edge-label {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  z-index: 6;
-  pointer-events: none;
-  white-space: nowrap;
-}
+    #controls {
+      position: fixed; top: 12px; right: 12px;
+      background: rgba(0,0,0,0.82); padding: 8px 12px;
+      border-radius: 8px; z-index: 9999;
+      display: flex; gap: 6px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+    #controls button {
+      background: #4da6ff; border: none; color: white;
+      padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
+      transition: background 0.15s;
+    }
+    #controls button:hover { background: #66b3ff; }
+    #controls button:active { background: #3d8ae0; }
 
-.controls {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 2000;
-}
-.controls button {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.controls button:hover { background: var(--surface-hover); }
+    #info {
+      position: fixed; bottom: 12px; left: 12px;
+      background: rgba(0,0,0,0.65); color: #aaa;
+      padding: 6px 10px; border-radius: 6px; font-size: 12px; z-index: 9999;
+    }
+  </style>
+</head>
+<body>
 
-.search-bar {
-  position: fixed;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2000;
-  display: flex;
-  gap: 0;
-}
-.search-bar input {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-right: none;
-  color: var(--text);
-  padding: 8px 14px;
-  border-radius: 8px 0 0 8px;
-  font-size: 14px;
-  width: 260px;
-  outline: none;
-}
-.search-bar input:focus { border-color: var(--accent); }
-.search-bar button {
-  background: var(--accent);
-  border: none;
-  color: white;
-  padding: 8px 14px;
-  border-radius: 0 8px 8px 0;
-  cursor: pointer;
-  font-size: 14px;
-}
+<div id="controls">
+  <button onclick="zoomIn()" title="Zoom rein">+</button>
+  <button onclick="zoomOut()" title="Zoom raus">&#8722;</button>
+  <button onclick="resetView()" title="Ansicht zur\xFCcksetzen">Reset</button>
+  <button onclick="fitToScreen()" title="Alles anzeigen">Fit</button>
+</div>
 
-.node.search-highlight {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
-  animation: pulse 1s ease-in-out 2;
-}
-@keyframes pulse {
-  0%, 100% { outline-color: var(--accent); }
-  50% { outline-color: transparent; }
-}
+<div id="info">
+  <span id="node-count">${nodes.length}</span> Knoten &middot;
+  <span id="edge-count">${edges.length}</span> Verbindungen
+</div>
 
-.theme-toggle {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 2000;
-}
-.theme-toggle button {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.info-badge {
-  position: fixed;
-  bottom: 12px;
-  left: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  z-index: 2000;
-}
-
-.minimap {
-  position: fixed;
-  bottom: 12px;
-  right: 12px;
-  width: 200px;
-  height: 150px;
-  background: var(--minimap-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  z-index: 2000;
-  cursor: pointer;
-}
-.minimap canvas { width: 100%; height: 100%; }
-  `,p=`
+<div id="canvas">
+  <svg id="edge-svg"></svg>
+  ${nodesHtmlParts.join("\n")}
+</div>
+<script>
 (function() {
   "use strict";
 
-  let scale = 1, panX = 0, panY = 0;
-  let isPanning = false, isDragging = false;
-  let panSX = 0, panSY = 0;
-  let dragNode = null, dragOffX = 0, dragOffY = 0;
-  let isDark = ${n};
-  let searchIdx = 0, searchMatches = [];
+  const edgeColor = "${edgeC}";
+  const OFFSET_X  = ${offX};
+  const OFFSET_Y  = ${offY};
 
-  const vp  = document.getElementById("viewport");
-  const wld = document.getElementById("world");
-  const pageEl = document.querySelector(".canvas-page");
-  const minimapEl = document.querySelector(".minimap");
-
-  function apply() {
-    wld.style.transform = "translate(" + panX + "px," + panY + "px) scale(" + scale + ")";
-    updateMinimap();
-  }
-
-  // \u2500\u2500 Zoom per Mausrad \u2500\u2500
-  vp.addEventListener("wheel", function(e) {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const r = (scale + delta) / scale;
-    scale = Math.min(5, Math.max(0.05, scale + delta));
-    panX = e.clientX - (e.clientX - panX) * r;
-    panY = e.clientY - (e.clientY - panY) * r;
-    apply();
-  }, { passive: false });
-
-  // \u2500\u2500 Pan per Drag auf den Hintergrund \u2500\u2500
-  vp.addEventListener("pointerdown", function(e) {
-    if (e.target.closest(".node") && !e.target.closest(".node-group")) return;
-    isPanning = true;
-    panSX = e.clientX - panX;
-    panSY = e.clientY - panY;
-    vp.classList.add("grabbing");
-    vp.setPointerCapture(e.pointerId);
-  });
-
-  vp.addEventListener("pointermove", function(e) {
-    if (!isPanning) return;
-    panX = e.clientX - panSX;
-    panY = e.clientY - panSY;
-    apply();
-  });
-
-  vp.addEventListener("pointerup", function() {
-    isPanning = false;
-    vp.classList.remove("grabbing");
-  });
-
-  // \u2500\u2500 Node Drag \u2500\u2500
-  document.querySelectorAll(".node:not(.node-group)").forEach(function(node) {
-    node.addEventListener("pointerdown", function(e) {
-      if (e.target.closest("a") || e.target.closest("input")) return;
-      e.stopPropagation();
-      isDragging = true;
-      dragNode = node;
-      dragNode.classList.add("dragging");
-      const rect = node.getBoundingClientRect();
-      dragOffX = (e.clientX - rect.left) / scale;
-      dragOffY = (e.clientY - rect.top) / scale;
-      vp.setPointerCapture(e.pointerId);
-    });
-  });
-
-  vp.addEventListener("pointermove", function(e) {
-    if (!isDragging || !dragNode) return;
-    const nx = (e.clientX / scale) - panX / scale - dragOffX;
-    const ny = (e.clientY / scale) - panY / scale - dragOffY;
-    dragNode.style.left = nx.toFixed(1) + "px";
-    dragNode.style.top  = ny.toFixed(1) + "px";
-    updateEdges();
-    updateMinimap();
-  });
-
-  vp.addEventListener("pointerup", function() {
-    if (dragNode) dragNode.classList.remove("dragging");
-    isDragging = false;
-    dragNode = null;
-  });
-
-  // \u2500\u2500 Kanten-Updates nach Drag \u2500\u2500
-  function updateEdges() {
-    document.querySelectorAll(".node").forEach(function(n) {
-      var id = n.dataset.nodeId;
-      if (!id) return;
-    });
-  }
-
-  // \u2500\u2500 Zoom-Buttons \u2500\u2500
-  window.zoomIn  = function() { zoomAt(vp.clientWidth / 2, vp.clientHeight / 2,  0.15); };
-  window.zoomOut = function() { zoomAt(vp.clientWidth / 2, vp.clientHeight / 2, -0.15); };
-  window.resetView = function() {
-    scale = 1; panX = 0; panY = 0;
-    apply();
+  const OBS_COLORS = {
+    "1": "#d73a4a", "2": "#e8a838", "3": "#3eb370",
+    "4": "#4a90d9", "5": "#9b59b6", "6": "#eb6ca0"
   };
 
-  function zoomAt(cx, cy, delta) {
-    var old = scale;
-    scale = Math.min(5, Math.max(0.05, scale + delta));
-    var r = scale / old;
-    panX = cx - (cx - panX) * r;
-    panY = cy - (cy - panY) * r;
-    apply();
+  const edgesRaw = [
+    ${edgesDataArray}
+  ];
+
+  const svg      = document.getElementById("edge-svg");
+  const canvas   = document.getElementById("canvas");
+
+  // \u2500\u2500 Ankerpunkt berechnen \u2500\u2500
+  function getAnchor(el, side) {
+    const l = parseFloat(el.style.left);
+    const t = parseFloat(el.style.top);
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    switch (side) {
+      case "top":    return { x: l + w / 2, y: t };
+      case "bottom": return { x: l + w / 2, y: t + h };
+      case "left":   return { x: l,         y: t + h / 2 };
+      case "right":  return { x: l + w,     y: t + h / 2 };
+      default:       return { x: l + w / 2, y: t + h / 2 };
+    }
   }
 
-  // \u2500\u2500 Suche \u2500\u2500
-  window.doSearch = function() {
-    var term = document.getElementById("search-input").value.trim();
-    if (!term) return;
+  // \u2500\u2500 Alle Kanten zeichnen \u2500\u2500
+  function drawEdges() {
+    svg.innerHTML = "";
 
-    document.querySelectorAll(".node").forEach(function(n) {
-      n.classList.remove("search-highlight");
-    });
+    // \u2500\u2500 Marker-Definitionen programmatisch (kein innerHTML-Template) \u2500\u2500
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    svg.appendChild(defs);
 
-    var hits = document.evaluate(
-      ".//*[contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'" +
-      term.toLowerCase() + "')]",
-      pageEl, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null
-    );
+    function makeMarker(id: string, fill: string) {
+      const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+      marker.setAttribute("id", id);
+      marker.setAttribute("markerWidth", "10");
+      marker.setAttribute("markerHeight", "7");
+      marker.setAttribute("refX", "9");
+      marker.setAttribute("refY", "3.5");
+      marker.setAttribute("orient", "auto");
+      defs.appendChild(marker);
 
-    searchMatches = [];
-    var seen = new Set();
-    for (var i = 0; i < hits.snapshotLength; i++) {
-      var node = hits.snapshotItem(i).closest(".node");
-      if (node && !seen.has(node)) {
-        seen.add(node);
-        node.classList.add("search-highlight");
-        searchMatches.push(node);
+      const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      poly.setAttribute("points", "0 0, 10 3.5, 0 7");
+      poly.setAttribute("fill", fill);
+      marker.appendChild(poly);
+    }
+
+    makeMarker("arrow",    edgeColor);
+    makeMarker("arrowg",   "#3eb370");
+    makeMarker("arrowr",   "#d73a4a");
+
+    // \u2500\u2500 Kanten \u2500\u2500
+    for (const e of edgesRaw) {
+      const fromEl = document.getElementById("node-" + e.fromId);
+      const toEl   = document.getElementById("node-" + e.toId);
+      if (!fromEl || !toEl) continue;
+
+      const a = getAnchor(fromEl, e.fromSide);
+      const b = getAnchor(toEl,   e.toSide);
+
+      const dx = Math.max(Math.abs(b.x - a.x) * 0.4, 30);
+      const dy = Math.max(Math.abs(b.y - a.y) * 0.4, 30);
+      let c1x = a.x, c1y = a.y, c2x = b.x, c2y = b.y;
+
+      if (e.fromSide === "right")  c1x += dx;
+      if (e.fromSide === "left")   c1x -= dx;
+      if (e.fromSide === "top")    c1y -= dy;
+      if (e.fromSide === "bottom") c1y += dy;
+      if (e.toSide   === "right")  c2x += dx;
+      if (e.toSide   === "left")   c2x -= dx;
+      if (e.toSide   === "top")    c2y -= dy;
+      if (e.toSide   === "bottom") c2y += dy;
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d",
+        "M " + a.x + " " + a.y +
+        " C " + c1x + " " + c1y + ", " + c2x + " " + c2y + ", " + b.x + " " + b.y
+      );
+      const col = e.color
+        ? (OBS_COLORS[e.color] || e.color)
+        : edgeColor;
+      const markerId = col === "#3eb370" ? "arrowg"
+        : col === "#d73a4a" ? "arrowr"
+        : "arrow";
+      path.setAttribute("stroke", col);
+      path.setAttribute("stroke-width", "2");
+      path.setAttribute("fill", "none");
+      path.setAttribute("marker-end", "url(#" + markerId + ")");
+      path.style.transition = "stroke-width 0.15s";
+      path.addEventListener("mouseenter", () => path.setAttribute("stroke-width", "3"));
+      path.addEventListener("mouseleave", () => path.setAttribute("stroke-width", "2"));
+      svg.appendChild(path);
+
+      // Label
+      if (e.label) {
+        const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        txt.setAttribute("x", String((a.x + b.x) / 2));
+        txt.setAttribute("y", String((a.y + b.y) / 2 - 6));
+        txt.setAttribute("text-anchor", "middle");
+        txt.setAttribute("fill", txtColor);
+        txt.setAttribute("font-size", "12");
+        txt.setAttribute("font-family", "sans-serif");
+        txt.textContent = e.label;
+        svg.appendChild(txt);
       }
     }
-
-    if (searchMatches.length > 0) {
-      searchIdx = 0;
-      scrollToMatch();
-      new Notice(term + ": " + searchMatches.length + " Treffer", 2000);
-    } else {
-      new Notice("Keine Treffer f\xFCr: " + term, 2000);
-    }
-  };
-
-  window.nextSearch = function() {
-    if (!searchMatches.length) return;
-    searchIdx = (searchIdx + 1) % searchMatches.length;
-    scrollToMatch();
-  };
-
-  function scrollToMatch() {
-    if (!searchMatches[searchIdx]) return;
-    var el = searchMatches[searchIdx];
-    var r = el.getBoundingClientRect();
-    panX = vp.clientWidth  / 2 - (r.left + r.width  / 2);
-    panY = vp.clientHeight / 2 - (r.top  + r.height / 2);
-    apply();
   }
+    // \u2500\u2500 Drag & Drop (Desktop) \u2500\u2500
+  let dragEl = null;
+  let dragStartX = 0, dragStartY = 0;
+  let elStartX = 0, elStartY = 0;
 
-  // \u2500\u2500 Theme-Toggle \u2500\u2500
-  window.toggleTheme = function() {
-    isDark = !isDark;
-    var root = document.documentElement;
-    if (isDark) {
-      root.style.setProperty("--bg",            "#1a1a2e");
-      root.style.setProperty("--surface",       "#16213e");
-      root.style.setProperty("--surface-hover",  "#1a2744");
-      root.style.setProperty("--border",         "#2a3a5c");
-      root.style.setProperty("--text",           "#e0e0e0");
-      root.style.setProperty("--text-muted",     "#8899aa");
-      root.style.setProperty("--title",          "#ffffff");
-      root.style.setProperty("--edge-color",     "#5588bb");
-    } else {
-      root.style.setProperty("--bg",            "#f0f0f0");
-      root.style.setProperty("--surface",        "#ffffff");
-      root.style.setProperty("--surface-hover",  "#f8f8ff");
-      root.style.setProperty("--border",         "#d0d0d0");
-      root.style.setProperty("--text",           "#333333");
-      root.style.setProperty("--text-muted",     "#888888");
-      root.style.setProperty("--title",          "#111111");
-      root.style.setProperty("--edge-color",     "#888888");
-    }
-  };
-
-  // \u2500\u2500 Minimap \u2500\u2500
-  function updateMinimap() {
-    var mc = document.getElementById("minimap-canvas");
-    if (!mc) return;
-    var ctx = mc.getContext("2d");
-    var pw = pageEl.offsetWidth, ph = pageEl.offsetHeight;
-    mc.width = 200; mc.height = Math.round(200 * ph / pw);
-
-    ctx.fillStyle = isDark ? "#0d1117" : "#ffffff";
-    ctx.fillRect(0, 0, mc.width, mc.height);
-
-    document.querySelectorAll(".node").forEach(function(n) {
-      var r = n.getBoundingClientRect();
-      var vp2 = vp.getBoundingClientRect();
-      var nx = (r.left - vp2.left) / scale + panX / scale;
-      var ny = (r.top  - vp2.top)  / scale + panY / scale;
-      var nw = r.width  / scale;
-      var nh = r.height / scale;
-      ctx.fillStyle = isDark ? "#4da6ff55" : "#4da6ff44";
-      ctx.fillRect(nx, ny, nw, nh);
-      ctx.strokeStyle = isDark ? "#4da6ffaa" : "#4da6ff88";
-      ctx.strokeRect(nx, ny, nw, nh);
-    });
-
-    var vw = vp.clientWidth / scale;
-    var vh = vp.clientHeight / scale;
-    var vx = -panX / scale;
-    var vy = -panY / scale;
-    ctx.strokeStyle = "#ff6644";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(vx, vy, vw, vh);
-  }
-
-  minimapEl && minimapEl.addEventListener("click", function(e) {
-    var rect = minimapEl.getBoundingClientRect();
-    var mx = e.clientX - rect.left;
-    var my = e.clientY - rect.top;
-    var pw = pageEl.offsetWidth,  ph = pageEl.offsetHeight;
-    var vw = vp.clientWidth / scale, vh = vp.clientHeight / scale;
-    panX = -(mx * pw / 200 - vp.clientWidth  / 2) * scale;
-    panY = -(my * ph / 200 - vp.clientHeight / 2) * scale;
-    apply();
-  });
-
-  // \u2500\u2500 Info-Badge \u2500\u2500
-  function updateInfo() {
-    var badge = document.getElementById("info-badge");
-    if (badge) badge.textContent = scale.toFixed(1) + "x";
-  }
-
-  // \u2500\u2500 Link-Vorschau Toggle \u2500\u2500
-  document.querySelectorAll(".node-type-link").forEach(function(n) {
-    var toggle = n.querySelector(".toggle-iframe");
-    if (!toggle) {
-      toggle = document.createElement("button");
-      toggle.className = "toggle-iframe";
-      toggle.textContent = "Vorschau";
-      toggle.style.cssText = "margin-top:8px;font-size:12px;padding:4px 10px;" +
-        "background:var(--accent);color:white;border:none;border-radius:4px;cursor:pointer;";
-      var content = n.querySelector(".node-content");
-      if (content) content.appendChild(toggle);
-    }
-    toggle.addEventListener("click", function() {
-      var iframe = n.querySelector("iframe");
-      if (iframe) iframe.classList.toggle("visible");
+  document.querySelectorAll(".node:not(.group)").forEach(function(el) {
+    el.addEventListener("mousedown", function(ev) {
+      if (ev.target.tagName === "A"
+       || ev.target.tagName === "INPUT"
+       || ev.target.tagName === "TEXTAREA"
+       || ev.target.closest("pre")
+       || ev.target.closest("code")) return;
+      dragEl = el;
+      el.classList.add("dragging");
+      dragStartX = ev.clientX;
+      dragStartY = ev.clientY;
+      elStartX   = parseFloat(el.style.left);
+      elStartY   = parseFloat(el.style.top);
+      ev.preventDefault();
     });
   });
 
-  // \u2500\u2500 Keyboard Shortcuts \u2500\u2500
-  document.addEventListener("keydown", function(e) {
-    if (e.key === "Escape") {
-      document.querySelectorAll(".node.search-highlight")
-        .forEach(function(n) { n.classList.remove("search-highlight"); });
-      searchMatches = [];
-    }
-    if (e.key === "f" && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      var inp = document.getElementById("search-input");
-      if (inp) inp.focus();
-    }
+  document.addEventListener("mousemove", function(ev) {
+    if (!dragEl) return;
+    const dx = (ev.clientX - dragStartX) / currentScale;
+    const dy = (ev.clientY - dragStartY) / currentScale;
+    dragEl.style.left = (elStartX + dx) + "px";
+    dragEl.style.top  = (elStartY + dy) + "px";
+    drawEdges();
   });
 
-  apply();
-  updateMinimap();
+  document.addEventListener("mouseup", function() {
+    if (dragEl) dragEl.classList.remove("dragging");
+    dragEl = null;
+  });
+
+  // \u2500\u2500 Touch-Support (Mobile) \u2500\u2500
+  document.querySelectorAll(".node:not(.group)").forEach(function(el) {
+    el.addEventListener("touchstart", function(ev) {
+      if (ev.target.tagName === "A"
+       || ev.target.closest("pre")
+       || ev.target.closest("code")) return;
+      const touch = ev.touches[0];
+      dragEl = el;
+      el.classList.add("dragging");
+      dragStartX = touch.clientX;
+      dragStartY = touch.clientY;
+      elStartX   = parseFloat(el.style.left);
+      elStartY   = parseFloat(el.style.top);
+      ev.preventDefault();
+    }, { passive: false });
+  });
+
+  document.addEventListener("touchmove", function(ev) {
+    if (!dragEl) return;
+    const touch = ev.touches[0];
+    const dx = (touch.clientX - dragStartX) / currentScale;
+    const dy = (touch.clientY - dragStartY) / currentScale;
+    dragEl.style.left = (elStartX + dx) + "px";
+    dragEl.style.top  = (elStartY + dy) + "px";
+    drawEdges();
+  }, { passive: true });
+
+  document.addEventListener("touchend", function() {
+    if (dragEl) dragEl.classList.remove("dragging");
+    dragEl = null;
+  });
+
+  // \u2500\u2500 Zoom-Steuerung \u2500\u2500
+  let currentScale = 1;
+
+  window.zoomIn = function() {
+    currentScale = Math.min(5, currentScale * 1.15);
+    canvas.style.transform = "scale(" + currentScale + ")";
+    canvas.style.transformOrigin = "top left";
+  };
+
+  window.zoomOut = function() {
+    currentScale = Math.max(0.1, currentScale * 0.87);
+    canvas.style.transform = "scale(" + currentScale + ")";
+    canvas.style.transformOrigin = "top left";
+  };
+
+  window.resetView = function() {
+    currentScale = 1;
+    canvas.style.transform = "scale(1)";
+  };
+
+  window.fitToScreen = function() {
+    const cw = canvas.offsetWidth;
+    const ch = canvas.offsetHeight;
+    const vw = window.innerWidth  - 40;
+    const vh = window.innerHeight - 80;
+    const s  = Math.min(vw / cw, vh / ch, 1);
+    currentScale = s;
+    canvas.style.transform = "scale(" + s + ")";
+    canvas.style.transformOrigin = "top left";
+  };
+
+  // Mausrad-Zoom (Ctrl/Cmd + Scroll)
+  document.body.addEventListener("wheel", function(ev) {
+    if (ev.ctrlKey || ev.metaKey) {
+      ev.preventDefault();
+      if (ev.deltaY < 0) {
+        window.zoomIn();
+      } else {
+        window.zoomOut();
+      }
+    }
+  }, { passive: false });
+
+  // \u2500\u2500 Initialisierung \u2500\u2500
+  drawEdges();
+  window.addEventListener("resize", drawEdges);
 })();
-`;return`<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${w(a)}</title>
-  <style>${g}</style>
-</head>
-<body>
-  <div id="viewport">
-    <div id="world">
-      <div class="canvas-page">
-        ${l}
-        ${o}
-      </div>
-    </div>
-  </div>
+<\/script>
 
-  <div class="theme-toggle">
-    <button onclick="toggleTheme()" title="Dark/Light wechseln">&#9788;</button>
-  </div>
-
-  <div class="search-bar">
-    <input id="search-input" placeholder="Suchen... (Ctrl+F)"
-           onkeydown="if(event.key==='Enter')doSearch()">
-    <button onclick="doSearch()">&#128269;</button>
-    <button onclick="nextSearch()" title="N\xE4chster Treffer">&#8680;</button>
-  </div>
-
-  <div class="controls">
-    <button onclick="zoomIn()"      title="Vergr\xF6\xDFern">+</button>
-    <button onclick="zoomOut()"     title="Verkleinern">&#8722;</button>
-    <button onclick="resetView()"   title="Ansicht zur\xFCcksetzen">&#8634;</button>
-  </div>
-
-  <div id="info-badge" class="info-badge">1.0x</div>
-
-  <div class="minimap">
-    <canvas id="minimap-canvas"></canvas>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/obsidian@latest/obsidian.min.js"><\/script>
-  <script>${p}<\/script>
 </body>
-</html>`}function v(t,e={}){return R(t,e)}var _={darkMode:!0,outputDir:"Canvas-Exports",exportImages:!0},b=class extends d.Plugin{async onload(){await this.loadSettings(),this.addRibbonIcon("file-down","Canvas \u2192 HTML exportieren",async()=>{await this.exportCurrentCanvas()}),this.addCommand({id:"export-canvas-html",name:"Export: Aktuellen Canvas als HTML speichern",callback:async()=>{await this.exportCurrentCanvas()}}),this.addCommand({id:"export-all-canvases",name:"Export: Alle Canvas-Dateien im Vault als HTML exportieren",callback:async()=>{await this.exportAllCanvases()}}),this.addCommand({id:"preview-canvas-html",name:"Vorschau: Aktuellen Canvas als HTML anzeigen",callback:async()=>{await this.previewCanvasHtml()}}),this.addSettingTab(new $(this.app,this))}onunload(){}async exportCurrentCanvas(){let e=this.app.workspace.getActiveFile();if(!e||e.extension!=="canvas"){new d.Notice("Kein Canvas gefunden. \xD6ffne ein Canvas und versuche es erneut.",4e3);return}try{let n=await this.app.vault.read(e),a=JSON.parse(n),i={darkMode:this.settings.darkMode,title:a.name||e.basename,exportImages:this.settings.exportImages},s=v(a,i);await this.saveHtmlFile(s,e.basename),new d.Notice("Canvas erfolgreich als HTML exportiert!",3e3)}catch(n){new d.Notice(`Export fehlgeschlagen: ${n}`,5e3)}}async exportAllCanvases(){let e=this.settings.outputDir||"Canvas-Exports",n=this.app.vault,a=0,i=[],s=n.getFiles();for(let r of s)if(r.extension==="canvas")try{let c=await n.read(r),o=JSON.parse(c),l={darkMode:this.settings.darkMode,title:o.name||r.basename,exportImages:this.settings.exportImages},g=v(o,l),p=`${e}/${r.basename}.html`;n.getAbstractFileByPath(e)||await n.createFolder(e);let f=n.getAbstractFileByPath(p);f&&f instanceof d.TFile?await n.modify(f,g):await n.create(p,g),a++}catch{i.push(r.basename)}a>0&&new d.Notice(`${a} Canvas-Dateien exportiert!`,3e3),i.length>0&&new d.Notice(`${i.length} Dateien fehlgeschlagen: ${i.join(", ")}`,5e3)}async previewCanvasHtml(){let e=this.app.workspace.getActiveFile();if(!e||e.extension!=="canvas"){new d.Notice("Kein Canvas gefunden.",4e3);return}try{let n=await this.app.vault.read(e),a=JSON.parse(n),i={darkMode:this.settings.darkMode,title:a.name||e.basename,exportImages:this.settings.exportImages},s=v(a,i),r=`.canvas-preview-${Date.now()}.html`;await this.app.vault.create(r,s),new d.Notice("Vorschau-Datei erstellt: "+r,3e3)}catch(n){new d.Notice(`Vorschau fehlgeschlagen: ${n}`,5e3)}}async saveHtmlFile(e,n){let a=this.settings.outputDir||"Canvas-Exports",i=`${n}.html`,s=`${a}/${i}`;this.app.vault.getAbstractFileByPath(a)||await this.app.vault.createFolder(a);let c=this.app.vault.getAbstractFileByPath(s);c&&c instanceof d.TFile?await this.app.vault.modify(c,e):await this.app.vault.create(s,e)}async loadSettings(){this.settings=Object.assign({},_,await this.loadData())}async saveSettings(){await this.saveData(this.settings)}},$=class extends d.PluginSettingTab{constructor(e,n){super(e,n),this.plugin=n}display(){let{containerEl:e}=this;e.empty(),e.createEl("h2",{text:"Canvas to HTML \u2014 Einstellungen"}),new d.Setting(e).setName("Dark Mode").setDesc("Standardm\xE4\xDFig dunklen Modus verwenden").addToggle(n=>n.setValue(this.plugin.settings.darkMode).onChange(async a=>{this.plugin.settings.darkMode=a,await this.plugin.saveSettings()})),new d.Setting(e).setName("Ausgabeordner").setDesc("Relativer Pfad im Vault (Standard: Canvas-Exports)").addText(n=>n.setValue(this.plugin.settings.outputDir).onChange(async a=>{this.plugin.settings.outputDir=a||"Canvas-Exports",await this.plugin.saveSettings()})),new d.Setting(e).setName("Bilder einbetten").setDesc("Referenzierte Bilder als Base64 in die HTML einbetten").addToggle(n=>n.setValue(this.plugin.settings.exportImages).onChange(async a=>{this.plugin.settings.exportImages=a,await this.plugin.saveSettings()}))}};
+</html>`;
+}
+
+// src/main.ts
+var CanvasExporterPlugin = class extends import_obsidian.Plugin {
+  async onload() {
+    await this.loadSettings();
+    this.addRibbonIcon("file-down", "Canvas \u2192 HTML exportieren", async () => {
+      await this.exportCurrentCanvas();
+    });
+    this.addCommand({
+      id: "export-canvas-html",
+      name: "Export: Aktuellen Canvas als HTML speichern",
+      callback: async () => {
+        await this.exportCurrentCanvas();
+      }
+    });
+    this.addCommand({
+      id: "export-all-canvases",
+      name: "Export: Alle Canvas-Dateien im Vault als HTML exportieren",
+      callback: async () => {
+        await this.exportAllCanvases();
+      }
+    });
+    this.addCommand({
+      id: "preview-canvas-html",
+      name: "Vorschau: Aktuellen Canvas als HTML anzeigen",
+      callback: async () => {
+        await this.previewCanvasHtml();
+      }
+    });
+    this.addSettingTab(new CanvasExporterSettingsTab(this.app, this));
+  }
+  onunload() {
+  }
+  async exportCurrentCanvas() {
+    const canvas = this.getActiveCanvas();
+    if (!canvas) {
+      new import_obsidian.Notice("Kein Canvas gefunden. \xD6ffne ein Canvas und versuche es erneut.", 4e3);
+      return;
+    }
+    const html = this.canvasToHtml(canvas);
+    const name = this.getCanvasName(canvas);
+    await this.saveHtmlFile(html, name);
+    new import_obsidian.Notice("Canvas erfolgreich als HTML exportiert!", 3e3);
+  }
+  async exportAllCanvases() {
+    const outputDir = this.settings.outputDir || "Canvas-Exports";
+    const vault = this.app.vault;
+    const allFiles = vault.getAllLoadedFiles();
+    let count = 0;
+    const skipped = [];
+    for (const file of allFiles) {
+      if (file instanceof import_obsidian.TFile && file.extension === "canvas") {
+        try {
+          const content = await vault.read(file);
+          const data = JSON.parse(content);
+          const opts = {
+            darkMode: this.settings.darkMode,
+            title: data.name || file.basename,
+            exportImages: this.settings.exportImages
+          };
+          const html = convertCanvasToHtml(data, opts);
+          const outPath = `${outputDir}/${file.basename}.html`;
+          const folder = vault.getAbstractFileByPath(outputDir);
+          if (!folder)
+            await vault.createFolder(outputDir);
+          await vault.create(outPath, html);
+          count++;
+        } catch {
+          skipped.push(file.basename);
+        }
+      }
+    }
+    if (count > 0)
+      new import_obsidian.Notice(`${count} Canvas-Dateien exportiert!`, 3e3);
+    if (skipped.length > 0) {
+      new import_obsidian.Notice(`${skipped.length} fehlgeschlagen: ${skipped.join(", ")}`, 5e3);
+    }
+  }
+  async previewCanvasHtml() {
+    const canvas = this.getActiveCanvas();
+    if (!canvas) {
+      new import_obsidian.Notice("Kein Canvas gefunden.", 4e3);
+      return;
+    }
+    const html = this.canvasToHtml(canvas);
+    const name = this.getCanvasName(canvas);
+    const tmpPath = `.canvas-preview-${Date.now()}.html`;
+    await this.app.vault.create(tmpPath, html);
+    const file = this.app.vault.getAbstractFileByPath(tmpPath);
+    if (file instanceof import_obsidian.TFile) {
+      this.app.workspace.getLeaf(true).openFile(file);
+    }
+  }
+  getActiveCanvas() {
+    const { workspace } = this.app;
+    for (const leaf of workspace.getLeavesOfType("canvas")) {
+      const view = leaf.view;
+      if (view && "canvas" in view) {
+        return view.canvas;
+      }
+    }
+    const activeLeaf = workspace.getMostRecentLeaf();
+    if (activeLeaf?.view && "canvas" in activeLeaf.view) {
+      return activeLeaf.view.canvas;
+    }
+    return null;
+  }
+  // ═══════════════════════════════════════════════════════════════
+  //  canvas.getName() existiert NICHT → Hilfsfunktion
+  // ═══════════════════════════════════════════════════════════════
+  getCanvasName(canvas) {
+    const rawData = canvas.data;
+    return rawData?.name || "Canvas-Export";
+  }
+  canvasToHtml(canvas) {
+    const rawData = canvas.data;
+    const data = {
+      nodes: rawData.nodes || [],
+      edges: rawData.edges || [],
+      name: rawData.name,
+      backgroundColor: rawData.backgroundColor
+    };
+    const opts = {
+      darkMode: this.settings.darkMode,
+      title: rawData.name || "Canvas Export",
+      exportImages: this.settings.exportImages
+    };
+    return convertCanvasToHtml(data, opts);
+  }
+  async saveHtmlFile(html, baseName) {
+    const outDir = this.settings.outputDir || "Canvas-Exports";
+    const outPath = `${outDir}/${baseName}.html`;
+    const folder = this.app.vault.getAbstractFileByPath(outDir);
+    if (!folder)
+      await this.app.vault.createFolder(outDir);
+    const existing = this.app.vault.getAbstractFileByPath(outPath);
+    if (existing) {
+      await this.app.vault.modify(existing, html);
+    } else {
+      await this.app.vault.create(outPath, html);
+    }
+  }
+  // ═══════════════════════════════════════════════════════════════
+  //  loadSettings — SO muss es aussehen (async, mit loadData())
+  //  Das alte: return new PluginSettings(this)
+  //  → new PluginSettings ruft plugin.data.get() auf
+  //  → plugin.data existiert NICHT → TypeError → settings = undefined
+  // ═══════════════════════════════════════════════════════════════
+  async loadSettings() {
+    const defaults = {
+      darkMode: true,
+      outputDir: "Canvas-Exports",
+      exportImages: true
+    };
+    const saved = await this.loadData();
+    this.settings = { ...defaults, ...saved };
+  }
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
+};
+var CanvasExporterSettingsTab = class extends import_obsidian.PluginSettingTab {
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+    containerEl.createEl("h2", { text: "Canvas to HTML \u2014 Einstellungen" });
+    new import_obsidian.Setting(containerEl).setName("Dark Mode").setDesc("Standardm\xE4\xDFig dunklen Modus verwenden").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.darkMode).onChange(async (val) => {
+        this.plugin.settings.darkMode = val;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("Ausgabeordner").setDesc("Relativer Pfad im Vault (Standard: Canvas-Exports)").addText(
+      (text) => text.setValue(this.plugin.settings.outputDir).onChange(async (val) => {
+        this.plugin.settings.outputDir = val || "Canvas-Exports";
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("Bilder einbetten").setDesc("Referenzierte Bilder als Base64 einbetten").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.exportImages).onChange(async (val) => {
+        this.plugin.settings.exportImages = val;
+        await this.plugin.saveSettings();
+      })
+    );
+  }
+};
+//# sourceMappingURL=main.js.map
