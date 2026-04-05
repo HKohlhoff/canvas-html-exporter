@@ -1,16 +1,15 @@
 import { App, Notice, Plugin, PluginSettingTab, Setting, TFile } from "obsidian";
-import { CanvasData, ExportOptions, convertCanvasToHtml } from "./converter";
+import { convertCanvasToHtml } from "./converter";
+import { exportCanvasPackage } from "./exporter";
 
 type PluginSettings = {
   darkMode: boolean;
   outputDir: string;
-  exportImages: boolean;
 };
 
 const DEFAULT_SETTINGS: PluginSettings = {
   darkMode: true,
   outputDir: "Canvas-Exports",
-  exportImages: false,
 };
 
 export default class CanvasExporterPlugin extends Plugin {
@@ -50,9 +49,10 @@ export default class CanvasExporterPlugin extends Plugin {
     }
 
     try {
-      const html = await this.buildHtmlForCanvasFile(file);
-      const savedFile = await this.writeHtmlFile(file.basename, html);
-      new Notice(`HTML exportiert: ${savedFile.path}`, 5000);
+      const result = await exportCanvasPackage(this.app, file, this.settings);
+      const html = convertCanvasToHtml(result.data, result.options);
+      await this.writeIndexFile(result.folderPath, html);
+      new Notice(`Canvas-Paket exportiert: ${result.folderPath}`, 6000);
     } catch (error) {
       console.error("[canvas-exporter] Export fehlgeschlagen", error);
       new Notice("Canvas-Export fehlgeschlagen. Details in der Entwicklerkonsole.", 6000);
@@ -60,10 +60,7 @@ export default class CanvasExporterPlugin extends Plugin {
   }
 
   async exportAllCanvases(): Promise<void> {
-    const canvasFiles = this.app.vault
-      .getFiles()
-      .filter((file) => file.extension === "canvas");
-
+    const canvasFiles = this.app.vault.getFiles().filter((file: TFile) => file.extension === "canvas");
     if (canvasFiles.length === 0) {
       new Notice("Im Vault wurden keine Canvas-Dateien gefunden.", 4000);
       return;
@@ -74,8 +71,9 @@ export default class CanvasExporterPlugin extends Plugin {
 
     for (const file of canvasFiles) {
       try {
-        const html = await this.buildHtmlForCanvasFile(file);
-        await this.writeHtmlFile(file.basename, html);
+        const result = await exportCanvasPackage(this.app, file, this.settings);
+        const html = convertCanvasToHtml(result.data, result.options);
+        await this.writeIndexFile(result.folderPath, html);
         successCount += 1;
       } catch (error) {
         console.error(`[canvas-exporter] Export fehlgeschlagen für ${file.path}`, error);
@@ -88,70 +86,23 @@ export default class CanvasExporterPlugin extends Plugin {
       return;
     }
 
-    new Notice(
-      `${successCount} exportiert, ${failed.length} fehlgeschlagen. Details in der Entwicklerkonsole.`,
-      7000,
-    );
+    new Notice(`${successCount} exportiert, ${failed.length} fehlgeschlagen. Details in der Entwicklerkonsole.`, 7000);
+  }
+
+  private async writeIndexFile(folderPath: string, html: string): Promise<void> {
+    const filePath = `${folderPath}/index.html`;
+    const existing = this.app.vault.getAbstractFileByPath(filePath);
+    if (existing instanceof TFile) {
+      await this.app.vault.modify(existing, html);
+      return;
+    }
+    await this.app.vault.create(filePath, html);
   }
 
   private getActiveCanvasFile(): TFile | null {
     const file = this.app.workspace.getActiveFile();
-    if (!file || file.extension !== "canvas") {
-      return null;
-    }
+    if (!file || file.extension !== "canvas") return null;
     return file;
-  }
-
-  private async buildHtmlForCanvasFile(file: TFile): Promise<string> {
-    const rawContent = await this.app.vault.read(file);
-    const parsed = JSON.parse(rawContent) as Partial<CanvasData>;
-
-    const data: CanvasData = {
-      nodes: Array.isArray(parsed.nodes) ? parsed.nodes : [],
-      edges: Array.isArray(parsed.edges) ? parsed.edges : [],
-      name: typeof parsed.name === "string" && parsed.name.trim() ? parsed.name : file.basename,
-    };
-
-    const options: ExportOptions = {
-      title: data.name ?? file.basename,
-      darkMode: this.settings.darkMode,
-      exportImages: this.settings.exportImages,
-    };
-
-    return convertCanvasToHtml(data, options);
-  }
-
-  private async writeHtmlFile(baseName: string, html: string): Promise<TFile> {
-    const outputDir = this.normalizeOutputDir(this.settings.outputDir);
-    await this.ensureFolderExists(outputDir);
-
-    const filePath = `${outputDir}/${baseName}.html`;
-    const existing = this.app.vault.getAbstractFileByPath(filePath);
-
-    if (existing instanceof TFile) {
-      await this.app.vault.modify(existing, html);
-      return existing;
-    }
-
-    return await this.app.vault.create(filePath, html);
-  }
-
-  private normalizeOutputDir(dir: string): string {
-    const cleaned = dir.trim().replace(/^\/+|\/+$/g, "");
-    return cleaned || DEFAULT_SETTINGS.outputDir;
-  }
-
-  private async ensureFolderExists(folderPath: string): Promise<void> {
-    const parts = folderPath.split("/").filter(Boolean);
-    let currentPath = "";
-
-    for (const part of parts) {
-      currentPath = currentPath ? `${currentPath}/${part}` : part;
-      const existing = this.app.vault.getAbstractFileByPath(currentPath);
-      if (!existing) {
-        await this.app.vault.createFolder(currentPath);
-      }
-    }
   }
 
   private async loadSettings(): Promise<void> {
@@ -178,7 +129,7 @@ class CanvasExporterSettingTab extends PluginSettingTab {
 
     containerEl.createEl("h2", { text: "Canvas to HTML" });
     containerEl.createEl("p", {
-      text: "Exportiert .canvas-Dateien als eigenständige HTML-Dateien. Diese stabile Basis unterstützt aktuell vor allem Text-, Link-, Datei- und Gruppen-Knoten.",
+      text: "Exportiert ein portables Paket pro Canvas mit index.html sowie assets/images und assets/files. Markdown-Dateiknoten werden dabei zusätzlich als einfache HTML-Unterseiten exportiert.",
     });
 
     new Setting(containerEl)
@@ -202,16 +153,6 @@ class CanvasExporterSettingTab extends PluginSettingTab {
             this.plugin.settings.outputDir = value || DEFAULT_SETTINGS.outputDir;
             await this.plugin.saveSettings();
           }),
-      );
-
-    new Setting(containerEl)
-      .setName("Bildpfade als Bilder ausgeben")
-      .setDesc("Versucht bei Bild-Dateiknoten ein img-Element mit dem Vault-Pfad zu erzeugen. Das ist nur ein erster Basis-Support, keine echte Einbettung.")
-      .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.exportImages).onChange(async (value) => {
-          this.plugin.settings.exportImages = value;
-          await this.plugin.saveSettings();
-        }),
       );
   }
 }
