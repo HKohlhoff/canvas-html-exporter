@@ -152,7 +152,7 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       line-height: 1.55;
       word-break: break-word;
     }
-    .node-content h1, .node-content h2, .node-content h3, .node-content h4 {
+    .node-content h1, .node-content h2, .node-content h3, .node-content h4, .node-content h5, .node-content h6 {
       margin: 0.5em 0 0.35em;
       line-height: 1.25;
     }
@@ -196,6 +196,17 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       height: auto;
       border-radius: 8px;
       margin: 0.6em 0;
+    }
+    .node-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.7em 0;
+    }
+    .node-content th,
+    .node-content td {
+      border: 1px solid ${theme.canvasBorder};
+      padding: 6px 8px;
+      text-align: left;
     }
     .file-chip, .link-chip {
       display: inline-block;
@@ -270,14 +281,29 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
     .md-card-link .md-card-preview h6 {
       margin-top: 0.2em;
       margin-bottom: 0.35em;
-      font-size: 1em;
+      line-height: 1.2;
     }
+    .md-card-link .md-card-preview h1 { font-size: 1.35em; }
+    .md-card-link .md-card-preview h2 { font-size: 1.22em; }
+    .md-card-link .md-card-preview h3 { font-size: 1.12em; }
+    .md-card-link .md-card-preview h4 { font-size: 1.04em; }
+    .md-card-link .md-card-preview h5 { font-size: 0.98em; }
+    .md-card-link .md-card-preview h6 { font-size: 0.94em; }
     .md-card-link .md-card-preview pre {
       max-height: 7.5em;
       overflow: hidden;
     }
     .md-card-link .md-card-preview table {
+      width: 100%;
+      border-collapse: collapse;
       font-size: 0.9em;
+      margin: 0.5em 0;
+    }
+    .md-card-link .md-card-preview th,
+    .md-card-link .md-card-preview td {
+      border: 1px solid ${theme.canvasBorder};
+      padding: 4px 6px;
+      text-align: left;
     }
     .md-page {
       max-width: 960px;
@@ -671,13 +697,18 @@ export function markdownToHtml(markdown: string): string {
       if (/^[-*+]\s+/.test(currentTrimmed)) break;
       if (/^\d+\.\s+/.test(currentTrimmed)) break;
       if (isTableStart(lines, i)) break;
-      paraLines.push(currentTrimmed);
+      paraLines.push(current.replace(/\s+$/, ""));
       i += 1;
     }
-    out.push(`<p>${renderInline(paraLines.join(" "))}</p>`);
+    out.push(`<p>${renderParagraphLines(paraLines)}</p>`);
   }
 
   return out.join("\n");
+}
+
+
+function renderParagraphLines(lines: string[]): string {
+  return renderInline(lines.join("\n")).replace(/\n/g, "<br>\n");
 }
 
 function isTableStart(lines: string[], index: number): boolean {
