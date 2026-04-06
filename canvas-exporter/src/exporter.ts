@@ -476,6 +476,13 @@ function normalizeWikiTarget(value: string): string {
   return out.trim();
 }
 
+function extractWikiAlias(value: string): string | null {
+  const pipeIndex = value.indexOf("|");
+  if (pipeIndex < 0) return null;
+  const alias = value.slice(pipeIndex + 1).trim();
+  return alias || null;
+}
+
 function isImageExt(ext: string): boolean {
   return ["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp"].includes(ext.toLowerCase());
 }
