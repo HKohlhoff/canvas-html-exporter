@@ -297,7 +297,7 @@ async function rewriteWikiLinks(
     } else {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false, mode);
       if (resolved) {
-        replacement = `<a href="${escapeHtmlAttr(resolved.href)}">${escapeHtmlAttr(target)}</a>`;
+        replacement = `<a href="${escapeHtmlAttr(resolved.href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlAttr(target)}</a>`;
       }
     }
 
@@ -317,7 +317,7 @@ async function rewriteWikiLinks(
       continue;
     }
 
-    const replacement = `<a href="${escapeHtmlAttr(resolved.href)}">${escapeHtmlAttr(alias)}</a>`;
+    const replacement = `<a href="${escapeHtmlAttr(resolved.href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlAttr(alias)}</a>`;
     result = result.replace(original, replacement);
   }
 
