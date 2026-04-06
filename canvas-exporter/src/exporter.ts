@@ -119,10 +119,16 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   }
 
   if (ext === "md") {
-    const exportHtmlPath = await exportMarkdownNote(ctx, file);
+    let exportHtmlPath: string | undefined;
+    let previewText: string | undefined;
+    let previewHtml: string | undefined;
 
-    let previewText = "";
-    let previewHtml = "";
+    try {
+      exportHtmlPath = await exportMarkdownNote(ctx, file);
+    } catch (error) {
+      console.error(`[canvas-exporter] Markdown-Seitenexport fehlgeschlagen für ${file.path}`, error);
+    }
+
     try {
       const preview = await buildMarkdownPreview(ctx, file);
       previewText = preview.text;
@@ -131,11 +137,23 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       console.error(`[canvas-exporter] Markdown-Vorschau fehlgeschlagen für ${file.path}`, error);
     }
 
+    if (exportHtmlPath) {
+      return {
+        ...node,
+        displayName: file.basename,
+        fileKind: "markdown",
+        exportHtmlPath,
+        previewText: previewText || undefined,
+        previewHtml: previewHtml || undefined,
+      };
+    }
+
+    const fallbackExportPath = await copyVaultFile(ctx, file, "file");
     return {
       ...node,
       displayName: file.basename,
-      fileKind: "markdown",
-      exportHtmlPath,
+      fileKind: "file",
+      exportPath: fallbackExportPath,
       previewText: previewText || undefined,
       previewHtml: previewHtml || undefined,
     };
@@ -257,11 +275,22 @@ async function rewriteWikiLinks(
     const targetFile = resolveLinkedFileForEmbed(ctx, sourceFile, target);
     let replacement = original;
 
-    if (targetFile.extension.toLowerCase() === "md") {
+    if (!targetFile) {
+      replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
+    } else if (targetFile.extension.toLowerCase() === "md") {
       if (mode === "page") {
-        await exportMarkdownNote(ctx, targetFile);
+        try {
+          await exportMarkdownNote(ctx, targetFile);
+        } catch (error) {
+          console.error(`[canvas-exporter] Markdown-Embed-Seitenexport fehlgeschlagen für ${targetFile.path}`, error);
+        }
       }
-      replacement = await exportMarkdownContentInline(ctx, targetFile);
+      try {
+        replacement = await exportMarkdownContentInline(ctx, targetFile);
+      } catch (error) {
+        console.error(`[canvas-exporter] Markdown-Embed-Inline-Export fehlgeschlagen für ${targetFile.path}`, error);
+        replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
+      }
     } else if (isImageExt(targetFile.extension.toLowerCase())) {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, true, mode);
       if (resolved) {
@@ -297,10 +326,10 @@ async function rewriteWikiLinks(
   return result;
 }
 
-function resolveLinkedFileForEmbed(ctx: MarkdownContext, sourceFile: TFile, target: string): TFile {
+function resolveLinkedFileForEmbed(ctx: MarkdownContext, sourceFile: TFile, target: string): TFile | null {
   const resolved = resolveLinkedVaultFile(ctx.app, sourceFile, normalizeWikiTarget(target));
   if (!(resolved instanceof TFile)) {
-    throw new Error(`Embed-Ziel nicht gefunden: ${target}`);
+    return null;
   }
   return resolved;
 }
