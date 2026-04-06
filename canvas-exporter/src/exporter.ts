@@ -551,8 +551,6 @@ function normalizeWikiTarget(value: string): string {
   } else if (out.startsWith("[[") && out.endsWith("]]")) {
     out = out.slice(2, -2);
   }
-  const pipeIndex = out.indexOf("|");
-  if (pipeIndex >= 0) out = out.slice(0, pipeIndex);
   return out.trim();
 }
 
