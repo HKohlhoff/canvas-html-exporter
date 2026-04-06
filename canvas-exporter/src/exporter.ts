@@ -120,14 +120,24 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
 
   if (ext === "md") {
     const exportHtmlPath = await exportMarkdownNote(ctx, file);
-    const preview = await buildMarkdownPreview(ctx, file);
+
+    let previewText = "";
+    let previewHtml = "";
+    try {
+      const preview = await buildMarkdownPreview(ctx, file);
+      previewText = preview.text;
+      previewHtml = preview.html;
+    } catch (error) {
+      console.error(`[canvas-exporter] Markdown-Vorschau fehlgeschlagen für ${file.path}`, error);
+    }
+
     return {
       ...node,
       displayName: file.basename,
       fileKind: "markdown",
       exportHtmlPath,
-      previewText: preview.text,
-      previewHtml: preview.html,
+      previewText: previewText || undefined,
+      previewHtml: previewHtml || undefined,
     };
   }
 
@@ -365,8 +375,15 @@ async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 220);
+
   let html = markdownToHtml(previewSource);
-  html = await rewriteMarkdownHtmlAssets(ctx, file, html, "inline");
+  try {
+    html = await rewriteMarkdownHtmlAssets(ctx, file, html, "inline");
+  } catch (error) {
+    console.error(`[canvas-exporter] Vorschau-Render fehlgeschlagen für ${file.path}`, error);
+    html = markdownToHtml(previewSource);
+  }
+
   return { text, html };
 }
 
