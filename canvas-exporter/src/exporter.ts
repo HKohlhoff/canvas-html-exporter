@@ -151,8 +151,10 @@ async function renderMarkdownFileToHtml(
   file: TFile,
   mode: "page" | "inline",
 ): Promise<string> {
-  const cached = ctx.htmlMap.get(file.path);
-  if (cached && mode === "page") return cached;
+  if (mode === "page") {
+    const cached = ctx.htmlMap.get(file.path);
+    if (cached) return cached;
+  }
 
   if (ctx.markdownStack.has(file.path)) {
     return mode === "page"
@@ -167,7 +169,6 @@ async function renderMarkdownFileToHtml(
     htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, mode);
 
     if (mode === "inline") {
-      htmlBody = await rewriteWikiLinks(ctx, file, htmlBody, mode);
       return htmlBody;
     }
 
@@ -234,13 +235,14 @@ async function rewriteWikiLinks(
   for (const match of embedMatches) {
     const original = match[0];
     const target = match[1] || "";
+    const normalizedTarget = normalizeWikiTarget(target);
     const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, true, mode);
     if (!resolved) continue;
 
     const replacement =
       resolved.kind === "markdown"
         ? mode === "inline"
-          ? await exportMarkdownContentInline(ctx, resolveLinkedFileForEmbed(ctx, sourceFile, target))
+          ? await exportMarkdownContentInline(ctx, resolveLinkedFileForEmbed(ctx, sourceFile, normalizedTarget))
           : `<a href="${escapeHtmlAttr(resolved.href)}" class="md-embed-link">${escapeHtmlAttr(target)}</a>`
         : resolved.kind === "image"
           ? `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(target)}">`
@@ -313,10 +315,11 @@ async function resolveObsidianTarget(
   }
 
   if (resolved.extension.toLowerCase() === "md") {
-    if (allowMarkdownEmbed && mode === "inline") {
-      await exportMarkdownNote(ctx, resolved);
-      const html = await exportMarkdownContentInline(ctx, resolved);
-      return { href: html, found: true, kind: "markdown", displayText: resolved.basename };
+    if (mode === "inline" && allowMarkdownEmbed) {
+      const targetFile = resolved;
+      await exportMarkdownNote(ctx, targetFile);
+      const html = await exportMarkdownContentInline(ctx, targetFile);
+      return { href: html, found: true, kind: "markdown", displayText: targetFile.basename };
     }
 
     const exported = await exportMarkdownNote(ctx, resolved);
