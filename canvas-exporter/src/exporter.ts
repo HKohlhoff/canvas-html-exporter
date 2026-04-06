@@ -377,8 +377,7 @@ async function resolveObsidianTarget(
   if (resolved.extension.toLowerCase() === "md") {
     const cached = ctx.htmlMap.get(resolved.path);
     const exported = cached || await exportMarkdownNote(ctx, resolved);
-    const href = normalizeExportHref(exported);
-    return { href: `${href}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
+    return { href: `${exported}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
 
   const rel = await copyVaultFile(ctx, resolved, expectImage || isImageExt(resolved.extension.toLowerCase()) ? "image" : "file");
