@@ -198,6 +198,8 @@ async function rewriteMarkdownHtmlAssets(
   for (const match of imgMatches) {
     const original = match[0];
     const target = match[1] || "";
+    if (!shouldRewriteInternalTarget(target)) continue;
+
     const resolved = await exportInternalTarget(ctx, sourceFile, target, true);
     if (resolved) {
       const replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(match[2] || "")}">`;
@@ -209,9 +211,11 @@ async function rewriteMarkdownHtmlAssets(
   for (const match of linkMatches) {
     const original = match[0];
     const target = match[1] || "";
-    const label = match[3] || "";
+    if (!shouldRewriteInternalTarget(target)) continue;
+
     const resolved = await exportInternalTarget(ctx, sourceFile, target, false);
     if (resolved) {
+      const label = match[3] || "";
       const attrs = match[2] || "";
       const replacement = `<a href="${escapeHtmlAttr(resolved.href)}"${attrs}>${label}</a>`;
       result = result.replace(original, replacement);
@@ -303,10 +307,13 @@ async function resolveObsidianTarget(
 ): Promise<ResolvedInternalTarget | null> {
   const target = normalizeWikiTarget(rawTarget.trim());
   if (!target) return null;
+  if (!shouldRewriteInternalTarget(target)) return null;
   if (isExternalLink(target)) return { href: target, found: true, kind: "external" };
   if (target.startsWith("#")) return { href: target, found: true, kind: "anchor" };
 
   const { path: cleaned, suffix } = splitTargetSuffix(target);
+  if (!shouldRewriteInternalTarget(cleaned)) return null;
+
   const resolved = resolveLinkedVaultFile(ctx.app, sourceFile, cleaned);
   if (!(resolved instanceof TFile)) {
     return {
@@ -450,7 +457,31 @@ function resolveLinkedVaultFile(app: App, sourceFile: TFile, target: string): TA
 }
 
 function isExternalLink(value: string): boolean {
-  return /^(https?:|mailto:|file:)/i.test(value);
+  return /^(https?:|mailto:|file:|javascript:)/i.test(value);
+}
+
+function shouldRewriteInternalTarget(target: string): boolean {
+  const cleaned = target.trim();
+  if (!cleaned) return false;
+  if (isExternalLink(cleaned)) return false;
+  if (cleaned.startsWith("#")) return false;
+
+  const lower = cleaned.toLowerCase();
+  if (
+    lower.endsWith(".html") ||
+    lower.endsWith(".png") ||
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg") ||
+    lower.endsWith(".gif") ||
+    lower.endsWith(".svg") ||
+    lower.endsWith(".webp") ||
+    lower.endsWith(".bmp") ||
+    lower.endsWith(".pdf")
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function splitTargetSuffix(value: string): { path: string; suffix: string } {
