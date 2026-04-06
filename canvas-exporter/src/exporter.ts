@@ -128,9 +128,14 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
     let exportHtmlPath: string | undefined;
     let previewText: string | undefined;
     let previewHtml: string | undefined;
+    let canvasHref: string | undefined;
 
     try {
       exportHtmlPath = await exportMarkdownNote(ctx, file);
+      if (exportHtmlPath) {
+        const outputName = exportHtmlPath.split("/").pop() || exportHtmlPath;
+        canvasHref = normalizeExportHref(`assets/files/${outputName}`);
+      }
     } catch (error) {
       console.error(`[canvas-exporter] Markdown-Seitenexport fehlgeschlagen für ${file.path}`, error);
     }
@@ -149,6 +154,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
         displayName: file.basename,
         fileKind: "markdown",
         exportHtmlPath,
+        canvasHref,
         previewText: previewText || undefined,
         previewHtml: previewHtml || undefined,
       };
