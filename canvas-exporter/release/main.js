@@ -81,16 +81,13 @@ function convertCanvasToHtml(data, options) {
     .viewport {
       overflow: auto;
       padding: 16px 24px 28px;
+      height: calc(100vh - 132px);
     }
     #canvas {
       position: relative;
       width: ${bounds.width}px;
       height: ${bounds.height}px;
       margin: 0 auto;
-      background: ${theme.canvasBackground};
-      border: 1px solid ${theme.canvasBorder};
-      border-radius: 14px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
       transform-origin: top left;
     }
     #edge-layer {
@@ -112,6 +109,8 @@ function convertCanvasToHtml(data, options) {
       box-shadow: 0 3px 14px rgba(0,0,0,0.12);
       z-index: 2;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     .node.group {
       background: ${theme.groupBackground};
@@ -127,6 +126,9 @@ function convertCanvasToHtml(data, options) {
     .node-content {
       line-height: 1.55;
       word-break: break-word;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
     }
     .node-content h1, .node-content h2, .node-content h3, .node-content h4, .node-content h5, .node-content h6 {
       margin: 0.5em 0 0.35em;
@@ -169,7 +171,6 @@ function convertCanvasToHtml(data, options) {
     .node-content img {
       display: block;
       max-width: 100%;
-      height: auto;
       border-radius: 8px;
       margin: 0.6em 0;
     }
@@ -224,11 +225,13 @@ function convertCanvasToHtml(data, options) {
       pointer-events: none;
     }
     .md-card {
-      display: block;
+      display: flex;
+      flex-direction: column;
       color: inherit;
       margin: -12px -14px;
       padding: 12px 14px;
-      min-height: calc(100% + 24px);
+      height: calc(100% + 24px);
+      overflow: hidden;
     }
     .md-card-title-link {
       color: inherit;
@@ -243,7 +246,8 @@ function convertCanvasToHtml(data, options) {
       color: ${theme.mutedText};
       font-size: 0.92em;
       margin: 0.2em 0 0;
-      max-height: calc(100% - 28px);
+      flex: 1 1 auto;
+      min-height: 0;
       overflow: hidden;
     }
     .md-card-preview-text {
@@ -319,6 +323,7 @@ function convertCanvasToHtml(data, options) {
     (() => {
       const edgeLayer = document.getElementById("edge-layer");
       const canvas = document.getElementById("canvas");
+      const viewport = document.querySelector(".viewport");
       const edgeColor = ${JSON.stringify(theme.edge)};
       const textColor = ${JSON.stringify(theme.text)};
       const obsidianColors = ${JSON.stringify(
@@ -345,13 +350,15 @@ function convertCanvasToHtml(data, options) {
       function createMarker(defs, id, fill) {
         const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
         marker.setAttribute("id", id);
-        marker.setAttribute("markerWidth", "10");
-        marker.setAttribute("markerHeight", "7");
-        marker.setAttribute("refX", "9");
-        marker.setAttribute("refY", "3.5");
+        marker.setAttribute("viewBox", "0 0 8 8");
+        marker.setAttribute("markerWidth", "15");
+        marker.setAttribute("markerHeight", "13");
+        marker.setAttribute("refX", "8");
+        marker.setAttribute("refY", "4");
         marker.setAttribute("orient", "auto");
+        marker.setAttribute("markerUnits", "userSpaceOnUse");
         const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-        polygon.setAttribute("points", "0 0, 10 3.5, 0 7");
+        polygon.setAttribute("points", "0 0, 8 4, 0 8");
         polygon.setAttribute("fill", fill);
         marker.appendChild(polygon);
         defs.appendChild(marker);
@@ -435,12 +442,22 @@ function convertCanvasToHtml(data, options) {
       };
 
       window.resetZoom = function() {
-        currentScale = 1;
-        canvas.style.transform = "scale(1)";
+        const padding = 24;
+        const availableWidth = Math.max(100, viewport.clientWidth - padding * 2);
+        const availableHeight = Math.max(100, viewport.clientHeight - padding * 2);
+        const scaleX = availableWidth / canvas.offsetWidth;
+        const scaleY = availableHeight / canvas.offsetHeight;
+        currentScale = Math.min(scaleX, scaleY, 1);
+        canvas.style.transform = "scale(" + currentScale + ")";
+        viewport.scrollTo({ left: 0, top: 0, behavior: "auto" });
       };
 
       drawEdges();
-      window.addEventListener("resize", drawEdges);
+      window.resetZoom();
+      window.addEventListener("resize", () => {
+        drawEdges();
+        window.resetZoom();
+      });
     })();
   </script>
 </body>
@@ -497,7 +514,7 @@ function buildMarkdownDocumentHtml(title, bodyHtml, darkMode) {
       color: ${theme.mutedText};
     }
     hr { border: none; border-top: 1px solid ${theme.rule}; margin: 1em 0; }
-    img { display: block; max-width: 100%; height: auto; border-radius: 8px; margin: 0.8em 0; }
+    img { display: block; max-width: 100%; border-radius: 8px; margin: 0.8em 0; }
     table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
     th, td { border: 1px solid ${theme.canvasBorder}; padding: 8px 10px; text-align: left; }
     .unresolved-link {
@@ -528,7 +545,7 @@ function renderNode(node, offsetX, offsetY, theme) {
   return `<div
     id="node-${escapeAttribute(node.id)}"
     class="${classes}"
-    style="left:${left}px;top:${top}px;width:${width}px;min-height:${height}px;background:${background};border-color:${border};"
+    style="left:${left}px;top:${top}px;width:${width}px;height:${height}px;background:${background};border-color:${border};"
   >${title}<div class="node-content">${content}</div></div>`;
 }
 function renderNodeContent(node) {
@@ -957,6 +974,51 @@ async function exportMarkdownNote(ctx, file) {
 async function exportMarkdownContentInline(ctx, file) {
   return renderMarkdownFileToHtml(ctx, file, "inline", "canvas");
 }
+async function exportMarkdownSectionInline(ctx, file, heading) {
+  const content = stripFrontmatter(await ctx.app.vault.read(file));
+  const section = extractMarkdownHeadingSection(content, heading);
+  if (!section)
+    return "";
+  let htmlBody = markdownToHtml(section);
+  htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", "canvas");
+  return htmlBody;
+}
+function extractMarkdownHeadingSection(markdown, headingRef) {
+  const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
+  const ref = normalizeHeadingRef(headingRef);
+  if (!ref)
+    return markdown;
+  let start = -1;
+  let level = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^(#{1,6})\s+(.+?)\s*$/.exec(lines[i] ?? "");
+    if (!m)
+      continue;
+    const text = m[2].trim();
+    if (normalizeHeadingRef(text) === ref) {
+      start = i;
+      level = m[1].length;
+      break;
+    }
+  }
+  if (start < 0)
+    return "";
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    const m = /^(#{1,6})\s+(.+?)\s*$/.exec(lines[i] ?? "");
+    if (!m)
+      continue;
+    const nextLevel = m[1].length;
+    if (nextLevel <= level) {
+      end = i;
+      break;
+    }
+  }
+  return lines.slice(start, end).join("\n").trim();
+}
+function normalizeHeadingRef(value) {
+  return String(value || "").trim().toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^[-]+|[-]+$/g, "");
+}
 async function renderMarkdownFileToHtml(ctx, file, mode, linkBase) {
   const activeStack = mode === "page" ? ctx.pageStack : ctx.inlineStack;
   const cached = mode === "page" ? ctx.htmlMap.get(file.path) : null;
@@ -1041,7 +1103,10 @@ async function rewriteWikiLinks(ctx, sourceFile, html, mode, linkBase) {
         if (mode === "page") {
           await exportMarkdownNote(ctx, targetFile);
         }
-        replacement = await exportMarkdownContentInline(ctx, targetFile);
+        replacement = parsedTargetSection(parsed.core) ? await exportMarkdownSectionInline(ctx, targetFile, parsedTargetSection(parsed.core)) : await exportMarkdownContentInline(ctx, targetFile);
+        if (!replacement) {
+          replacement = `<span class="unresolved-link">Nicht aufl\xF6sbarer Embed: ${escapeHtmlAttr(target)}</span>`;
+        }
       } catch (error) {
         console.error(`[canvas-exporter] Markdown-Embed-Export fehlgeschlagen f\xFCr ${targetFile.path}`, error);
         replacement = `<span class="unresolved-link">Nicht aufl\xF6sbarer Embed: ${escapeHtmlAttr(target)}</span>`;
@@ -1254,6 +1319,13 @@ function shouldRewriteInternalTarget(target) {
     return false;
   }
   return true;
+}
+function parsedTargetSection(target) {
+  const hashIndex = target.indexOf("#");
+  if (hashIndex < 0)
+    return null;
+  const section = target.slice(hashIndex + 1).trim();
+  return section || null;
 }
 function splitTargetSuffix(value) {
   const hashIndex = value.indexOf("#");

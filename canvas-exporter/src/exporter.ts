@@ -188,6 +188,62 @@ async function exportMarkdownContentInline(ctx: MarkdownContext, file: TFile): P
   return renderMarkdownFileToHtml(ctx, file, "inline", "canvas");
 }
 
+async function exportMarkdownSectionInline(ctx: MarkdownContext, file: TFile, heading: string): Promise<string> {
+  const content = stripFrontmatter(await ctx.app.vault.read(file));
+  const section = extractMarkdownHeadingSection(content, heading);
+  if (!section) return "";
+  let htmlBody = markdownToHtml(section);
+  htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", "canvas");
+  return htmlBody;
+}
+
+function extractMarkdownHeadingSection(markdown: string, headingRef: string): string {
+  const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
+  const ref = normalizeHeadingRef(headingRef);
+  if (!ref) return markdown;
+
+  let start = -1;
+  let level = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^(#{1,6})\s+(.+?)\s*$/.exec(lines[i] ?? "");
+    if (!m) continue;
+    const text = m[2].trim();
+    if (normalizeHeadingRef(text) === ref) {
+      start = i;
+      level = m[1].length;
+      break;
+    }
+  }
+
+  if (start < 0) return "";
+
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    const m = /^(#{1,6})\s+(.+?)\s*$/.exec(lines[i] ?? "");
+    if (!m) continue;
+    const nextLevel = m[1].length;
+    if (nextLevel <= level) {
+      end = i;
+      break;
+    }
+  }
+
+  return lines.slice(start, end).join("\n").trim();
+}
+
+function normalizeHeadingRef(value: string): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-]+|[-]+$/g, "");
+}
+
 async function renderMarkdownFileToHtml(
   ctx: MarkdownContext,
   file: TFile,
@@ -306,7 +362,12 @@ async function rewriteWikiLinks(
         if (mode === "page") {
           await exportMarkdownNote(ctx, targetFile);
         }
-        replacement = await exportMarkdownContentInline(ctx, targetFile);
+        replacement = parsedTargetSection(parsed.core)
+          ? await exportMarkdownSectionInline(ctx, targetFile, parsedTargetSection(parsed.core)!)
+          : await exportMarkdownContentInline(ctx, targetFile);
+        if (!replacement) {
+          replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
+        }
       } catch (error) {
         console.error(`[canvas-exporter] Markdown-Embed-Export fehlgeschlagen für ${targetFile.path}`, error);
         replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
@@ -576,6 +637,14 @@ function shouldRewriteInternalTarget(target: string): boolean {
   }
 
   return true;
+}
+
+
+function parsedTargetSection(target: string): string | null {
+  const hashIndex = target.indexOf("#");
+  if (hashIndex < 0) return null;
+  const section = target.slice(hashIndex + 1).trim();
+  return section || null;
 }
 
 function splitTargetSuffix(value: string): { path: string; suffix: string } {
