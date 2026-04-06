@@ -247,17 +247,20 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       stroke: none;
       pointer-events: none;
     }
-    .md-card-link {
+    .md-card {
       display: block;
       color: inherit;
-      text-decoration: none;
       margin: -12px -14px;
       padding: 12px 14px;
       min-height: calc(100% + 24px);
+    }
+    .md-card-title-link {
+      color: inherit;
+      text-decoration: none;
       cursor: pointer;
     }
-    .md-card-link:hover {
-      background: ${theme.chipBackground};
+    .md-card-title-link:hover {
+      text-decoration: underline;
     }
     .md-card-title { font-weight: 700; margin-bottom: 8px; }
     .md-card-preview {
@@ -273,34 +276,34 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       margin: 0.35em 0 0;
       overflow: hidden;
     }
-    .md-card-link .md-card-preview h1,
-    .md-card-link .md-card-preview h2,
-    .md-card-link .md-card-preview h3,
-    .md-card-link .md-card-preview h4,
-    .md-card-link .md-card-preview h5,
-    .md-card-link .md-card-preview h6 {
+    .md-card-preview h1,
+    .md-card-preview h2,
+    .md-card-preview h3,
+    .md-card-preview h4,
+    .md-card-preview h5,
+    .md-card-preview h6 {
       margin-top: 0.2em;
       margin-bottom: 0.35em;
       line-height: 1.2;
     }
-    .md-card-link .md-card-preview h1 { font-size: 1.35em; }
-    .md-card-link .md-card-preview h2 { font-size: 1.22em; }
-    .md-card-link .md-card-preview h3 { font-size: 1.12em; }
-    .md-card-link .md-card-preview h4 { font-size: 1.04em; }
-    .md-card-link .md-card-preview h5 { font-size: 0.98em; }
-    .md-card-link .md-card-preview h6 { font-size: 0.94em; }
-    .md-card-link .md-card-preview pre {
+    .md-card-preview h1 { font-size: 1.35em; }
+    .md-card-preview h2 { font-size: 1.22em; }
+    .md-card-preview h3 { font-size: 1.12em; }
+    .md-card-preview h4 { font-size: 1.04em; }
+    .md-card-preview h5 { font-size: 0.98em; }
+    .md-card-preview h6 { font-size: 0.94em; }
+    .md-card-preview pre {
       max-height: 7.5em;
       overflow: hidden;
     }
-    .md-card-link .md-card-preview table {
+    .md-card-preview table {
       width: 100%;
       border-collapse: collapse;
       font-size: 0.9em;
       margin: 0.5em 0;
     }
-    .md-card-link .md-card-preview th,
-    .md-card-link .md-card-preview td {
+    .md-card-preview th,
+    .md-card-preview td {
       border: 1px solid ${theme.canvasBorder};
       padding: 4px 6px;
       text-align: left;
@@ -589,7 +592,8 @@ function renderNodeContent(node: CanvasNode): string {
       const preview = node.previewHtml
         ? `<div class="md-card-preview">${node.previewHtml}</div>`
         : (node.previewText ? `<p class="md-card-preview-text">${escapeHtml(node.previewText)}</p>` : "");
-      return `<a class="md-card-link" href="${href}" target="_blank" rel="noopener noreferrer"><div class="md-card-title">${displayName}</div>${preview}</a>`;
+
+      return `<div class="md-card"><a class="md-card-title-link" href="${href}" target="_blank" rel="noopener noreferrer"><div class="md-card-title">${displayName}</div></a>${preview}</div>`;
     }
 
     if (!href) return "<p>Leerer Datei-Knoten</p>";
