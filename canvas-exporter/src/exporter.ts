@@ -228,7 +228,8 @@ async function rewriteMarkdownHtmlAssets(
   for (const match of imgMatches) {
     const original = match[0];
     const target = match[1] || "";
-    if (!shouldRewriteInternalTarget(target)) continue;
+    const { path: targetPath } = splitTargetSuffix(target);
+    if (!shouldRewriteInternalTarget(targetPath)) continue;
 
     const resolved = await exportInternalTarget(ctx, sourceFile, target, true);
     if (resolved) {
@@ -241,7 +242,8 @@ async function rewriteMarkdownHtmlAssets(
   for (const match of linkMatches) {
     const original = match[0];
     const target = match[1] || "";
-    if (!shouldRewriteInternalTarget(target)) continue;
+    const { path: targetPath } = splitTargetSuffix(target);
+    if (!shouldRewriteInternalTarget(targetPath)) continue;
 
     const resolved = await exportInternalTarget(ctx, sourceFile, target, false);
     if (resolved) {
@@ -278,21 +280,17 @@ async function rewriteWikiLinks(
     if (!targetFile) {
       replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
     } else if (targetFile.extension.toLowerCase() === "md") {
-      if (mode === "page") {
-        try {
-          await exportMarkdownNote(ctx, targetFile);
-        } catch (error) {
-          console.error(`[canvas-exporter] Markdown-Embed-Seitenexport fehlgeschlagen für ${targetFile.path}`, error);
-        }
-      }
       try {
+        if (mode === "page") {
+          await exportMarkdownNote(ctx, targetFile);
+        }
         replacement = await exportMarkdownContentInline(ctx, targetFile);
       } catch (error) {
-        console.error(`[canvas-exporter] Markdown-Embed-Inline-Export fehlgeschlagen für ${targetFile.path}`, error);
+        console.error(`[canvas-exporter] Markdown-Embed-Export fehlgeschlagen für ${targetFile.path}`, error);
         replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
       }
     } else if (isImageExt(targetFile.extension.toLowerCase())) {
-      const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, true, mode);
+      const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, false, mode);
       if (resolved) {
         replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(target)}">`;
       }
@@ -373,10 +371,6 @@ async function resolveObsidianTarget(
   }
 
   if (resolved.extension.toLowerCase() === "md") {
-    if (mode === "inline" && allowMarkdownEmbed) {
-      return { href: "", found: true, kind: "markdown", displayText: resolved.basename };
-    }
-
     const exported = await exportMarkdownNote(ctx, resolved);
     return { href: `${exported}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
