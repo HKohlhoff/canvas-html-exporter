@@ -17,7 +17,8 @@ type MarkdownContext = {
   fileMap: Map<string, string>;
   htmlMap: Map<string, string>;
   counter: number;
-  markdownStack: Set<string>;
+  pageStack: Set<string>;
+  inlineStack: Set<string>;
 };
 
 type ResolvedInternalTarget = {
@@ -76,7 +77,8 @@ export async function exportCanvasPackage(
     fileMap: new Map<string, string>(),
     htmlMap: new Map<string, string>(),
     counter: 0,
-    markdownStack: new Set<string>(),
+    pageStack: new Set<string>(),
+    inlineStack: new Set<string>(),
   };
 
   const preparedNodes: CanvasNode[] = [];
@@ -151,18 +153,18 @@ async function renderMarkdownFileToHtml(
   file: TFile,
   mode: "page" | "inline",
 ): Promise<string> {
-  if (mode === "page") {
-    const cached = ctx.htmlMap.get(file.path);
-    if (cached) return cached;
-  }
+  const activeStack = mode === "page" ? ctx.pageStack : ctx.inlineStack;
+  const cached = mode === "page" ? ctx.htmlMap.get(file.path) : null;
 
-  if (ctx.markdownStack.has(file.path)) {
+  if (mode === "page" && cached) return cached;
+
+  if (activeStack.has(file.path)) {
     return mode === "page"
       ? toExportRelativePath(`${ctx.assetsFilesDir}/${uniqueOutputName(ctx, file.basename, "html")}`, ctx.outputRoot)
       : "";
   }
 
-  ctx.markdownStack.add(file.path);
+  activeStack.add(file.path);
   try {
     const content = stripFrontmatter(await ctx.app.vault.read(file));
     let htmlBody = markdownToHtml(content);
@@ -182,7 +184,7 @@ async function renderMarkdownFileToHtml(
     ctx.htmlMap.set(file.path, rel);
     return rel;
   } finally {
-    ctx.markdownStack.delete(file.path);
+    activeStack.delete(file.path);
   }
 }
 
@@ -240,19 +242,26 @@ async function rewriteWikiLinks(
     const original = match[0];
     const raw = match[1] || "";
     const target = normalizeWikiTarget(raw);
-    const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, true, mode);
-    if (!resolved) continue;
+    if (!target) continue;
 
+    const targetFile = resolveLinkedFileForEmbed(ctx, sourceFile, target);
     let replacement = original;
 
-    if (resolved.kind === "markdown") {
-      const targetFile = resolveLinkedFileForEmbed(ctx, sourceFile, target);
-      await exportMarkdownNote(ctx, targetFile);
+    if (targetFile.extension.toLowerCase() === "md") {
+      if (mode === "page") {
+        await exportMarkdownNote(ctx, targetFile);
+      }
       replacement = await exportMarkdownContentInline(ctx, targetFile);
-    } else if (resolved.kind === "image") {
-      replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(target)}">`;
+    } else if (isImageExt(targetFile.extension.toLowerCase())) {
+      const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, true, mode);
+      if (resolved) {
+        replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(target)}">`;
+      }
     } else {
-      replacement = `<a href="${escapeHtmlAttr(resolved.href)}">${escapeHtmlAttr(target)}</a>`;
+      const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false, mode);
+      if (resolved) {
+        replacement = `<a href="${escapeHtmlAttr(resolved.href)}">${escapeHtmlAttr(target)}</a>`;
+      }
     }
 
     result = result.replace(original, replacement);
