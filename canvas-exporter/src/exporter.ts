@@ -234,19 +234,22 @@ async function rewriteWikiLinks(
   const embedMatches = [...result.matchAll(/!\[\[([^\]]+)\]\]/g)];
   for (const match of embedMatches) {
     const original = match[0];
-    const target = match[1] || "";
-    const normalizedTarget = normalizeWikiTarget(target);
+    const raw = match[1] || "";
+    const target = normalizeWikiTarget(raw);
     const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, true, mode);
     if (!resolved) continue;
 
-    const replacement =
-      resolved.kind === "markdown"
-        ? mode === "inline"
-          ? await exportMarkdownContentInline(ctx, resolveLinkedFileForEmbed(ctx, sourceFile, normalizedTarget))
-          : `<a href="${escapeHtmlAttr(resolved.href)}" class="md-embed-link">${escapeHtmlAttr(target)}</a>`
-        : resolved.kind === "image"
-          ? `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(target)}">`
-          : `<a href="${escapeHtmlAttr(resolved.href)}">${escapeHtmlAttr(target)}</a>`;
+    let replacement = original;
+
+    if (resolved.kind === "markdown") {
+      const targetFile = resolveLinkedFileForEmbed(ctx, sourceFile, target);
+      await exportMarkdownNote(ctx, targetFile);
+      replacement = await exportMarkdownContentInline(ctx, targetFile);
+    } else if (resolved.kind === "image") {
+      replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(target)}">`;
+    } else {
+      replacement = `<a href="${escapeHtmlAttr(resolved.href)}">${escapeHtmlAttr(target)}</a>`;
+    }
 
     result = result.replace(original, replacement);
   }
@@ -316,10 +319,7 @@ async function resolveObsidianTarget(
 
   if (resolved.extension.toLowerCase() === "md") {
     if (mode === "inline" && allowMarkdownEmbed) {
-      const targetFile = resolved;
-      await exportMarkdownNote(ctx, targetFile);
-      const html = await exportMarkdownContentInline(ctx, targetFile);
-      return { href: html, found: true, kind: "markdown", displayText: targetFile.basename };
+      return { href: "", found: true, kind: "markdown", displayText: resolved.basename };
     }
 
     const exported = await exportMarkdownNote(ctx, resolved);
