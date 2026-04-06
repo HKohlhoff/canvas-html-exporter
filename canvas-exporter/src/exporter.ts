@@ -201,12 +201,22 @@ async function renderMarkdownFileToHtml(
 
   if (activeStack.has(file.path)) {
     return mode === "page"
-      ? toExportRelativePath(`${ctx.assetsFilesDir}/${uniqueOutputName(ctx, file.basename, "html")}`, ctx.outputRoot)
+      ? normalizeExportHref(ctx.htmlMap.get(file.path) || toExportRelativePath(`${ctx.assetsFilesDir}/${uniqueOutputName(ctx, file.basename, "html")}`, ctx.outputRoot))
       : "";
   }
 
   activeStack.add(file.path);
   try {
+    let outputPath = "";
+    let rel = "";
+
+    if (mode === "page") {
+      const outputName = uniqueOutputName(ctx, file.basename, "html");
+      outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
+      rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
+      ctx.htmlMap.set(file.path, rel);
+    }
+
     const content = stripFrontmatter(await ctx.app.vault.read(file));
     let htmlBody = markdownToHtml(content);
     htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, mode, linkBase);
@@ -215,14 +225,10 @@ async function renderMarkdownFileToHtml(
       return htmlBody;
     }
 
-    const outputName = uniqueOutputName(ctx, file.basename, "html");
-    const outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
     const title = file.basename;
     const htmlDoc = buildMarkdownDocumentHtml(title, htmlBody, ctx.darkMode);
     await writeTextFile(ctx.app, outputPath, htmlDoc);
 
-    const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
-    ctx.htmlMap.set(file.path, rel);
     return rel;
   } finally {
     activeStack.delete(file.path);
@@ -391,7 +397,7 @@ async function resolveObsidianTarget(
     const cached = ctx.htmlMap.get(resolved.path);
     const exported = cached || await exportMarkdownNote(ctx, resolved);
     const href = linkBase === "page"
-      ? getHrefForMarkdownPage(ctx.outputRoot, exported)
+      ? getHrefForMarkdownPage(ctx.htmlMap.get(sourceFile.path) || "", exported)
       : `${exported}`;
     return { href: `${href}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
@@ -406,8 +412,9 @@ async function resolveObsidianTarget(
 }
 
 function getHrefForMarkdownPage(currentHtmlPath: string, targetHtmlPath: string): string {
-  const currentDir = normalizePath(currentHtmlPath).split("/").slice(0, -1).join("/");
-  const target = normalizePath(targetHtmlPath);
+  const current = normalizeExportHref(currentHtmlPath || "");
+  const target = normalizeExportHref(targetHtmlPath);
+  const currentDir = current.split("/").slice(0, -1).join("/");
   const relative = currentDir ? pathRelative(currentDir, target) : target;
   return normalizeExportHref(relative);
 }
