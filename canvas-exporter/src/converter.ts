@@ -763,8 +763,8 @@ function renderInline(text: string): string {
   let html = escapeHtml(text);
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-  html = html.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '<a href="$1">$2</a>');
-  html = html.replace(/\[\[([^\]]+)\]\]/g, '<a href="$1">$1</a>');
+  html = html.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '[[${1}|${2}]]');
+  html = html.replace(/\[\[([^\]]+)\]\]/g, '[[${1}]]');
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
   html = html.replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>');
   html = html.replace(/___([^_\n]+)___/g, '<strong><em>$1</em></strong>');

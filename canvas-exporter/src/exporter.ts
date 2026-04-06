@@ -139,18 +139,37 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
 }
 
 async function exportMarkdownNote(ctx: MarkdownContext, file: TFile): Promise<string> {
+  return renderMarkdownFileToHtml(ctx, file, "page");
+}
+
+async function exportMarkdownContentInline(ctx: MarkdownContext, file: TFile): Promise<string> {
+  return renderMarkdownFileToHtml(ctx, file, "inline");
+}
+
+async function renderMarkdownFileToHtml(
+  ctx: MarkdownContext,
+  file: TFile,
+  mode: "page" | "inline",
+): Promise<string> {
   const cached = ctx.htmlMap.get(file.path);
-  if (cached) return cached;
+  if (cached && mode === "page") return cached;
 
   if (ctx.markdownStack.has(file.path)) {
-    return toExportRelativePath(`${ctx.assetsFilesDir}/${uniqueOutputName(ctx, file.basename, "html")}`, ctx.outputRoot);
+    return mode === "page"
+      ? toExportRelativePath(`${ctx.assetsFilesDir}/${uniqueOutputName(ctx, file.basename, "html")}`, ctx.outputRoot)
+      : "";
   }
 
   ctx.markdownStack.add(file.path);
   try {
     const content = stripFrontmatter(await ctx.app.vault.read(file));
     let htmlBody = markdownToHtml(content);
-    htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody);
+    htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, mode);
+
+    if (mode === "inline") {
+      htmlBody = await rewriteWikiLinks(ctx, file, htmlBody, mode);
+      return htmlBody;
+    }
 
     const outputName = uniqueOutputName(ctx, file.basename, "html");
     const outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
@@ -166,14 +185,19 @@ async function exportMarkdownNote(ctx: MarkdownContext, file: TFile): Promise<st
   }
 }
 
-async function rewriteMarkdownHtmlAssets(ctx: MarkdownContext, sourceFile: TFile, html: string): Promise<string> {
+async function rewriteMarkdownHtmlAssets(
+  ctx: MarkdownContext,
+  sourceFile: TFile,
+  html: string,
+  mode: "page" | "inline",
+): Promise<string> {
   let result = html;
 
   const imgMatches = [...result.matchAll(/<img\s+src="([^"]+)"\s+alt="([^"]*)">/g)];
   for (const match of imgMatches) {
     const original = match[0];
     const target = match[1] || "";
-    const resolved = await exportInternalTarget(ctx, sourceFile, target, true, match[2] || "");
+    const resolved = await exportInternalTarget(ctx, sourceFile, target, true);
     if (resolved) {
       const replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(match[2] || "")}">`;
       result = result.replace(original, replacement);
@@ -185,7 +209,7 @@ async function rewriteMarkdownHtmlAssets(ctx: MarkdownContext, sourceFile: TFile
     const original = match[0];
     const target = match[1] || "";
     const label = match[3] || "";
-    const resolved = await exportInternalTarget(ctx, sourceFile, target, false, label);
+    const resolved = await exportInternalTarget(ctx, sourceFile, target, false);
     if (resolved) {
       const attrs = match[2] || "";
       const replacement = `<a href="${escapeHtmlAttr(resolved.href)}"${attrs}>${label}</a>`;
@@ -193,24 +217,31 @@ async function rewriteMarkdownHtmlAssets(ctx: MarkdownContext, sourceFile: TFile
     }
   }
 
-  result = await rewriteWikiLinks(ctx, sourceFile, result);
+  result = await rewriteWikiLinks(ctx, sourceFile, result, mode);
 
   return result;
 }
 
-async function rewriteWikiLinks(ctx: MarkdownContext, sourceFile: TFile, html: string): Promise<string> {
+async function rewriteWikiLinks(
+  ctx: MarkdownContext,
+  sourceFile: TFile,
+  html: string,
+  mode: "page" | "inline",
+): Promise<string> {
   let result = html;
 
   const embedMatches = [...result.matchAll(/!\[\[([^\]]+)\]\]/g)];
   for (const match of embedMatches) {
     const original = match[0];
     const target = match[1] || "";
-    const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, true);
+    const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, true, mode);
     if (!resolved) continue;
 
     const replacement =
       resolved.kind === "markdown"
-        ? `<a href="${escapeHtmlAttr(resolved.href)}" class="md-embed-link">${escapeHtmlAttr(target)}</a>`
+        ? mode === "inline"
+          ? await exportMarkdownContentInline(ctx, resolveLinkedFileForEmbed(ctx, sourceFile, target))
+          : `<a href="${escapeHtmlAttr(resolved.href)}" class="md-embed-link">${escapeHtmlAttr(target)}</a>`
         : resolved.kind === "image"
           ? `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(target)}">`
           : `<a href="${escapeHtmlAttr(resolved.href)}">${escapeHtmlAttr(target)}</a>`;
@@ -224,7 +255,7 @@ async function rewriteWikiLinks(ctx: MarkdownContext, sourceFile: TFile, html: s
     const raw = match[1] || "";
     const target = normalizeWikiTarget(raw);
     const alias = extractWikiAlias(raw) || target;
-    const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false);
+    const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false, mode);
     if (!resolved) {
       const fallback = `<span class="unresolved-link">Nicht auflösbarer Link: ${escapeHtmlAttr(alias)}</span>`;
       result = result.replace(original, fallback);
@@ -238,14 +269,21 @@ async function rewriteWikiLinks(ctx: MarkdownContext, sourceFile: TFile, html: s
   return result;
 }
 
+function resolveLinkedFileForEmbed(ctx: MarkdownContext, sourceFile: TFile, target: string): TFile {
+  const resolved = resolveLinkedVaultFile(ctx.app, sourceFile, normalizeWikiTarget(target));
+  if (!(resolved instanceof TFile)) {
+    throw new Error(`Embed-Ziel nicht gefunden: ${target}`);
+  }
+  return resolved;
+}
+
 async function exportInternalTarget(
   ctx: MarkdownContext,
   sourceFile: TFile,
   rawTarget: string,
   expectImage: boolean,
-  displayText: string,
 ): Promise<ResolvedInternalTarget | null> {
-  const resolved = await resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, false);
+  const resolved = await resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, false, "page");
   if (!resolved) return null;
   return resolved;
 }
@@ -256,6 +294,7 @@ async function resolveObsidianTarget(
   rawTarget: string,
   expectImage: boolean,
   allowMarkdownEmbed: boolean,
+  mode: "page" | "inline",
 ): Promise<ResolvedInternalTarget | null> {
   const target = normalizeWikiTarget(rawTarget.trim());
   if (!target) return null;
@@ -274,9 +313,13 @@ async function resolveObsidianTarget(
   }
 
   if (resolved.extension.toLowerCase() === "md") {
-    const exported = allowMarkdownEmbed
-      ? await exportMarkdownContentInline(ctx, resolved)
-      : await exportMarkdownNote(ctx, resolved);
+    if (allowMarkdownEmbed && mode === "inline") {
+      await exportMarkdownNote(ctx, resolved);
+      const html = await exportMarkdownContentInline(ctx, resolved);
+      return { href: html, found: true, kind: "markdown", displayText: resolved.basename };
+    }
+
+    const exported = await exportMarkdownNote(ctx, resolved);
     return { href: `${exported}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
 
@@ -287,31 +330,6 @@ async function resolveObsidianTarget(
     kind: isImageExt(resolved.extension.toLowerCase()) ? "image" : "file",
     displayText: resolved.basename,
   };
-}
-
-async function exportMarkdownContentInline(ctx: MarkdownContext, file: TFile): Promise<string> {
-  const cached = ctx.htmlMap.get(file.path);
-  if (cached) return cached;
-
-  if (ctx.markdownStack.has(file.path)) {
-    return "";
-  }
-
-  ctx.markdownStack.add(file.path);
-  try {
-    const content = stripFrontmatter(await ctx.app.vault.read(file));
-    let htmlBody = markdownToHtml(content);
-    htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody);
-    return htmlBody;
-  } finally {
-    ctx.markdownStack.delete(file.path);
-  }
-}
-
-function extractWikiAlias(raw: string): string {
-  const pipeIndex = raw.indexOf("|");
-  if (pipeIndex < 0) return "";
-  return raw.slice(pipeIndex + 1).trim();
 }
 
 async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<{ text: string; html: string }> {
@@ -329,7 +347,7 @@ async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<
     .trim()
     .slice(0, 220);
   let html = markdownToHtml(previewSource);
-  html = await rewriteMarkdownHtmlAssets(ctx, file, html);
+  html = await rewriteMarkdownHtmlAssets(ctx, file, html, "inline");
   return { text, html };
 }
 
