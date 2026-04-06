@@ -43,6 +43,10 @@ function stripFrontmatter(markdown: string): string {
   return normalized.slice(end + 5).replace(/^\n+/, "");
 }
 
+function normalizeExportHref(href: string): string {
+  return normalizePath(href).replace(/^\/+/, "");
+}
+
 export async function exportCanvasPackage(
   app: App,
   canvasFile: TFile,
@@ -208,7 +212,7 @@ async function renderMarkdownFileToHtml(
     const htmlDoc = buildMarkdownDocumentHtml(title, htmlBody, ctx.darkMode);
     await writeTextFile(ctx.app, outputPath, htmlDoc);
 
-    const rel = toExportRelativePath(outputPath, ctx.outputRoot);
+    const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
     ctx.htmlMap.set(file.path, rel);
     return rel;
   } finally {
@@ -373,7 +377,8 @@ async function resolveObsidianTarget(
   if (resolved.extension.toLowerCase() === "md") {
     const cached = ctx.htmlMap.get(resolved.path);
     const exported = cached || await exportMarkdownNote(ctx, resolved);
-    return { href: `${exported}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
+    const href = normalizeExportHref(exported);
+    return { href: `${href}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
 
   const rel = await copyVaultFile(ctx, resolved, expectImage || isImageExt(resolved.extension.toLowerCase()) ? "image" : "file");
