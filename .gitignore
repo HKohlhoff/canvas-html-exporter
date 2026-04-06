@@ -3,3 +3,4 @@ dist/
 .obsidian/
 *.log
 .DS_Store
+.aider*
