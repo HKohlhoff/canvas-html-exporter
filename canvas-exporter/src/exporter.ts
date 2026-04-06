@@ -371,7 +371,8 @@ async function resolveObsidianTarget(
   }
 
   if (resolved.extension.toLowerCase() === "md") {
-    const exported = await exportMarkdownNote(ctx, resolved);
+    const cached = ctx.htmlMap.get(resolved.path);
+    const exported = cached || await exportMarkdownNote(ctx, resolved);
     return { href: `${exported}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
 
@@ -514,6 +515,7 @@ function shouldRewriteInternalTarget(target: string): boolean {
   if (!cleaned) return false;
   if (isExternalLink(cleaned)) return false;
   if (cleaned.startsWith("#")) return false;
+  if (cleaned.startsWith("assets/files/") || cleaned.startsWith("assets/images/")) return false;
 
   const lower = cleaned.toLowerCase();
   if (
