@@ -314,6 +314,10 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       border-radius: 14px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.12);
     }
+    .unresolved-link {
+      color: #d64545;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -518,6 +522,10 @@ export function buildMarkdownDocumentHtml(title: string, bodyHtml: string, darkM
     img { display: block; max-width: 100%; height: auto; border-radius: 8px; margin: 0.8em 0; }
     table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
     th, td { border: 1px solid ${theme.canvasBorder}; padding: 8px 10px; text-align: left; }
+    .unresolved-link {
+      color: #d64545;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -705,7 +713,6 @@ export function markdownToHtml(markdown: string): string {
 
   return out.join("\n");
 }
-
 
 function renderParagraphLines(lines: string[]): string {
   return renderInline(lines.join("\n")).replace(/\n/g, "<br>\n");

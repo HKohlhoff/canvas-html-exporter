@@ -19,6 +19,13 @@ type MarkdownContext = {
   counter: number;
 };
 
+type ResolvedInternalTarget = {
+  href: string;
+  found: boolean;
+  kind: "markdown" | "image" | "file" | "external" | "anchor" | "missing";
+  displayText?: string;
+};
+
 function stripFrontmatter(markdown: string): string {
   const normalized = markdown.replace(/\r\n/g, "\n");
 
@@ -155,9 +162,9 @@ async function rewriteMarkdownHtmlAssets(ctx: MarkdownContext, sourceFile: TFile
   for (const match of imgMatches) {
     const original = match[0];
     const target = match[1] || "";
-    const resolved = await exportLinkedTarget(ctx, sourceFile, target, true);
+    const resolved = await exportInternalTarget(ctx, sourceFile, target, true, match[2] || "");
     if (resolved) {
-      const replacement = `<img src="${escapeHtmlAttr(resolved)}" alt="${match[2] || ""}">`;
+      const replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(match[2] || "")}">`;
       result = result.replace(original, replacement);
     }
   }
@@ -166,39 +173,112 @@ async function rewriteMarkdownHtmlAssets(ctx: MarkdownContext, sourceFile: TFile
   for (const match of linkMatches) {
     const original = match[0];
     const target = match[1] || "";
-    const resolved = await exportLinkedTarget(ctx, sourceFile, target, false);
+    const label = match[3] || "";
+    const resolved = await exportInternalTarget(ctx, sourceFile, target, false, label);
     if (resolved) {
       const attrs = match[2] || "";
-      const label = match[3] || "";
-      const replacement = `<a href="${escapeHtmlAttr(resolved)}"${attrs}>${label}</a>`;
+      const replacement = `<a href="${escapeHtmlAttr(resolved.href)}"${attrs}>${label}</a>`;
       result = result.replace(original, replacement);
     }
+  }
+
+  result = await rewriteWikiLinks(ctx, sourceFile, result);
+
+  return result;
+}
+
+async function rewriteWikiLinks(ctx: MarkdownContext, sourceFile: TFile, html: string): Promise<string> {
+  let result = html;
+
+  const embedMatches = [...result.matchAll(/!\[\[([^\]]+)\]\]/g)];
+  for (const match of embedMatches) {
+    const original = match[0];
+    const target = match[1] || "";
+    const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true);
+    if (!resolved) continue;
+
+    const replacement =
+      resolved.kind === "markdown"
+        ? `<a href="${escapeHtmlAttr(resolved.href)}" class="md-embed-link">${escapeHtmlAttr(target)}</a>`
+        : resolved.kind === "image"
+          ? `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(target)}">`
+          : `<a href="${escapeHtmlAttr(resolved.href)}">${escapeHtmlAttr(target)}</a>`;
+
+    result = result.replace(original, replacement);
+  }
+
+  const wikiMatches = [...result.matchAll(/\[\[([^\]]+)\]\]/g)];
+  for (const match of wikiMatches) {
+    const original = match[0];
+    const raw = match[1] || "";
+    const target = normalizeWikiTarget(raw);
+    const alias = extractWikiAlias(raw) || target;
+    const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false);
+    if (!resolved) {
+      const fallback = `<span class="unresolved-link">Nicht auflösbarer Link: ${escapeHtmlAttr(alias)}</span>`;
+      result = result.replace(original, fallback);
+      continue;
+    }
+
+    const replacement = `<a href="${escapeHtmlAttr(resolved.href)}">${escapeHtmlAttr(alias)}</a>`;
+    result = result.replace(original, replacement);
   }
 
   return result;
 }
 
-async function exportLinkedTarget(
+async function exportInternalTarget(
   ctx: MarkdownContext,
   sourceFile: TFile,
   rawTarget: string,
   expectImage: boolean,
-): Promise<string | null> {
+  displayText: string,
+): Promise<ResolvedInternalTarget | null> {
+  const resolved = await resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage);
+  if (!resolved) return null;
+  return resolved;
+}
+
+async function resolveObsidianTarget(
+  ctx: MarkdownContext,
+  sourceFile: TFile,
+  rawTarget: string,
+  expectImage: boolean,
+): Promise<ResolvedInternalTarget | null> {
   const target = normalizeWikiTarget(rawTarget.trim());
   if (!target) return null;
-  if (isExternalLink(target) || target.startsWith("#")) return target;
+  if (isExternalLink(target)) return { href: target, found: true, kind: "external" };
+  if (target.startsWith("#")) return { href: target, found: true, kind: "anchor" };
 
   const { path: cleaned, suffix } = splitTargetSuffix(target);
   const resolved = resolveLinkedVaultFile(ctx.app, sourceFile, cleaned);
-  if (!(resolved instanceof TFile)) return null;
+  if (!(resolved instanceof TFile)) {
+    return {
+      href: `#missing-${encodeURIComponent(cleaned)}`,
+      found: false,
+      kind: "missing",
+      displayText: cleaned,
+    };
+  }
 
   if (resolved.extension.toLowerCase() === "md") {
     const exported = await exportMarkdownNote(ctx, resolved);
-    return `${exported}${suffix}`;
+    return { href: `${exported}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
 
   const rel = await copyVaultFile(ctx, resolved, expectImage || isImageExt(resolved.extension.toLowerCase()) ? "image" : "file");
-  return rel;
+  return {
+    href: `${rel}${suffix}`,
+    found: true,
+    kind: isImageExt(resolved.extension.toLowerCase()) ? "image" : "file",
+    displayText: resolved.basename,
+  };
+}
+
+function extractWikiAlias(raw: string): string {
+  const pipeIndex = raw.indexOf("|");
+  if (pipeIndex < 0) return "";
+  return raw.slice(pipeIndex + 1).trim();
 }
 
 async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<{ text: string; html: string }> {
