@@ -12,6 +12,7 @@ export interface CanvasNode {
   color?: string;
   exportPath?: string;
   exportHtmlPath?: string;
+  canvasHref?: string;
   displayName?: string;
   fileKind?: "image" | "markdown" | "pdf" | "file";
   previewText?: string;
@@ -583,7 +584,11 @@ function renderNodeContent(node: CanvasNode): string {
 
   if (type === "file") {
     const displayName = escapeHtml(node.displayName || node.file || "Datei");
-    const href = escapeAttribute(node.exportHtmlPath || node.exportPath || node.file || "");
+    const href = escapeAttribute(
+      node.fileKind === "markdown" && node.canvasHref
+        ? node.canvasHref
+        : node.exportHtmlPath || node.exportPath || node.file || "",
+    );
 
     if (node.fileKind === "image") {
       return `<a href="${href}" target="_blank" rel="noopener noreferrer"><img src="${href}" alt="${displayName}"></a>`;
