@@ -358,6 +358,14 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       const edges = ${JSON.stringify(edgesData)};
       let currentScale = 1;
 
+      function resolveEdgeColor(color) {
+        const normalized = String(color || "").trim();
+        if (!normalized) return edgeColor;
+        if (obsidianColors[normalized]) return obsidianColors[normalized];
+        if (normalized.startsWith("#")) return normalized;
+        return edgeColor;
+      }
+
       function getAnchor(el, side) {
         const left = parseFloat(el.style.left || "0");
         const top = parseFloat(el.style.top || "0");
@@ -423,7 +431,7 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
           if (edge.toSide === "top") c2y -= dy;
           if (edge.toSide === "bottom") c2y += dy;
 
-          const color = edge.color ? (obsidianColors[edge.color] || edge.color) : edgeColor;
+          const color = resolveEdgeColor(edge.color);
           const markerId = markerIdForColor(color);
           if (!seenColors.has(markerId)) {
             createMarker(defs, markerId, color);
@@ -849,16 +857,6 @@ function getNodePalette(color: string | undefined, darkMode: boolean): NodePalet
 
   if (normalized && OBSIDIAN_COLORS[normalized]) {
     return OBSIDIAN_COLORS[normalized];
-  }
-
-  const numeric = Number(normalized);
-  if (normalized !== "" && Number.isInteger(numeric)) {
-    if (OBSIDIAN_COLORS[String(numeric)]) {
-      return OBSIDIAN_COLORS[String(numeric)];
-    }
-    if (OBSIDIAN_COLORS[String(numeric - 1)]) {
-      return OBSIDIAN_COLORS[String(numeric - 1)];
-    }
   }
 
   if (normalized.startsWith("#")) {
