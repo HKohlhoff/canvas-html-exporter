@@ -11,21 +11,36 @@ const ENTRY = "src/main.ts";
 // Anpassen, falls deine Plugin-ID im manifest.json anders lautet:
 const PLUGIN_ID = "canvas-exporter";
 
-const VAULT_PLUGIN_DIR = process.env.OBSIDIAN_PLUGIN_DIR || "";
+const OBSIDIAN_PLUGIN_DIR = process.env.OBSIDIAN_PLUGIN_DIR || "";
+const VAULT_PLUGIN_DIR = OBSIDIAN_PLUGIN_DIR
+  ? path.join(OBSIDIAN_PLUGIN_DIR, PLUGIN_ID)
+  : "";
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
 function safeCopy(src, dst) {
-  if (!fs.existsSync(src)) return;
+  if (!fs.existsSync(src)) return false;
+  ensureDir(path.dirname(dst));
   fs.copyFileSync(src, dst);
+  return true;
+}
+
+function removeIfExists(file) {
+  if (fs.existsSync(file)) {
+    fs.unlinkSync(file);
+    return true;
+  }
+  return false;
 }
 
 function removeIfMissingInSource(src, dst) {
   if (!fs.existsSync(src) && fs.existsSync(dst)) {
     fs.unlinkSync(dst);
+    return true;
   }
+  return false;
 }
 
 function ensureReleaseDir() {
@@ -34,16 +49,26 @@ function ensureReleaseDir() {
 
 function copyStaticToRelease() {
   ensureReleaseDir();
-  safeCopy("manifest.json", path.join(RELEASE_DIR, "manifest.json"));
 
-  if (fs.existsSync("styles.css")) {
-    safeCopy("styles.css", path.join(RELEASE_DIR, "styles.css"));
-  } else {
-    removeIfMissingInSource(
-      "styles.css",
-      path.join(RELEASE_DIR, "styles.css")
-    );
-  }
+  const copiedManifest = safeCopy(
+    "manifest.json",
+    path.join(RELEASE_DIR, "manifest.json")
+  );
+  const copiedStyles = fs.existsSync("styles.css")
+    ? safeCopy("styles.css", path.join(RELEASE_DIR, "styles.css"))
+    : false;
+  const removedStyles = fs.existsSync("styles.css")
+    ? false
+    : removeIfMissingInSource(
+        "styles.css",
+        path.join(RELEASE_DIR, "styles.css")
+      );
+
+  console.log(
+    `[static] release sync: manifest=${
+      copiedManifest ? "copied" : "missing"
+    }, styles=${copiedStyles ? "copied" : removedStyles ? "removed" : "missing"}`
+  );
 }
 
 function ensureHotReloadMarker() {
@@ -52,22 +77,32 @@ function ensureHotReloadMarker() {
   const marker = path.join(VAULT_PLUGIN_DIR, ".hotreload");
   if (!fs.existsSync(marker)) {
     fs.writeFileSync(marker, "", "utf8");
+    console.log(`[deploy] hotreload marker erstellt: ${marker}`);
+  } else {
+    console.log(`[deploy] hotreload marker vorhanden: ${marker}`);
   }
 }
 
 function deployToVault() {
-  if (!VAULT_PLUGIN_DIR) {
-    console.log("[deploy] übersprungen, weil OBSIDIAN_PLUGIN_DIR nicht gesetzt ist");
+  if (!OBSIDIAN_PLUGIN_DIR) {
+    console.log(
+      "[deploy] übersprungen: OBSIDIAN_PLUGIN_DIR ist nicht gesetzt"
+    );
     return;
   }
 
+  ensureDir(OBSIDIAN_PLUGIN_DIR);
   ensureDir(VAULT_PLUGIN_DIR);
 
-  safeCopy(
+  console.log(`[deploy] plugin id: ${PLUGIN_ID}`);
+  console.log(`[deploy] basisordner: ${OBSIDIAN_PLUGIN_DIR}`);
+  console.log(`[deploy] zielordner: ${VAULT_PLUGIN_DIR}`);
+
+  const copiedMain = safeCopy(
     path.join(RELEASE_DIR, "main.js"),
     path.join(VAULT_PLUGIN_DIR, "main.js")
   );
-  safeCopy(
+  const copiedManifest = safeCopy(
     path.join(RELEASE_DIR, "manifest.json"),
     path.join(VAULT_PLUGIN_DIR, "manifest.json")
   );
@@ -75,13 +110,21 @@ function deployToVault() {
   const releaseCss = path.join(RELEASE_DIR, "styles.css");
   const vaultCss = path.join(VAULT_PLUGIN_DIR, "styles.css");
 
+  let cssStatus = "missing";
   if (fs.existsSync(releaseCss)) {
     safeCopy(releaseCss, vaultCss);
-  } else if (fs.existsSync(vaultCss)) {
-    fs.unlinkSync(vaultCss);
+    cssStatus = "copied";
+  } else if (removeIfExists(vaultCss)) {
+    cssStatus = "removed";
   }
 
   ensureHotReloadMarker();
+
+  console.log(
+    `[deploy] dateien: main.js=${
+      copiedMain ? "copied" : "missing"
+    }, manifest.json=${copiedManifest ? "copied" : "missing"}, styles.css=${cssStatus}`
+  );
   console.log("[deploy] release -> vault plugin folder kopiert");
 }
 
@@ -117,12 +160,7 @@ const common = {
           copyStaticToRelease();
 
           if (result.errors.length === 0) {
-            if (VAULT_PLUGIN_DIR) {
-              deployToVault();
-            } else {
-              console.log("[deploy] kein Vault-Deploy konfiguriert");
-            }
-            console.log("[static] manifest/styles in release/ aktualisiert");
+            deployToVault();
           } else {
             console.log("[deploy] übersprungen wegen Build-Fehlern");
           }
