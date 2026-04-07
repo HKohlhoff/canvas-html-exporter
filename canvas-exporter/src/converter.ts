@@ -465,17 +465,21 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       window.zoomBy = function(factor) {
         currentScale = Math.max(0.2, Math.min(4, currentScale * factor));
         canvas.style.transform = "scale(" + currentScale + ")";
+        drawEdges();
       };
 
       window.resetZoom = function() {
         const padding = 24;
         const availableWidth = Math.max(100, viewport.clientWidth - padding * 2);
         const availableHeight = Math.max(100, viewport.clientHeight - padding * 2);
-        const scaleX = availableWidth / canvas.offsetWidth;
-        const scaleY = availableHeight / canvas.offsetHeight;
+        const baseWidth = ${JSON.stringify(bounds.width)};
+        const baseHeight = ${JSON.stringify(bounds.height)};
+        const scaleX = availableWidth / baseWidth;
+        const scaleY = availableHeight / baseHeight;
         currentScale = Math.min(scaleX, scaleY, 1);
         canvas.style.transform = "scale(" + currentScale + ")";
         viewport.scrollTo({ left: 0, top: 0, behavior: "auto" });
+        drawEdges();
       };
 
       drawEdges();
