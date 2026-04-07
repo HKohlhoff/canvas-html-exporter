@@ -9,7 +9,6 @@ Diese überarbeitete Version ist bewusst reduziert und soll vor allem zuverläss
 Unterstützt werden derzeit:
 
 - Export der **aktiven Canvas-Datei** als HTML
-- Export **aller Canvas-Dateien** im Vault
 - einfache Darstellung von
   - Text-Knoten
   - Gruppen-Knoten
@@ -26,7 +25,6 @@ Unterstützt werden derzeit:
 
 Noch **nicht** stabil umgesetzt und deshalb bewusst entfernt oder nicht mehr behauptet:
 
-- echte Live-Vorschau in Obsidian
 - eingebettete Webseiten
 - Minimap
 - Suche
@@ -40,10 +38,9 @@ Die vorherige Version hatte bereits gute Ansätze, war aber an mehreren Stellen 
 
 ## Bedienung
 
-Nach dem Aktivieren des Plugins stehen zwei Commands zur Verfügung:
+Nach dem Aktivieren des Plugins steht folgender Command zur Verfügung:
 
 - **Export: Aktuelles Canvas als HTML speichern**
-- **Export: Alle Canvas-Dateien als HTML speichern**
 
 Die erzeugten HTML-Dateien werden in den eingestellten Ausgabeordner im Vault geschrieben.
 

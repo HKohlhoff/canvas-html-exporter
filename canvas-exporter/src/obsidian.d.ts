@@ -13,7 +13,6 @@ declare module "obsidian" {
   }
 
   export class Vault {
-    getFiles(): TFile[];
     read(file: TFile): Promise<string>;
     readBinary(file: TFile): Promise<ArrayBuffer>;
     create(path: string, data: string): Promise<TFile>;

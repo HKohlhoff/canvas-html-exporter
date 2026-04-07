@@ -30,14 +30,6 @@ export default class CanvasExporterPlugin extends Plugin {
       },
     });
 
-    this.addCommand({
-      id: "export-all-canvases-to-html",
-      name: "Export: Alle Canvas-Dateien als HTML speichern",
-      callback: async () => {
-        await this.exportAllCanvases();
-      },
-    });
-
     this.addSettingTab(new CanvasExporterSettingTab(this.app, this));
   }
 
@@ -58,41 +50,6 @@ export default class CanvasExporterPlugin extends Plugin {
       const message = error instanceof Error ? error.message : "Unbekannter Fehler";
       new Notice(`Canvas-Export fehlgeschlagen: ${message}`, 7000);
     }
-  }
-
-  async exportAllCanvases(): Promise<void> {
-    const canvasFiles = this.app.vault.getFiles().filter((file: TFile) => file.extension === "canvas");
-    if (canvasFiles.length === 0) {
-      new Notice("Im Vault wurden keine Canvas-Dateien gefunden.", 4000);
-      return;
-    }
-
-    let successCount = 0;
-    const failed: string[] = [];
-
-    for (const file of canvasFiles) {
-      try {
-        const result = await exportCanvasPackage(this.app, file, this.settings);
-        const html = convertCanvasToHtml(result.data, result.options);
-        await this.writeIndexFile(result.folderPath, html);
-        successCount += 1;
-      } catch (error) {
-        console.error(`[canvas-exporter] Export fehlgeschlagen für ${file.path}`, error);
-        const message = error instanceof Error ? error.message : "Unbekannter Fehler";
-        failed.push(`${file.path} (${message})`);
-      }
-    }
-
-    if (failed.length === 0) {
-      new Notice(`${successCount} Canvas-Datei(en) exportiert.`, 5000);
-      return;
-    }
-
-    if (failed.length > 0) {
-      console.error("[canvas-exporter] Fehlgeschlagene Exporte:\n" + failed.join("\n"));
-    }
-
-    new Notice(`${successCount} exportiert, ${failed.length} fehlgeschlagen. Details in der Entwicklerkonsole.`, 7000);
   }
 
   private async writeIndexFile(folderPath: string, html: string): Promise<void> {
