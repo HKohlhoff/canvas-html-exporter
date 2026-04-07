@@ -11,7 +11,7 @@ const ENTRY = "src/main.ts";
 // Anpassen, falls deine Plugin-ID im manifest.json anders lautet:
 const PLUGIN_ID = "canvas-exporter";
 
-const OBSIDIAN_PLUGIN_DIR = process.env.OBSIDIAN_PLUGIN_DIR || "";
+const OBSIDIAN_PLUGIN_DIR = process.env.OBSIDIAN_PLUGIN_DIR || "/Users/Holger/SynologyDrive/Obsidian/HolgersVault/.obsidian/plugins";
 const VAULT_PLUGIN_DIR = OBSIDIAN_PLUGIN_DIR
   ? path.join(OBSIDIAN_PLUGIN_DIR, PLUGIN_ID)
   : "";
