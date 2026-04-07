@@ -46,12 +46,12 @@ type NodePalette = {
 };
 
 const OBSIDIAN_COLORS: Record<string, NodePalette> = {
-  "1": { background: "#d73a4a22", border: "#d73a4a" },
-  "2": { background: "#e8a83822", border: "#e8a838" },
-  "3": { background: "#3eb37022", border: "#3eb370" },
-  "4": { background: "#4a90d922", border: "#4a90d9" },
-  "5": { background: "#9b59b622", border: "#9b59b6" },
-  "6": { background: "#eb6ca022", border: "#eb6ca0" },
+  "0": { background: "#d73a4a22", border: "#d73a4a" },
+  "1": { background: "#e8a83822", border: "#e8a838" },
+  "2": { background: "#3eb37022", border: "#3eb370" },
+  "3": { background: "#4a90d922", border: "#4a90d9" },
+  "4": { background: "#9b59b622", border: "#9b59b6" },
+  "5": { background: "#eb6ca022", border: "#eb6ca0" },
 };
 
 export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): string {
@@ -845,12 +845,24 @@ function getBounds(nodes: CanvasNode[]): { width: number; height: number; offset
 }
 
 function getNodePalette(color: string | undefined, darkMode: boolean): NodePalette {
-  if (color && OBSIDIAN_COLORS[color]) {
-    return OBSIDIAN_COLORS[color];
+  const normalized = (color || "").trim();
+
+  if (normalized && OBSIDIAN_COLORS[normalized]) {
+    return OBSIDIAN_COLORS[normalized];
   }
 
-  if (color && color.startsWith("#")) {
-    return { background: `${color}22`, border: color };
+  const numeric = Number(normalized);
+  if (normalized !== "" && Number.isInteger(numeric)) {
+    if (OBSIDIAN_COLORS[String(numeric)]) {
+      return OBSIDIAN_COLORS[String(numeric)];
+    }
+    if (OBSIDIAN_COLORS[String(numeric - 1)]) {
+      return OBSIDIAN_COLORS[String(numeric - 1)];
+    }
+  }
+
+  if (normalized.startsWith("#")) {
+    return { background: `${normalized}22`, border: normalized };
   }
 
   return darkMode
