@@ -95,7 +95,7 @@ export async function exportCanvasPackage(
   };
 
   const preparedNodes: CanvasNode[] = [];
-  for (const node of nodes as CanvasNode[]) {
+  for (const node of nodes) {
     preparedNodes.push(await prepareNode(ctx, node));
   }
 
@@ -632,7 +632,7 @@ function resolveLinkedVaultFile(app: App, sourceFile: TFile, target: string): TA
 }
 
 function isExternalLink(value: string): boolean {
-  return /^(https?:|mailto:|file:|javascript:)/i.test(value);
+  return /^(https?:|mailto:|file:)/i.test(value);
 }
 
 function shouldRewriteInternalTarget(target: string): boolean {
@@ -769,10 +769,6 @@ function normalizeWikiTarget(value: string): string {
     out = out.slice(2, -2);
   }
   return out.trim();
-}
-
-function extractWikiAlias(value: string): string | null {
-  return parseWikiReference(value).display;
 }
 
 function isImageExt(ext: string): boolean {

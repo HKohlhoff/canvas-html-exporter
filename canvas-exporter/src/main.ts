@@ -88,6 +88,10 @@ export default class CanvasExporterPlugin extends Plugin {
       return;
     }
 
+    if (failed.length > 0) {
+      console.error("[canvas-exporter] Fehlgeschlagene Exporte:\n" + failed.join("\n"));
+    }
+
     new Notice(`${successCount} exportiert, ${failed.length} fehlgeschlagen. Details in der Entwicklerkonsole.`, 7000);
   }
 

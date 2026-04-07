@@ -788,8 +788,12 @@ function splitTableRow(row: string): string[] {
 
 function renderInline(text: string): string {
   let html = escapeHtml(text);
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt, src) => {
+    return `<img src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}">`;
+  });
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => {
+    return `<a href="${escapeAttribute(href)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  });
   html = html.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "[[$1|$2]]");
   html = html.replace(/\[\[([^\]]+)\]\]/g, "[[$1]]");
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');

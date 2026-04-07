@@ -11,9 +11,7 @@ const ENTRY = "src/main.ts";
 // Anpassen, falls deine Plugin-ID im manifest.json anders lautet:
 const PLUGIN_ID = "canvas-exporter";
 
-// Dein Vault:
-const VAULT_PLUGIN_DIR =
-  `/Users/Holger/SynologyDrive/Obsidian/HolgersVault/.obsidian/plugins/${PLUGIN_ID}`;
+const VAULT_PLUGIN_DIR = process.env.OBSIDIAN_PLUGIN_DIR || "";
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -49,6 +47,7 @@ function copyStaticToRelease() {
 }
 
 function ensureHotReloadMarker() {
+  if (!VAULT_PLUGIN_DIR) return;
   ensureDir(VAULT_PLUGIN_DIR);
   const marker = path.join(VAULT_PLUGIN_DIR, ".hotreload");
   if (!fs.existsSync(marker)) {
@@ -57,6 +56,11 @@ function ensureHotReloadMarker() {
 }
 
 function deployToVault() {
+  if (!VAULT_PLUGIN_DIR) {
+    console.log("[deploy] übersprungen, weil OBSIDIAN_PLUGIN_DIR nicht gesetzt ist");
+    return;
+  }
+
   ensureDir(VAULT_PLUGIN_DIR);
 
   safeCopy(
@@ -113,7 +117,11 @@ const common = {
           copyStaticToRelease();
 
           if (result.errors.length === 0) {
-            deployToVault();
+            if (VAULT_PLUGIN_DIR) {
+              deployToVault();
+            } else {
+              console.log("[deploy] kein Vault-Deploy konfiguriert");
+            }
             console.log("[static] manifest/styles in release/ aktualisiert");
           } else {
             console.log("[deploy] übersprungen wegen Build-Fehlern");
