@@ -55,7 +55,13 @@ export async function exportCanvasPackage(
   settings: ExportSettings,
 ): Promise<{ folderPath: string; data: PreparedCanvasData; options: ExportOptions }> {
   const rawContent = await app.vault.read(canvasFile);
-  const parsed = JSON.parse(rawContent) as Partial<CanvasData>;
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(rawContent);
+  } catch (error) {
+    throw new Error(`Ungültiges Canvas-JSON in ${canvasFile.path}`);
+  }
 
   const baseFolder = normalizeFolder(settings.outputDir);
   await ensureFolderExists(app, baseFolder);
@@ -70,9 +76,10 @@ export async function exportCanvasPackage(
   await ensureFolderExists(app, imagesDir);
   await ensureFolderExists(app, filesDir);
 
-  const nodes = Array.isArray(parsed.nodes) ? parsed.nodes : [];
-  const edges = Array.isArray(parsed.edges) ? parsed.edges : [];
-  const title = typeof parsed.name === "string" && parsed.name.trim() ? parsed.name : canvasFile.basename;
+  const normalized = normalizeCanvasData(parsed, canvasFile.basename);
+  const nodes = normalized.nodes;
+  const edges = normalized.edges;
+  const title = normalized.name || canvasFile.basename;
 
   const ctx: MarkdownContext = {
     app,
@@ -92,9 +99,12 @@ export async function exportCanvasPackage(
     preparedNodes.push(await prepareNode(ctx, node));
   }
 
+  const nodeIds = new Set(preparedNodes.map((node) => node.id));
+  const preparedEdges = edges.filter((edge) => nodeIds.has(edge.fromNode) && nodeIds.has(edge.toNode));
+
   return {
     folderPath: exportFolder,
-    data: { nodes: preparedNodes, edges, name: title },
+    data: { nodes: preparedNodes, edges: preparedEdges, name: title },
     options: { darkMode: settings.darkMode, title },
   };
 }
@@ -639,6 +649,66 @@ function shouldRewriteInternalTarget(target: string): boolean {
   return true;
 }
 
+function normalizeCanvasData(input: unknown, fallbackName: string): CanvasData {
+  const raw = (input && typeof input === "object") ? input as Record<string, unknown> : {};
+
+  const nodes = Array.isArray(raw.nodes)
+    ? raw.nodes
+        .filter((item) => item && typeof item === "object")
+        .map((item) => normalizeCanvasNode(item as Record<string, unknown>))
+        .filter((node): node is CanvasNode => node !== null)
+    : [];
+
+  const edges = Array.isArray(raw.edges)
+    ? raw.edges
+        .filter((item) => item && typeof item === "object")
+        .map((item) => normalizeCanvasEdge(item as Record<string, unknown>))
+        .filter((edge): edge is CanvasData["edges"][number] => edge !== null)
+    : [];
+
+  const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : fallbackName;
+
+  return { nodes, edges, name };
+}
+
+function normalizeCanvasNode(input: Record<string, unknown>): CanvasNode | null {
+  const id = typeof input.id === "string" && input.id.trim() ? input.id.trim() : "";
+  if (!id) return null;
+
+  return {
+    id,
+    type: typeof input.type === "string" ? input.type : "text",
+    x: toFiniteNumber(input.x),
+    y: toFiniteNumber(input.y),
+    width: toFiniteNumber(input.width),
+    height: toFiniteNumber(input.height),
+    text: typeof input.text === "string" ? input.text : undefined,
+    label: typeof input.label === "string" ? input.label : undefined,
+    file: typeof input.file === "string" ? input.file : undefined,
+    url: typeof input.url === "string" ? input.url : undefined,
+    color: typeof input.color === "string" ? input.color : undefined,
+  };
+}
+
+function normalizeCanvasEdge(input: Record<string, unknown>): CanvasData["edges"][number] | null {
+  const fromNode = typeof input.fromNode === "string" && input.fromNode.trim() ? input.fromNode.trim() : "";
+  const toNode = typeof input.toNode === "string" && input.toNode.trim() ? input.toNode.trim() : "";
+  if (!fromNode || !toNode) return null;
+
+  return {
+    id: typeof input.id === "string" ? input.id : undefined,
+    fromNode,
+    fromSide: typeof input.fromSide === "string" ? input.fromSide : undefined,
+    toNode,
+    toSide: typeof input.toSide === "string" ? input.toSide : undefined,
+    label: typeof input.label === "string" ? input.label : undefined,
+    color: typeof input.color === "string" ? input.color : undefined,
+  };
+}
+
+function toFiniteNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
 
 function parsedTargetSection(target: string): string | null {
   const hashIndex = target.indexOf("#");

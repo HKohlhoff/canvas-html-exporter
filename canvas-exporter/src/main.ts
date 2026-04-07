@@ -55,7 +55,8 @@ export default class CanvasExporterPlugin extends Plugin {
       new Notice(`Canvas-Paket exportiert: ${result.folderPath}`, 6000);
     } catch (error) {
       console.error("[canvas-exporter] Export fehlgeschlagen", error);
-      new Notice("Canvas-Export fehlgeschlagen. Details in der Entwicklerkonsole.", 6000);
+      const message = error instanceof Error ? error.message : "Unbekannter Fehler";
+      new Notice(`Canvas-Export fehlgeschlagen: ${message}`, 7000);
     }
   }
 
@@ -77,7 +78,8 @@ export default class CanvasExporterPlugin extends Plugin {
         successCount += 1;
       } catch (error) {
         console.error(`[canvas-exporter] Export fehlgeschlagen für ${file.path}`, error);
-        failed.push(file.path);
+        const message = error instanceof Error ? error.message : "Unbekannter Fehler";
+        failed.push(`${file.path} (${message})`);
       }
     }
 

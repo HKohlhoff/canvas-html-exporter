@@ -18,6 +18,11 @@ Unterstützt werden derzeit:
 - Kanten zwischen Knoten
 - schlichtes Zoom im exportierten HTML
 - ein einfaches Einstellungs-Panel
+- Export von Markdown-Dateiknoten als HTML-Unterseiten
+- Rewrite interner Links und Wiki-Links in exportierten Markdown-Seiten
+- Kopie von Bildern und Dateien nach `assets/images` bzw. `assets/files`
+- Markdown-Vorschau in Datei-Knoten
+- defensivere Validierung und Normalisierung von Canvas-JSON, Nodes und Edges vor dem Export
 
 Noch **nicht** stabil umgesetzt und deshalb bewusst entfernt oder nicht mehr behauptet:
 
@@ -42,6 +47,13 @@ Nach dem Aktivieren des Plugins stehen zwei Commands zur Verfügung:
 
 Die erzeugten HTML-Dateien werden in den eingestellten Ausgabeordner im Vault geschrieben.
 
+Pro Canvas wird ein portables Export-Paket erzeugt. Je nach Inhalt enthält es:
+
+- `index.html` für die Canvas-Ansicht
+- `assets/images` für exportierte Bilder
+- `assets/files` für sonstige Dateien
+- zusätzliche HTML-Unterseiten für Markdown-Dateien, falls solche als Dateiknoten referenziert werden
+
 ## Entwicklung
 
 ```bash
@@ -57,8 +69,8 @@ npm run dev
 
 ## Nächste sinnvolle Schritte
 
-1. echte Behandlung von Bild-Dateiknoten
-2. bessere Markdown-Unterstützung
-3. relative Ressourcenpfade robuster machen
+1. automatisierte Export-Regressionstests für Markdown-, Link- und Asset-Fälle
+2. echte Behandlung weiterer Bild- und Medien-Sonderfälle
+3. relative Ressourcenpfade noch robuster machen
 4. optionale Vorschau im Browser
 5. später zusätzliche Interaktivität gezielt wieder einbauen
