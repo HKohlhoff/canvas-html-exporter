@@ -739,8 +739,12 @@ function splitTableRow(row) {
 }
 function renderInline(text) {
   let html = escapeHtml(text);
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt, src) => {
+    return `<img src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}">`;
+  });
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => {
+    return `<a href="${escapeAttribute(href)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  });
   html = html.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "[[$1|$2]]");
   html = html.replace(/\[\[([^\]]+)\]\]/g, "[[$1]]");
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
@@ -861,7 +865,12 @@ function normalizeExportHref(href) {
 }
 async function exportCanvasPackage(app, canvasFile, settings) {
   const rawContent = await app.vault.read(canvasFile);
-  const parsed = JSON.parse(rawContent);
+  let parsed;
+  try {
+    parsed = JSON.parse(rawContent);
+  } catch (error) {
+    throw new Error(`Ung\xFCltiges Canvas-JSON in ${canvasFile.path}`);
+  }
   const baseFolder = normalizeFolder(settings.outputDir);
   await ensureFolderExists(app, baseFolder);
   const exportFolder = (0, import_obsidian.normalizePath)(`${baseFolder}/${safeSegment(canvasFile.basename)}`);
@@ -872,9 +881,10 @@ async function exportCanvasPackage(app, canvasFile, settings) {
   await ensureFolderExists(app, assetsDir);
   await ensureFolderExists(app, imagesDir);
   await ensureFolderExists(app, filesDir);
-  const nodes = Array.isArray(parsed.nodes) ? parsed.nodes : [];
-  const edges = Array.isArray(parsed.edges) ? parsed.edges : [];
-  const title = typeof parsed.name === "string" && parsed.name.trim() ? parsed.name : canvasFile.basename;
+  const normalized = normalizeCanvasData(parsed, canvasFile.basename);
+  const nodes = normalized.nodes;
+  const edges = normalized.edges;
+  const title = normalized.name || canvasFile.basename;
   const ctx = {
     app,
     outputRoot: exportFolder,
@@ -891,9 +901,11 @@ async function exportCanvasPackage(app, canvasFile, settings) {
   for (const node of nodes) {
     preparedNodes.push(await prepareNode(ctx, node));
   }
+  const nodeIds = new Set(preparedNodes.map((node) => node.id));
+  const preparedEdges = edges.filter((edge) => nodeIds.has(edge.fromNode) && nodeIds.has(edge.toNode));
   return {
     folderPath: exportFolder,
-    data: { nodes: preparedNodes, edges, name: title },
+    data: { nodes: preparedNodes, edges: preparedEdges, name: title },
     options: { darkMode: settings.darkMode, title }
   };
 }
@@ -1304,7 +1316,7 @@ function resolveLinkedVaultFile(app, sourceFile, target) {
   return byName ?? null;
 }
 function isExternalLink(value) {
-  return /^(https?:|mailto:|file:|javascript:)/i.test(value);
+  return /^(https?:|mailto:|file:)/i.test(value);
 }
 function shouldRewriteInternalTarget(target) {
   const cleaned = target.trim();
@@ -1319,6 +1331,49 @@ function shouldRewriteInternalTarget(target) {
     return false;
   }
   return true;
+}
+function normalizeCanvasData(input, fallbackName) {
+  const raw = input && typeof input === "object" ? input : {};
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.filter((item) => item && typeof item === "object").map((item) => normalizeCanvasNode(item)).filter((node) => node !== null) : [];
+  const edges = Array.isArray(raw.edges) ? raw.edges.filter((item) => item && typeof item === "object").map((item) => normalizeCanvasEdge(item)).filter((edge) => edge !== null) : [];
+  const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : fallbackName;
+  return { nodes, edges, name };
+}
+function normalizeCanvasNode(input) {
+  const id = typeof input.id === "string" && input.id.trim() ? input.id.trim() : "";
+  if (!id)
+    return null;
+  return {
+    id,
+    type: typeof input.type === "string" ? input.type : "text",
+    x: toFiniteNumber(input.x),
+    y: toFiniteNumber(input.y),
+    width: toFiniteNumber(input.width),
+    height: toFiniteNumber(input.height),
+    text: typeof input.text === "string" ? input.text : void 0,
+    label: typeof input.label === "string" ? input.label : void 0,
+    file: typeof input.file === "string" ? input.file : void 0,
+    url: typeof input.url === "string" ? input.url : void 0,
+    color: typeof input.color === "string" ? input.color : void 0
+  };
+}
+function normalizeCanvasEdge(input) {
+  const fromNode = typeof input.fromNode === "string" && input.fromNode.trim() ? input.fromNode.trim() : "";
+  const toNode = typeof input.toNode === "string" && input.toNode.trim() ? input.toNode.trim() : "";
+  if (!fromNode || !toNode)
+    return null;
+  return {
+    id: typeof input.id === "string" ? input.id : void 0,
+    fromNode,
+    fromSide: typeof input.fromSide === "string" ? input.fromSide : void 0,
+    toNode,
+    toSide: typeof input.toSide === "string" ? input.toSide : void 0,
+    label: typeof input.label === "string" ? input.label : void 0,
+    color: typeof input.color === "string" ? input.color : void 0
+  };
+}
+function toFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 function parsedTargetSection(target) {
   const hashIndex = target.indexOf("#");
@@ -1411,13 +1466,6 @@ var CanvasExporterPlugin = class extends import_obsidian2.Plugin {
         await this.exportCurrentCanvas();
       }
     });
-    this.addCommand({
-      id: "export-all-canvases-to-html",
-      name: "Export: Alle Canvas-Dateien als HTML speichern",
-      callback: async () => {
-        await this.exportAllCanvases();
-      }
-    });
     this.addSettingTab(new CanvasExporterSettingTab(this.app, this));
   }
   async exportCurrentCanvas() {
@@ -1433,33 +1481,9 @@ var CanvasExporterPlugin = class extends import_obsidian2.Plugin {
       new import_obsidian2.Notice(`Canvas-Paket exportiert: ${result.folderPath}`, 6e3);
     } catch (error) {
       console.error("[canvas-exporter] Export fehlgeschlagen", error);
-      new import_obsidian2.Notice("Canvas-Export fehlgeschlagen. Details in der Entwicklerkonsole.", 6e3);
+      const message = error instanceof Error ? error.message : "Unbekannter Fehler";
+      new import_obsidian2.Notice(`Canvas-Export fehlgeschlagen: ${message}`, 7e3);
     }
-  }
-  async exportAllCanvases() {
-    const canvasFiles = this.app.vault.getFiles().filter((file) => file.extension === "canvas");
-    if (canvasFiles.length === 0) {
-      new import_obsidian2.Notice("Im Vault wurden keine Canvas-Dateien gefunden.", 4e3);
-      return;
-    }
-    let successCount = 0;
-    const failed = [];
-    for (const file of canvasFiles) {
-      try {
-        const result = await exportCanvasPackage(this.app, file, this.settings);
-        const html = convertCanvasToHtml(result.data, result.options);
-        await this.writeIndexFile(result.folderPath, html);
-        successCount += 1;
-      } catch (error) {
-        console.error(`[canvas-exporter] Export fehlgeschlagen f\xFCr ${file.path}`, error);
-        failed.push(file.path);
-      }
-    }
-    if (failed.length === 0) {
-      new import_obsidian2.Notice(`${successCount} Canvas-Datei(en) exportiert.`, 5e3);
-      return;
-    }
-    new import_obsidian2.Notice(`${successCount} exportiert, ${failed.length} fehlgeschlagen. Details in der Entwicklerkonsole.`, 7e3);
   }
   async writeIndexFile(folderPath, html) {
     const filePath = `${folderPath}/index.html`;
