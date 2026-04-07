@@ -11,10 +11,22 @@ const ENTRY = "src/main.ts";
 // Anpassen, falls deine Plugin-ID im manifest.json anders lautet:
 const PLUGIN_ID = "canvas-exporter";
 
-const OBSIDIAN_PLUGIN_DIR = process.env.OBSIDIAN_PLUGIN_DIR || "/Users/Holger/SynologyDrive/Obsidian/HolgersVault/.obsidian/plugins";
-const VAULT_PLUGIN_DIR = OBSIDIAN_PLUGIN_DIR
-  ? path.join(OBSIDIAN_PLUGIN_DIR, PLUGIN_ID)
-  : "";
+const OBSIDIAN_PLUGINS_DIR =
+  process.env.OBSIDIAN_PLUGINS_DIR ||
+  "/Users/Holger/SynologyDrive/Obsidian/HolgersVault/.obsidian/plugins";
+
+function resolveVaultPluginDir(pluginsDirOrPluginDir, pluginId) {
+  if (!pluginsDirOrPluginDir) return "";
+
+  const normalizedPath = path.resolve(pluginsDirOrPluginDir);
+  if (path.basename(normalizedPath) === pluginId) {
+    return normalizedPath;
+  }
+
+  return path.join(normalizedPath, pluginId);
+}
+
+const VAULT_PLUGIN_DIR = resolveVaultPluginDir(OBSIDIAN_PLUGINS_DIR, PLUGIN_ID);
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -84,18 +96,18 @@ function ensureHotReloadMarker() {
 }
 
 function deployToVault() {
-  if (!OBSIDIAN_PLUGIN_DIR) {
+  if (!OBSIDIAN_PLUGINS_DIR) {
     console.log(
-      "[deploy] übersprungen: OBSIDIAN_PLUGIN_DIR ist nicht gesetzt"
+      "[deploy] übersprungen: OBSIDIAN_PLUGINS_DIR ist nicht gesetzt"
     );
     return;
   }
 
-  ensureDir(OBSIDIAN_PLUGIN_DIR);
+  ensureDir(OBSIDIAN_PLUGINS_DIR);
   ensureDir(VAULT_PLUGIN_DIR);
 
   console.log(`[deploy] plugin id: ${PLUGIN_ID}`);
-  console.log(`[deploy] basisordner: ${OBSIDIAN_PLUGIN_DIR}`);
+  console.log(`[deploy] plugins-pfad: ${OBSIDIAN_PLUGINS_DIR}`);
   console.log(`[deploy] zielordner: ${VAULT_PLUGIN_DIR}`);
 
   const copiedMain = safeCopy(
