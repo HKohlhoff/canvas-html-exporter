@@ -686,7 +686,10 @@ function normalizeCanvasNode(input: Record<string, unknown>): CanvasNode | null 
     label: typeof input.label === "string" ? input.label : undefined,
     file: typeof input.file === "string" ? input.file : undefined,
     url: typeof input.url === "string" ? input.url : undefined,
-    color: typeof input.color === "string" ? input.color : undefined,
+    color:
+      typeof input.color === "string" || typeof input.color === "number"
+        ? String(input.color)
+        : undefined,
   };
 }
 
@@ -702,7 +705,10 @@ function normalizeCanvasEdge(input: Record<string, unknown>): CanvasData["edges"
     toNode,
     toSide: typeof input.toSide === "string" ? input.toSide : undefined,
     label: typeof input.label === "string" ? input.label : undefined,
-    color: typeof input.color === "string" ? input.color : undefined,
+    color:
+      typeof input.color === "string" || typeof input.color === "number"
+        ? String(input.color)
+        : undefined,
   };
 }
 
