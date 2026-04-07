@@ -675,21 +675,32 @@ function normalizeCanvasNode(input: Record<string, unknown>): CanvasNode | null 
   const id = typeof input.id === "string" && input.id.trim() ? input.id.trim() : "";
   if (!id) return null;
 
+  const type = typeof input.type === "string" ? input.type : "text";
+  const x = toFiniteNumber(input.x);
+  const y = toFiniteNumber(input.y);
+  const width = toFiniteNumber(input.width);
+  const height = toFiniteNumber(input.height);
+  const text = typeof input.text === "string" ? input.text : undefined;
+  const label = typeof input.label === "string" ? input.label : undefined;
+  const file = typeof input.file === "string" ? input.file : undefined;
+  const url = typeof input.url === "string" ? input.url : undefined;
+  const color =
+    typeof input.color === "string" || typeof input.color === "number"
+      ? String(input.color).trim()
+      : undefined;
+
   return {
     id,
-    type: typeof input.type === "string" ? input.type : "text",
-    x: toFiniteNumber(input.x),
-    y: toFiniteNumber(input.y),
-    width: toFiniteNumber(input.width),
-    height: toFiniteNumber(input.height),
-    text: typeof input.text === "string" ? input.text : undefined,
-    label: typeof input.label === "string" ? input.label : undefined,
-    file: typeof input.file === "string" ? input.file : undefined,
-    url: typeof input.url === "string" ? input.url : undefined,
-    color:
-      typeof input.color === "string" || typeof input.color === "number"
-        ? String(input.color)
-        : undefined,
+    type,
+    x,
+    y,
+    width,
+    height,
+    text,
+    label,
+    file,
+    url,
+    color: color || undefined,
   };
 }
 
@@ -698,17 +709,23 @@ function normalizeCanvasEdge(input: Record<string, unknown>): CanvasData["edges"
   const toNode = typeof input.toNode === "string" && input.toNode.trim() ? input.toNode.trim() : "";
   if (!fromNode || !toNode) return null;
 
+  const id = typeof input.id === "string" ? input.id : undefined;
+  const fromSide = typeof input.fromSide === "string" ? input.fromSide : undefined;
+  const toSide = typeof input.toSide === "string" ? input.toSide : undefined;
+  const label = typeof input.label === "string" ? input.label : undefined;
+  const color =
+    typeof input.color === "string" || typeof input.color === "number"
+      ? String(input.color).trim()
+      : undefined;
+
   return {
-    id: typeof input.id === "string" ? input.id : undefined,
+    id,
     fromNode,
-    fromSide: typeof input.fromSide === "string" ? input.fromSide : undefined,
+    fromSide,
     toNode,
-    toSide: typeof input.toSide === "string" ? input.toSide : undefined,
-    label: typeof input.label === "string" ? input.label : undefined,
-    color:
-      typeof input.color === "string" || typeof input.color === "number"
-        ? String(input.color)
-        : undefined,
+    toSide,
+    label,
+    color: color || undefined,
   };
 }
 
