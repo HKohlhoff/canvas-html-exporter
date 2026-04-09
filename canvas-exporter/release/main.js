@@ -475,7 +475,7 @@ function convertCanvasToHtml(data, options) {
 </body>
 </html>`;
 }
-function buildMarkdownDocumentHtml(title, bodyHtml, darkMode) {
+function buildMarkdownDocumentHtml(title, bodyHtml, darkMode, canvasColors) {
   const theme = getTheme(darkMode);
   return `<!DOCTYPE html>
 <html lang="de">
@@ -484,6 +484,7 @@ function buildMarkdownDocumentHtml(title, bodyHtml, darkMode) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)}</title>
   <style>
+    :root { ${buildCanvasColorVariables(canvasColors)} }
     html, body { margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -809,6 +810,85 @@ function getNodePalette(color, darkMode) {
   }
   return darkMode ? { background: "#2b2f36", border: "#4a5565" } : { background: "#ffffff", border: "#c8d0da" };
 }
+function buildCanvasColorVariables(canvasColors) {
+  const parts = [];
+  const source = canvasColors ?? {};
+  for (const [key, raw] of Object.entries(source)) {
+    const normalizedKey = String(key).trim();
+    if (!normalizedKey)
+      continue;
+    const color = normalizeCssColorValue(raw);
+    if (!color)
+      continue;
+    const bg = toSoftBackground(color);
+    parts.push(`--canvas-color-${normalizedKey}: ${color};`);
+    parts.push(`--canvas-color-${normalizedKey}-bg: ${bg};`);
+  }
+  return parts.join(" ");
+}
+function normalizeCssColorValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw)
+    return "";
+  if (/^rgba?\(/i.test(raw) || /^hsla?\(/i.test(raw) || raw.startsWith("#")) {
+    return raw;
+  }
+  const rgbMatch = raw.match(/^(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?$/);
+  if (rgbMatch) {
+    const r = clampColor(rgbMatch[1]);
+    const g = clampColor(rgbMatch[2]);
+    const b = clampColor(rgbMatch[3]);
+    if (typeof rgbMatch[4] === "string") {
+      const a = Math.max(0, Math.min(1, Number(rgbMatch[4])));
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    }
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+  return raw;
+}
+function clampColor(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n))
+    return 0;
+  return Math.max(0, Math.min(255, Math.round(n)));
+}
+function toSoftBackground(color) {
+  const rgba = colorToRgba(color);
+  if (!rgba)
+    return color;
+  return `rgba(${rgba.r}, ${rgba.g}, ${rgba.b}, 0.18)`;
+}
+function colorToRgba(color) {
+  const raw = color.trim();
+  const hex = raw.match(/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+  if (hex) {
+    const value = hex[1];
+    if (value.length === 3 || value.length === 4) {
+      const r2 = parseInt(value[0] + value[0], 16);
+      const g2 = parseInt(value[1] + value[1], 16);
+      const b2 = parseInt(value[2] + value[2], 16);
+      const a2 = value.length === 4 ? parseInt(value[3] + value[3], 16) / 255 : 1;
+      return { r: r2, g: g2, b: b2, a: a2 };
+    }
+    const r = parseInt(value.slice(0, 2), 16);
+    const g = parseInt(value.slice(2, 4), 16);
+    const b = parseInt(value.slice(4, 6), 16);
+    const a = value.length === 8 ? parseInt(value.slice(6, 8), 16) / 255 : 1;
+    return { r, g, b, a };
+  }
+  const rgba = raw.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgba) {
+    const parts = rgba[1].split(",").map((p) => p.trim());
+    if (parts.length >= 3) {
+      const r = clampColor(parts[0]);
+      const g = clampColor(parts[1]);
+      const b = clampColor(parts[2]);
+      const a = parts.length >= 4 ? Math.max(0, Math.min(1, Number(parts[3]))) : 1;
+      return { r, g, b, a };
+    }
+  }
+  return null;
+}
 function getTheme(darkMode) {
   return darkMode ? {
     darkMode: true,
@@ -1072,7 +1152,7 @@ async function renderMarkdownFileToHtml(ctx, file, mode, linkBase) {
       return htmlBody;
     }
     const title = file.basename;
-    const htmlDoc = buildMarkdownDocumentHtml(title, htmlBody, ctx.darkMode);
+    const htmlDoc = buildMarkdownDocumentHtml(title, htmlBody, ctx.darkMode, ctx.canvasColors);
     await writeTextFile(ctx.app, outputPath, htmlDoc);
     return rel;
   } finally {
@@ -1506,7 +1586,8 @@ var CanvasExporterPlugin = class extends import_obsidian2.Plugin {
       return;
     }
     try {
-      const result = await exportCanvasPackage(this.app, file, this.settings);
+      const canvasColors = this.readCanvasPaletteColors();
+      const result = await exportCanvasPackage(this.app, file, { ...this.settings, canvasColors });
       const html = convertCanvasToHtml(result.data, result.options);
       await this.writeIndexFile(result.folderPath, html);
       new import_obsidian2.Notice(`Canvas-Paket exportiert: ${result.folderPath}`, 6e3);
@@ -1530,6 +1611,62 @@ var CanvasExporterPlugin = class extends import_obsidian2.Plugin {
     if (!file || file.extension !== "canvas")
       return null;
     return file;
+  }
+  readCanvasPaletteColors() {
+    if (typeof window === "undefined" || typeof document === "undefined" || !document.body) {
+      return {};
+    }
+    const styleTargets = [];
+    const activeView = this.app.workspace?.activeLeaf?.view;
+    const viewContainer = activeView?.containerEl instanceof HTMLElement ? activeView.containerEl : null;
+    if (viewContainer)
+      styleTargets.push(viewContainer);
+    styleTargets.push(document.body);
+    if (document.documentElement instanceof HTMLElement) {
+      styleTargets.push(document.documentElement);
+    }
+    const result = {};
+    for (let index = 1; index <= 6; index += 1) {
+      const cssVar = `--canvas-color-${index}`;
+      let resolved = "";
+      for (const target of styleTargets) {
+        const concrete = this.resolveCssColorValue(cssVar, target);
+        if (concrete) {
+          resolved = concrete;
+          break;
+        }
+        const raw = getComputedStyle(target).getPropertyValue(cssVar).trim();
+        if (raw) {
+          resolved = raw;
+          break;
+        }
+      }
+      if (resolved) {
+        result[String(index)] = resolved;
+        result[String(index - 1)] = resolved;
+      }
+    }
+    return result;
+  }
+  resolveCssColorValue(cssVar, target) {
+    if (typeof document === "undefined" || !document.body)
+      return "";
+    const probe = document.createElement("div");
+    probe.style.position = "fixed";
+    probe.style.left = "-9999px";
+    probe.style.top = "-9999px";
+    probe.style.width = "1px";
+    probe.style.height = "1px";
+    probe.style.pointerEvents = "none";
+    probe.style.opacity = "0";
+    probe.style.backgroundColor = `var(${cssVar})`;
+    target.appendChild(probe);
+    const resolved = getComputedStyle(probe).backgroundColor.trim();
+    probe.remove();
+    if (!resolved || resolved === "rgba(0, 0, 0, 0)" || resolved === "transparent") {
+      return "";
+    }
+    return resolved;
   }
   async loadSettings() {
     const saved = await this.loadData();
