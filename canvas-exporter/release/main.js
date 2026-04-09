@@ -552,8 +552,10 @@ function renderNode(node, offsetX, offsetY, theme) {
   const classes = ["node", escapeAttribute(type === "group" ? "group" : "")].filter(Boolean).join(" ");
   const title = node.label ? `<div class="node-title">${markdownToHtml(node.label)}</div>` : "";
   const content = renderNodeContent(node);
-  const background = type === "group" ? theme.groupBackground : palette.background;
-  const border = type === "group" ? theme.groupBorder : palette.border;
+  const useCanvasVar = !!node.color && /^\d+$/.test(String(node.color).trim());
+  const colorKey = useCanvasVar ? String(node.color).trim() : "";
+  const background = type === "group" ? theme.groupBackground : useCanvasVar ? `var(--canvas-color-${colorKey}-bg, ${palette.background})` : palette.background;
+  const border = type === "group" ? theme.groupBorder : useCanvasVar ? `var(--canvas-color-${colorKey}, ${palette.border})` : palette.border;
   return `<div
     id="node-${escapeAttribute(node.id)}"
     class="${classes}"
@@ -908,7 +910,8 @@ async function exportCanvasPackage(app, canvasFile, settings) {
     htmlMap: /* @__PURE__ */ new Map(),
     counter: 0,
     pageStack: /* @__PURE__ */ new Set(),
-    inlineStack: /* @__PURE__ */ new Set()
+    inlineStack: /* @__PURE__ */ new Set(),
+    canvasColors: settings.canvasColors
   };
   const preparedNodes = [];
   for (const node of nodes) {

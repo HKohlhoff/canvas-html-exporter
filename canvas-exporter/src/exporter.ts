@@ -4,6 +4,7 @@ import { buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markd
 export type ExportSettings = {
   darkMode: boolean;
   outputDir: string;
+  canvasColors?: Record<string, string>;
 };
 
 type PreparedCanvasData = CanvasData;
@@ -19,6 +20,7 @@ type MarkdownContext = {
   counter: number;
   pageStack: Set<string>;
   inlineStack: Set<string>;
+  canvasColors?: Record<string, string>;
 };
 
 type LinkBase = "canvas" | "page";
@@ -92,6 +94,7 @@ export async function exportCanvasPackage(
     counter: 0,
     pageStack: new Set<string>(),
     inlineStack: new Set<string>(),
+    canvasColors: settings.canvasColors,
   };
 
   const preparedNodes: CanvasNode[] = [];
