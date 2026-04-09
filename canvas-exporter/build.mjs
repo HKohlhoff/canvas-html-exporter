@@ -83,6 +83,14 @@ function copyStaticToRelease() {
   );
 }
 
+function syncSourceMapsToRelease() {
+  const releaseMap = path.join(RELEASE_DIR, "main.js.map");
+  if (!isProd) {
+    return fs.existsSync(releaseMap) ? "present" : "missing";
+  }
+  return removeIfExists(releaseMap) ? "removed" : "absent";
+}
+
 function ensureHotReloadMarker() {
   if (!VAULT_PLUGIN_DIR) return;
   ensureDir(VAULT_PLUGIN_DIR);
@@ -119,6 +127,16 @@ function deployToVault() {
     path.join(VAULT_PLUGIN_DIR, "manifest.json")
   );
 
+  const releaseMap = path.join(RELEASE_DIR, "main.js.map");
+  const vaultMap = path.join(VAULT_PLUGIN_DIR, "main.js.map");
+  let mapStatus = "missing";
+  if (!isProd && fs.existsSync(releaseMap)) {
+    safeCopy(releaseMap, vaultMap);
+    mapStatus = "copied";
+  } else if (removeIfExists(vaultMap)) {
+    mapStatus = "removed";
+  }
+
   const releaseCss = path.join(RELEASE_DIR, "styles.css");
   const vaultCss = path.join(VAULT_PLUGIN_DIR, "styles.css");
 
@@ -135,7 +153,9 @@ function deployToVault() {
   console.log(
     `[deploy] dateien: main.js=${
       copiedMain ? "copied" : "missing"
-    }, manifest.json=${copiedManifest ? "copied" : "missing"}, styles.css=${cssStatus}`
+    }, main.js.map=${mapStatus}, manifest.json=${
+      copiedManifest ? "copied" : "missing"
+    }, styles.css=${cssStatus}`
   );
   console.log("[deploy] release -> vault plugin folder kopiert");
 }
@@ -152,6 +172,7 @@ function watchStaticFile(file, onChange) {
 
 ensureReleaseDir();
 copyStaticToRelease();
+syncSourceMapsToRelease();
 
 const common = {
   entryPoints: [ENTRY],
@@ -170,6 +191,8 @@ const common = {
       setup(build) {
         build.onEnd((result) => {
           copyStaticToRelease();
+          const mapStatus = syncSourceMapsToRelease();
+          console.log(`[static] sourcemap=${mapStatus}`);
 
           if (result.errors.length === 0) {
             deployToVault();

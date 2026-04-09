@@ -27,12 +27,12 @@ var import_obsidian2 = require("obsidian");
 
 // src/converter.ts
 var OBSIDIAN_COLORS = {
-  "1": { background: "#d73a4a22", border: "#d73a4a" },
-  "2": { background: "#e8a83822", border: "#e8a838" },
-  "3": { background: "#3eb37022", border: "#3eb370" },
-  "4": { background: "#4a90d922", border: "#4a90d9" },
-  "5": { background: "#9b59b622", border: "#9b59b6" },
-  "6": { background: "#eb6ca022", border: "#eb6ca0" }
+  "0": { background: "#d73a4a22", border: "#d73a4a" },
+  "1": { background: "#e8a83822", border: "#e8a838" },
+  "2": { background: "#3eb37022", border: "#3eb370" },
+  "3": { background: "#4a90d922", border: "#4a90d9" },
+  "4": { background: "#9b59b622", border: "#9b59b6" },
+  "5": { background: "#eb6ca022", border: "#eb6ca0" }
 };
 function convertCanvasToHtml(data, options) {
   const nodes = Array.isArray(data.nodes) ? data.nodes : [];
@@ -332,6 +332,14 @@ function convertCanvasToHtml(data, options) {
       const edges = ${JSON.stringify(edgesData)};
       let currentScale = 1;
 
+      function resolveEdgeColor(color) {
+        const normalized = String(color || "").trim();
+        if (!normalized) return edgeColor;
+        if (obsidianColors[normalized]) return obsidianColors[normalized];
+        if (normalized.startsWith("#")) return normalized;
+        return edgeColor;
+      }
+
       function getAnchor(el, side) {
         const left = parseFloat(el.style.left || "0");
         const top = parseFloat(el.style.top || "0");
@@ -397,7 +405,7 @@ function convertCanvasToHtml(data, options) {
           if (edge.toSide === "top") c2y -= dy;
           if (edge.toSide === "bottom") c2y += dy;
 
-          const color = edge.color ? (obsidianColors[edge.color] || edge.color) : edgeColor;
+          const color = resolveEdgeColor(edge.color);
           const markerId = markerIdForColor(color);
           if (!seenColors.has(markerId)) {
             createMarker(defs, markerId, color);
@@ -790,11 +798,12 @@ function getBounds(nodes) {
   };
 }
 function getNodePalette(color, darkMode) {
-  if (color && OBSIDIAN_COLORS[color]) {
-    return OBSIDIAN_COLORS[color];
+  const normalized = (color || "").trim();
+  if (normalized && OBSIDIAN_COLORS[normalized]) {
+    return OBSIDIAN_COLORS[normalized];
   }
-  if (color && color.startsWith("#")) {
-    return { background: `${color}22`, border: color };
+  if (normalized.startsWith("#")) {
+    return { background: `${normalized}22`, border: normalized };
   }
   return darkMode ? { background: "#2b2f36", border: "#4a5565" } : { background: "#ffffff", border: "#c8d0da" };
 }
@@ -1347,18 +1356,28 @@ function normalizeCanvasNode(input) {
   const id = typeof input.id === "string" && input.id.trim() ? input.id.trim() : "";
   if (!id)
     return null;
+  const type = typeof input.type === "string" ? input.type : "text";
+  const x = toFiniteNumber(input.x);
+  const y = toFiniteNumber(input.y);
+  const width = toFiniteNumber(input.width);
+  const height = toFiniteNumber(input.height);
+  const text = typeof input.text === "string" ? input.text : void 0;
+  const label = typeof input.label === "string" ? input.label : void 0;
+  const file = typeof input.file === "string" ? input.file : void 0;
+  const url = typeof input.url === "string" ? input.url : void 0;
+  const color = typeof input.color === "string" || typeof input.color === "number" ? String(input.color).trim() : void 0;
   return {
     id,
-    type: typeof input.type === "string" ? input.type : "text",
-    x: toFiniteNumber(input.x),
-    y: toFiniteNumber(input.y),
-    width: toFiniteNumber(input.width),
-    height: toFiniteNumber(input.height),
-    text: typeof input.text === "string" ? input.text : void 0,
-    label: typeof input.label === "string" ? input.label : void 0,
-    file: typeof input.file === "string" ? input.file : void 0,
-    url: typeof input.url === "string" ? input.url : void 0,
-    color: typeof input.color === "string" ? input.color : void 0
+    type,
+    x,
+    y,
+    width,
+    height,
+    text,
+    label,
+    file,
+    url,
+    color: color || void 0
   };
 }
 function normalizeCanvasEdge(input) {
@@ -1366,14 +1385,19 @@ function normalizeCanvasEdge(input) {
   const toNode = typeof input.toNode === "string" && input.toNode.trim() ? input.toNode.trim() : "";
   if (!fromNode || !toNode)
     return null;
+  const id = typeof input.id === "string" ? input.id : void 0;
+  const fromSide = typeof input.fromSide === "string" ? input.fromSide : void 0;
+  const toSide = typeof input.toSide === "string" ? input.toSide : void 0;
+  const label = typeof input.label === "string" ? input.label : void 0;
+  const color = typeof input.color === "string" || typeof input.color === "number" ? String(input.color).trim() : void 0;
   return {
-    id: typeof input.id === "string" ? input.id : void 0,
+    id,
     fromNode,
-    fromSide: typeof input.fromSide === "string" ? input.fromSide : void 0,
+    fromSide,
     toNode,
-    toSide: typeof input.toSide === "string" ? input.toSide : void 0,
-    label: typeof input.label === "string" ? input.label : void 0,
-    color: typeof input.color === "string" ? input.color : void 0
+    toSide,
+    label,
+    color: color || void 0
   };
 }
 function toFiniteNumber(value) {
