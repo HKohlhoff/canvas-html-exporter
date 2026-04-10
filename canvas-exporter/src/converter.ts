@@ -864,7 +864,6 @@ function getNodePalette(color: string | undefined, darkMode: boolean): NodePalet
     : { background: "#ffffff", border: "#c8d0da" };
 }
 
-
 function buildCanvasColorVariables(canvasColors?: Record<string, string>): string {
   const parts: string[] = [];
   const source = canvasColors ?? {};
@@ -1006,34 +1005,4 @@ function escapeHtml(text: string): string {
 
 function escapeAttribute(text: string): string {
   return escapeHtml(text).replace(/`/g, "&#96;");
-}function buildThemeVariableStyle(theme: ReturnType<typeof getTheme>, canvasColors?: CanvasColorMap): string {
-  const vars = [
-    `--body-background:${theme.bodyBackground}`,
-    `--canvas-background:${theme.canvasBackground}`,
-    `--canvas-border:${theme.canvasBorder}`,
-    `--text-color:${theme.text}`,
-    `--muted-text:${theme.mutedText}`,
-    `--node-background:${theme.nodeBackground}`,
-    `--node-border:${theme.nodeBorder}`,
-    `--group-background:${theme.groupBackground}`,
-    `--group-border:${theme.groupBorder}`,
-    `--link-color:${theme.link}`,
-    `--edge-color:${theme.edge}`,
-    `--rule-color:${theme.rule}`,
-    `--inline-code-background:${theme.inlineCodeBackground}`,
-    `--code-block-background:${theme.codeBlockBackground}`,
-    `--chip-background:${theme.chipBackground}`,
-  ];
-
-  const resolved = buildCanvasColorMap(canvasColors);
-  for (const [key, raw] of Object.entries(resolved)) {
-    const color = normalizeCssColorValue(raw);
-    if (!color) continue;
-    vars.push(`--canvas-color-${key}:${color}`);
-    vars.push(`--canvas-color-${key}-bg:${withAlpha(color, 0.13)}`);
-  }
-
-  return `:root{${vars.join(";")};}`;
 }
-
-
