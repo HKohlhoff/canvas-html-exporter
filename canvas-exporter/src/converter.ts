@@ -46,13 +46,14 @@ type NodePalette = {
   border: string;
 };
 
+// Obsidian Canvas verwendet 1-basierte Farb-Indizes (1–6)
 const OBSIDIAN_COLORS: Record<string, NodePalette> = {
-  "0": { background: "#d73a4a22", border: "#d73a4a" },
-  "1": { background: "#e8a83822", border: "#e8a838" },
-  "2": { background: "#3eb37022", border: "#3eb370" },
-  "3": { background: "#4a90d922", border: "#4a90d9" },
-  "4": { background: "#9b59b622", border: "#9b59b6" },
-  "5": { background: "#eb6ca022", border: "#eb6ca0" },
+  "1": { background: "#d73a4a22", border: "#d73a4a" },
+  "2": { background: "#e8a83822", border: "#e8a838" },
+  "3": { background: "#3eb37022", border: "#3eb370" },
+  "4": { background: "#4a90d922", border: "#4a90d9" },
+  "5": { background: "#9b59b622", border: "#9b59b6" },
+  "6": { background: "#eb6ca022", border: "#eb6ca0" },
 };
 
 export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): string {
@@ -75,6 +76,9 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
     color: edge.color ?? "",
   }));
 
+  // CSS-Variablen für benutzerdefinierte Canvas-Farben (überschreiben die Obsidian-Defaults)
+  const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
+
   return `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -83,6 +87,7 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
   <base href="./">
   <title>${escapeHtml(options.title)}</title>
   <style>
+    :root { ${canvasColorVars} }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
@@ -581,10 +586,20 @@ function renderNode(
   const title = node.label ? `<div class="node-title">${markdownToHtml(node.label)}</div>` : "";
   const content = renderNodeContent(node);
 
+  // Numerische Farb-Indizes (1–6) werden als CSS-Variablen referenziert,
+  // damit benutzerdefinierte Palette-Farben aus canvasColors überschreiben können.
   const useCanvasVar = !!node.color && /^\d+$/.test(String(node.color).trim());
   const colorKey = useCanvasVar ? String(node.color).trim() : "";
-  const background = type === "group" ? theme.groupBackground : (useCanvasVar ? `var(--canvas-color-${colorKey}-bg, ${palette.background})` : palette.background);
-  const border = type === "group" ? theme.groupBorder : (useCanvasVar ? `var(--canvas-color-${colorKey}, ${palette.border})` : palette.border);
+  const background = type === "group"
+    ? theme.groupBackground
+    : (useCanvasVar
+        ? `var(--canvas-color-${colorKey}-bg, ${palette.background})`
+        : palette.background);
+  const border = type === "group"
+    ? theme.groupBorder
+    : (useCanvasVar
+        ? `var(--canvas-color-${colorKey}, ${palette.border})`
+        : palette.border);
 
   return `<div
     id="node-${escapeAttribute(node.id)}"
@@ -864,6 +879,8 @@ function getNodePalette(color: string | undefined, darkMode: boolean): NodePalet
     : { background: "#ffffff", border: "#c8d0da" };
 }
 
+// Erzeugt CSS-Variablen aus den canvasColors (vom Nutzer konfigurierbare Palette).
+// Diese überschreiben die hartkodierten OBSIDIAN_COLORS-Fallbacks in renderNode.
 function buildCanvasColorVariables(canvasColors?: Record<string, string>): string {
   const parts: string[] = [];
   const source = canvasColors ?? {};
