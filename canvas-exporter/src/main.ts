@@ -78,20 +78,20 @@ export default class CanvasExporterPlugin extends Plugin {
 
     const result: CanvasColorMap = {};
 
-    // Obsidian Canvas verwendet die Farb-Indizes 1–6, die zu diesen CSS-Variablen mappen:
+    // Obsidian Canvas Farb-Index → CSS-Variable (aus app.css):
     // 1 → --color-red-rgb
     // 2 → --color-orange-rgb
-    // 3 → --color-green-rgb
-    // 4 → --color-cyan-rgb
-    // 5 → --color-purple-rgb
-    // 6 → --color-pink-rgb
+    // 3 → --color-yellow-rgb
+    // 4 → --color-green-rgb
+    // 5 → --color-cyan-rgb
+    // 6 → --color-purple-rgb
     const colorMap: Record<string, string> = {
       "1": "--color-red-rgb",
       "2": "--color-orange-rgb",
-      "3": "--color-green-rgb",
-      "4": "--color-cyan-rgb",
-      "5": "--color-purple-rgb",
-      "6": "--color-pink-rgb",
+      "3": "--color-yellow-rgb",
+      "4": "--color-green-rgb",
+      "5": "--color-cyan-rgb",
+      "6": "--color-purple-rgb",
     };
 
     for (const [colorIndex, cssVar] of Object.entries(colorMap)) {
@@ -109,7 +109,7 @@ export default class CanvasExporterPlugin extends Plugin {
 
     // Hole den Wert der CSS-Variablen direkt vom Wurzel-Element
     const value = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
-    
+
     if (!value) return "";
 
     // Falls der Wert als RGB-String vorliegt (z.B. "255, 0, 0"), konvertiere zu rgb()
