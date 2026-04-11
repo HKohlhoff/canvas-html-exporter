@@ -105,9 +105,8 @@ export default class CanvasExporterPlugin extends Plugin {
       }
 
       if (resolved) {
+        // Nur 1-basierte Keys setzen – passend zu den CSS-Variablen im HTML-Export
         result[String(index)] = resolved;
-        // also support older 0-based color ids if present in canvas JSON
-        result[String(index - 1)] = resolved;
       }
     }
 
@@ -136,7 +135,6 @@ export default class CanvasExporterPlugin extends Plugin {
     }
     return resolved;
   }
-
 
   private async loadSettings(): Promise<void> {
     const saved = await this.loadData();
