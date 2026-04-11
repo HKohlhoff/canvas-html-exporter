@@ -64,7 +64,7 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
   const theme = getTheme(options.darkMode);
 
   const nodeHtml = nodes
-    .map((node) => renderNode(node, bounds.offsetX, bounds.offsetY, theme))
+    .map((node) => renderNode(node, bounds.offsetX, bounds.offsetY, theme, options.canvasColors))
     .join("\n");
 
   const edgesData = edges.map((edge) => ({
@@ -574,8 +574,8 @@ function renderNode(
   offsetX: number,
   offsetY: number,
   theme: ReturnType<typeof getTheme>,
+  canvasColors?: Record<string, string>,
 ): string {
-  const palette = getNodePalette(node.color, theme.darkMode);
   const left = normalizeNumber(node.x) + offsetX;
   const top = normalizeNumber(node.y) + offsetY;
   const width = Math.max(120, normalizeNumber(node.width));
@@ -588,18 +588,36 @@ function renderNode(
 
   // Numerische Farb-Indizes (1–6) werden als CSS-Variablen referenziert,
   // damit benutzerdefinierte Palette-Farben aus canvasColors überschreiben können.
-  const useCanvasVar = !!node.color && /^\d+$/.test(String(node.color).trim());
-  const colorKey = useCanvasVar ? String(node.color).trim() : "";
-  const background = type === "group"
-    ? theme.groupBackground
-    : (useCanvasVar
-        ? `var(--canvas-color-${colorKey}-bg, ${palette.background})`
-        : palette.background);
-  const border = type === "group"
-    ? theme.groupBorder
-    : (useCanvasVar
-        ? `var(--canvas-color-${colorKey}, ${palette.border})`
-        : palette.border);
+  const colorKey = String(node.color || "").trim();
+  const isNumericColor = /^\d+$/.test(colorKey);
+
+  let background: string;
+  let border: string;
+
+  if (type === "group") {
+    background = theme.groupBackground;
+    border = theme.groupBorder;
+  } else if (isNumericColor && canvasColors && canvasColors[colorKey]) {
+    // Benutzerdefinierte Farbe vorhanden – nutze CSS-Variablen
+    const bgVar = `--canvas-color-${colorKey}-bg`;
+    const borderVar = `--canvas-color-${colorKey}`;
+    const fallbackPalette = OBSIDIAN_COLORS[colorKey] || { background: theme.nodeBackground, border: theme.nodeBorder };
+    background = `var(${bgVar}, ${fallbackPalette.background})`;
+    border = `var(${borderVar}, ${fallbackPalette.border})`;
+  } else if (isNumericColor) {
+    // Keine benutzerdefinierte Farbe – nutze Obsidian-Defaults direkt
+    const palette = OBSIDIAN_COLORS[colorKey] || { background: theme.nodeBackground, border: theme.nodeBorder };
+    background = palette.background;
+    border = palette.border;
+  } else if (colorKey.startsWith("#")) {
+    // Hex-Farbe direkt
+    background = `${colorKey}22`;
+    border = colorKey;
+  } else {
+    // Keine Farbe angegeben – Theme-Defaults
+    background = theme.nodeBackground;
+    border = theme.nodeBorder;
+  }
 
   return `<div
     id="node-${escapeAttribute(node.id)}"
