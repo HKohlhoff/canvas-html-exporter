@@ -27,19 +27,25 @@ var import_obsidian2 = require("obsidian");
 
 // src/converter.ts
 var OBSIDIAN_COLORS = {
-  "0": { background: "#d73a4a22", border: "#d73a4a" },
-  "1": { background: "#e8a83822", border: "#e8a838" },
-  "2": { background: "#3eb37022", border: "#3eb370" },
-  "3": { background: "#4a90d922", border: "#4a90d9" },
-  "4": { background: "#9b59b622", border: "#9b59b6" },
-  "5": { background: "#eb6ca022", border: "#eb6ca0" }
+  "1": { background: "#e6324222", border: "#e63242" },
+  // red
+  "2": { background: "#fa8d3e22", border: "#fa8d3e" },
+  // orange
+  "3": { background: "#f9c74f22", border: "#f9c74f" },
+  // yellow
+  "4": { background: "#56ae6c22", border: "#56ae6c" },
+  // green
+  "5": { background: "#04a5e522", border: "#04a5e5" },
+  // cyan  (--color-cyan-rgb: 4, 165, 229)
+  "6": { background: "#9c6bae22", border: "#9c6bae" }
+  // purple
 };
 function convertCanvasToHtml(data, options) {
   const nodes = Array.isArray(data.nodes) ? data.nodes : [];
   const edges = Array.isArray(data.edges) ? data.edges : [];
   const bounds = getBounds(nodes);
   const theme = getTheme(options.darkMode);
-  const nodeHtml = nodes.map((node) => renderNode(node, bounds.offsetX, bounds.offsetY, theme)).join("\n");
+  const nodeHtml = nodes.map((node) => renderNode(node, bounds.offsetX, bounds.offsetY, theme, options.canvasColors)).join("\n");
   const edgesData = edges.map((edge) => ({
     fromId: edge.fromNode,
     toId: edge.toNode,
@@ -48,6 +54,7 @@ function convertCanvasToHtml(data, options) {
     label: edge.label ?? "",
     color: edge.color ?? ""
   }));
+  const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
   return `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -56,6 +63,7 @@ function convertCanvasToHtml(data, options) {
   <base href="./">
   <title>${escapeHtml(options.title)}</title>
   <style>
+    :root { ${canvasColorVars} }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
@@ -543,8 +551,7 @@ function buildMarkdownDocumentHtml(title, bodyHtml, darkMode, canvasColors) {
 </body>
 </html>`;
 }
-function renderNode(node, offsetX, offsetY, theme) {
-  const palette = getNodePalette(node.color, theme.darkMode);
+function renderNode(node, offsetX, offsetY, theme, canvasColors) {
   const left = normalizeNumber(node.x) + offsetX;
   const top = normalizeNumber(node.y) + offsetY;
   const width = Math.max(120, normalizeNumber(node.width));
@@ -553,10 +560,30 @@ function renderNode(node, offsetX, offsetY, theme) {
   const classes = ["node", escapeAttribute(type === "group" ? "group" : "")].filter(Boolean).join(" ");
   const title = node.label ? `<div class="node-title">${markdownToHtml(node.label)}</div>` : "";
   const content = renderNodeContent(node);
-  const useCanvasVar = !!node.color && /^\d+$/.test(String(node.color).trim());
-  const colorKey = useCanvasVar ? String(node.color).trim() : "";
-  const background = type === "group" ? theme.groupBackground : useCanvasVar ? `var(--canvas-color-${colorKey}-bg, ${palette.background})` : palette.background;
-  const border = type === "group" ? theme.groupBorder : useCanvasVar ? `var(--canvas-color-${colorKey}, ${palette.border})` : palette.border;
+  const colorKey = String(node.color || "").trim();
+  const isNumericColor = /^\d+$/.test(colorKey);
+  let background;
+  let border;
+  if (type === "group") {
+    background = theme.groupBackground;
+    border = theme.groupBorder;
+  } else if (isNumericColor && canvasColors && canvasColors[colorKey]) {
+    const bgVar = `--canvas-color-${colorKey}-bg`;
+    const borderVar = `--canvas-color-${colorKey}`;
+    const fallbackPalette = OBSIDIAN_COLORS[colorKey] || { background: theme.nodeBackground, border: theme.nodeBorder };
+    background = `var(${bgVar}, ${fallbackPalette.background})`;
+    border = `var(${borderVar}, ${fallbackPalette.border})`;
+  } else if (isNumericColor) {
+    const palette = OBSIDIAN_COLORS[colorKey] || { background: theme.nodeBackground, border: theme.nodeBorder };
+    background = palette.background;
+    border = palette.border;
+  } else if (colorKey.startsWith("#")) {
+    background = `${colorKey}22`;
+    border = colorKey;
+  } else {
+    background = theme.nodeBackground;
+    border = theme.nodeBorder;
+  }
   return `<div
     id="node-${escapeAttribute(node.id)}"
     class="${classes}"
@@ -799,16 +826,6 @@ function getBounds(nodes) {
     offsetX,
     offsetY
   };
-}
-function getNodePalette(color, darkMode) {
-  const normalized = (color || "").trim();
-  if (normalized && OBSIDIAN_COLORS[normalized]) {
-    return OBSIDIAN_COLORS[normalized];
-  }
-  if (normalized.startsWith("#")) {
-    return { background: `${normalized}22`, border: normalized };
-  }
-  return darkMode ? { background: "#2b2f36", border: "#4a5565" } : { background: "#ffffff", border: "#c8d0da" };
 }
 function buildCanvasColorVariables(canvasColors) {
   const parts = [];
@@ -1616,41 +1633,36 @@ var CanvasExporterPlugin = class extends import_obsidian2.Plugin {
     if (typeof window === "undefined" || typeof document === "undefined" || !document.body) {
       return {};
     }
-    const styleTargets = [];
-    const activeView = this.app.workspace?.activeLeaf?.view;
-    const viewContainer = activeView?.containerEl instanceof HTMLElement ? activeView.containerEl : null;
-    if (viewContainer)
-      styleTargets.push(viewContainer);
-    styleTargets.push(document.body);
-    if (document.documentElement instanceof HTMLElement) {
-      styleTargets.push(document.documentElement);
-    }
     const result = {};
-    for (let index = 1; index <= 6; index += 1) {
-      const cssVar = `--canvas-color-${index}`;
-      let resolved = "";
-      for (const target of styleTargets) {
-        const concrete = this.resolveCssColorValue(cssVar, target);
-        if (concrete) {
-          resolved = concrete;
-          break;
-        }
-        const raw = getComputedStyle(target).getPropertyValue(cssVar).trim();
-        if (raw) {
-          resolved = raw;
-          break;
-        }
-      }
+    const colorMap = {
+      "1": "--color-red-rgb",
+      "2": "--color-orange-rgb",
+      "3": "--color-yellow-rgb",
+      "4": "--color-green-rgb",
+      "5": "--color-cyan-rgb",
+      "6": "--color-purple-rgb"
+    };
+    for (const [colorIndex, cssVar] of Object.entries(colorMap)) {
+      const resolved = this.resolveCssVariable(cssVar);
       if (resolved) {
-        result[String(index)] = resolved;
-        result[String(index - 1)] = resolved;
+        result[colorIndex] = resolved;
       }
     }
     return result;
   }
-  resolveCssColorValue(cssVar, target) {
+  resolveCssVariable(cssVar) {
     if (typeof document === "undefined" || !document.body)
       return "";
+    const value = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
+    if (!value)
+      return "";
+    const rgbMatch = value.match(/^(\d+)\s*,\s*(\d+)\s*,\s*(\d+)$/);
+    if (rgbMatch) {
+      return `rgb(${value})`;
+    }
+    if (/^(rgb|#)/.test(value) || /^rgba?\(/.test(value)) {
+      return value;
+    }
     const probe = document.createElement("div");
     probe.style.position = "fixed";
     probe.style.left = "-9999px";
@@ -1660,7 +1672,7 @@ var CanvasExporterPlugin = class extends import_obsidian2.Plugin {
     probe.style.pointerEvents = "none";
     probe.style.opacity = "0";
     probe.style.backgroundColor = `var(${cssVar})`;
-    target.appendChild(probe);
+    document.body.appendChild(probe);
     const resolved = getComputedStyle(probe).backgroundColor.trim();
     probe.remove();
     if (!resolved || resolved === "rgba(0, 0, 0, 0)" || resolved === "transparent") {

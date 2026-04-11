@@ -6,3 +6,4 @@ dist/
 .aider*
 release/
 Obsidian_canvas-exporter/
+.env
