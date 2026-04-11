@@ -54,7 +54,7 @@ const OBSIDIAN_COLORS: Record<string, NodePalette> = {
   "2": { background: "#fa8d3e22", border: "#fa8d3e" }, // orange
   "3": { background: "#f9c74f22", border: "#f9c74f" }, // yellow
   "4": { background: "#56ae6c22", border: "#56ae6c" }, // green
-  "5": { background: "#4db6ac22", border: "#4db6ac" }, // cyan
+  "5": { background: "#04a5e522", border: "#04a5e5" }, // cyan  (--color-cyan-rgb: 4, 165, 229)
   "6": { background: "#9c6bae22", border: "#9c6bae" }, // purple
 };
 
