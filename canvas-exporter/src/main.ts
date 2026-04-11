@@ -76,46 +76,54 @@ export default class CanvasExporterPlugin extends Plugin {
       return {};
     }
 
-    const styleTargets: HTMLElement[] = [];
-    const activeView = (this.app.workspace as any)?.activeLeaf?.view;
-    const viewContainer = activeView?.containerEl instanceof HTMLElement ? activeView.containerEl : null;
-    if (viewContainer) styleTargets.push(viewContainer);
-    styleTargets.push(document.body);
-    if (document.documentElement instanceof HTMLElement) {
-      styleTargets.push(document.documentElement);
-    }
-
     const result: CanvasColorMap = {};
 
-    for (let index = 1; index <= 6; index += 1) {
-      const cssVar = `--canvas-color-${index}`;
-      let resolved = "";
+    // Obsidian Canvas verwendet die Farb-Indizes 1–6, die zu diesen CSS-Variablen mappen:
+    // 1 → --color-red-rgb
+    // 2 → --color-orange-rgb
+    // 3 → --color-green-rgb
+    // 4 → --color-cyan-rgb
+    // 5 → --color-purple-rgb
+    // 6 → --color-pink-rgb
+    const colorMap: Record<string, string> = {
+      "1": "--color-red-rgb",
+      "2": "--color-orange-rgb",
+      "3": "--color-green-rgb",
+      "4": "--color-cyan-rgb",
+      "5": "--color-purple-rgb",
+      "6": "--color-pink-rgb",
+    };
 
-      for (const target of styleTargets) {
-        const concrete = this.resolveCssColorValue(cssVar, target);
-        if (concrete) {
-          resolved = concrete;
-          break;
-        }
-        const raw = getComputedStyle(target).getPropertyValue(cssVar).trim();
-        if (raw) {
-          resolved = raw;
-          break;
-        }
-      }
-
+    for (const [colorIndex, cssVar] of Object.entries(colorMap)) {
+      const resolved = this.resolveCssVariable(cssVar);
       if (resolved) {
-        // Nur 1-basierte Keys setzen – passend zu den CSS-Variablen im HTML-Export
-        result[String(index)] = resolved;
+        result[colorIndex] = resolved;
       }
     }
 
     return result;
   }
 
-  private resolveCssColorValue(cssVar: string, target: HTMLElement): string {
+  private resolveCssVariable(cssVar: string): string {
     if (typeof document === "undefined" || !document.body) return "";
 
+    // Hole den Wert der CSS-Variablen direkt vom Wurzel-Element
+    const value = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
+    
+    if (!value) return "";
+
+    // Falls der Wert als RGB-String vorliegt (z.B. "255, 0, 0"), konvertiere zu rgb()
+    const rgbMatch = value.match(/^(\d+)\s*,\s*(\d+)\s*,\s*(\d+)$/);
+    if (rgbMatch) {
+      return `rgb(${value})`;
+    }
+
+    // Falls es bereits ein korrektes Farbformat ist, gib es zurück
+    if (/^(rgb|#)/.test(value) || /^rgba?\(/.test(value)) {
+      return value;
+    }
+
+    // Fallback: Versuche die Farbe über ein Probe-Element zu rendern
     const probe = document.createElement("div");
     probe.style.position = "fixed";
     probe.style.left = "-9999px";
@@ -126,13 +134,14 @@ export default class CanvasExporterPlugin extends Plugin {
     probe.style.opacity = "0";
     probe.style.backgroundColor = `var(${cssVar})`;
 
-    target.appendChild(probe);
+    document.body.appendChild(probe);
     const resolved = getComputedStyle(probe).backgroundColor.trim();
     probe.remove();
 
     if (!resolved || resolved === "rgba(0, 0, 0, 0)" || resolved === "transparent") {
       return "";
     }
+
     return resolved;
   }
 
