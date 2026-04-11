@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="./">
+  <title>Test-Canvas2html</title>
+  <style>
+    :root {  }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f6f9;
+      color: #24303d;
+      overflow: auto;
+    }
+    .page-header {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 24px 8px;
+    }
+    .page-header h1 {
+      margin: 0 0 8px;
+      font-size: 1.4rem;
+    }
+    .page-header p {
+      margin: 0;
+      color: #5f6b7a;
+      font-size: 0.95rem;
+    }
+    .viewport {
+      overflow: auto;
+      padding: 16px 24px 28px;
+      height: calc(100vh - 132px);
+    }
+    #canvas {
+      position: relative;
+      width: 2080px;
+      height: 1197px;
+      margin: 0 auto;
+      transform-origin: top left;
+    }
+    #edge-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+      z-index: 1;
+    }
+    .node {
+      position: absolute;
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: #24303d;
+      background: #ffffff;
+      border: 2px solid #c8d0da;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.12);
+      z-index: 2;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .node.group {
+      background: rgba(0,0,0,0.03);
+      border-style: dashed;
+      z-index: 0;
+    }
+    .node-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #d6dde7;
+    }
+    .node-content {
+      line-height: 1.55;
+      word-break: break-word;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .node-content h1, .node-content h2, .node-content h3, .node-content h4, .node-content h5, .node-content h6 {
+      margin: 0.5em 0 0.35em;
+      line-height: 1.25;
+    }
+    .node-content p { margin: 0.45em 0; }
+    .node-content ul, .node-content ol { margin: 0.45em 0 0.45em 1.2em; }
+    .node-content li { margin: 0.2em 0; }
+    .node-content a { color: #1967d2; text-decoration: none; }
+    .node-content a:hover { text-decoration: underline; }
+    .node-content code {
+      background: rgba(0,0,0,0.06);
+      border-radius: 4px;
+      padding: 0.1em 0.35em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92em;
+    }
+    .node-content pre {
+      margin: 0.7em 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.05);
+      overflow-x: auto;
+    }
+    .node-content pre code {
+      padding: 0;
+      background: transparent;
+    }
+    .node-content blockquote {
+      margin: 0.7em 0;
+      padding-left: 12px;
+      border-left: 3px solid #1967d2;
+      color: #5f6b7a;
+    }
+    .node-content hr {
+      border: none;
+      border-top: 1px solid #d6dde7;
+      margin: 0.8em 0;
+    }
+    .node-content img {
+      display: block;
+      max-width: 100%;
+      border-radius: 8px;
+      margin: 0.6em 0;
+    }
+    .node-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.7em 0;
+    }
+    .node-content th,
+    .node-content td {
+      border: 1px solid #d6dde7;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .file-chip, .link-chip {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.04);
+      border: 1px solid #d6dde7;
+      color: #24303d;
+      text-decoration: none;
+      margin-top: 6px;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      padding: 10px 24px 0;
+      background: linear-gradient(to bottom, #f4f6f9, transparent);
+    }
+    .toolbar button {
+      border: 1px solid #d6dde7;
+      background: #ffffff;
+      color: #24303d;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .toolbar button:hover { background: rgba(0,0,0,0.04); }
+    .edge-label {
+      font-size: 12px;
+      fill: #24303d;
+      pointer-events: none;
+    }
+    .edge-label-background {
+      fill: #ffffff;
+      stroke: none;
+      pointer-events: none;
+    }
+    .md-card {
+      display: flex;
+      flex-direction: column;
+      color: inherit;
+      margin: -12px -14px;
+      padding: 12px 14px;
+      height: calc(100% + 24px);
+      overflow: hidden;
+    }
+    .md-card-title-link {
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .md-card-title-link:hover {
+      text-decoration: underline;
+    }
+    .md-card-title { font-weight: 700; margin-bottom: 8px; }
+    .md-card-preview {
+      color: #5f6b7a;
+      font-size: 0.92em;
+      margin: 0.2em 0 0;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .md-card-preview-text {
+      color: #5f6b7a;
+      font-size: 0.92em;
+      margin: 0.35em 0 0;
+      overflow: hidden;
+    }
+    .md-card-preview h1,
+    .md-card-preview h2,
+    .md-card-preview h3,
+    .md-card-preview h4,
+    .md-card-preview h5,
+    .md-card-preview h6 {
+      margin-top: 0.2em;
+      margin-bottom: 0.35em;
+      line-height: 1.2;
+    }
+    .md-card-preview h1 { font-size: 1.35em; }
+    .md-card-preview h2 { font-size: 1.22em; }
+    .md-card-preview h3 { font-size: 1.12em; }
+    .md-card-preview h4 { font-size: 1.04em; }
+    .md-card-preview h5 { font-size: 0.98em; }
+    .md-card-preview h6 { font-size: 0.94em; }
+    .md-card-preview pre {
+      max-height: 7.5em;
+      overflow: hidden;
+    }
+    .md-card-preview table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9em;
+      margin: 0.5em 0;
+    }
+    .md-card-preview th,
+    .md-card-preview td {
+      border: 1px solid #d6dde7;
+      padding: 4px 6px;
+      text-align: left;
+    }
+    .md-page {
+      max-width: 960px;
+      margin: 32px auto;
+      padding: 32px;
+      background: #ffffff;
+      border: 1px solid #d6dde7;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .unresolved-link {
+      color: #d64545;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="zoomBy(1.15)">Zoom +</button>
+    <button type="button" onclick="zoomBy(1 / 1.15)">Zoom −</button>
+    <button type="button" onclick="resetZoom()">Reset</button>
+  </div>
+  <div class="page-header">
+    <h1>Test-Canvas2html</h1>
+    <p>7 Knoten · 6 Verbindungen</p>
+  </div>
+  <div class="viewport">
+    <div id="canvas">
+      <svg id="edge-layer"></svg>
+      <div
+    id="node-35bc5a96e3145669"
+    class="node"
+    style="left:811px;top:120px;width:209px;height:99px;background:var(--canvas-color-2-bg, #e8a83822);border-color:var(--canvas-color-2, #e8a838);"
+  ><div class="node-content"><p>Dies ist eine Karte.<br>
+Darin kann man Text speichern.</p></div></div>
+<div
+    id="node-9767cd3bfb8c45ff"
+    class="node"
+    style="left:1260px;top:170px;width:304px;height:240px;background:var(--canvas-color-5-bg, #9b59b622);border-color:var(--canvas-color-5, #9b59b6);"
+  ><div class="node-content"><div class="md-card"><a class="md-card-title-link" href="assets/files/001_Notiz-zur-Anzeige.html" target="_blank" rel="noopener noreferrer"><div class="md-card-title">Notiz zur Anzeige</div></a><div class="md-card-preview"><p>Dies ist <strong>einfach</strong> eine Notiz, die ich in einem Test anzeigen will.<br>
+Insbesondere ist die Frage spannend, <em>ob und wie</em> diese dann in einem html-Export dargestellt werden würde.</p></div></div></div></div>
+<div
+    id="node-2485acb8e5911d09"
+    class="node"
+    style="left:1321px;top:679px;width:339px;height:320px;background:#ffffff;border-color:#c8d0da;"
+  ><div class="node-content"><div class="md-card"><a class="md-card-title-link" href="assets/files/002_Linien-und-Tabellen.html" target="_blank" rel="noopener noreferrer"><div class="md-card-title">Linien und Tabellen</div></a><div class="md-card-preview"><p>Eine horizontale Linie sieht so aus:</p>
+<hr>
+<p>Sie wird von Leerzeilen oben und unten umrahmt.</p>
+<p>Eine einfache Tabelle ist das hier z.B.</p>
+<table><thead><tr><th>Spalte 1</th><th>Spalte 2</th><th>Spalte 3</th></tr></thead><tbody><tr><td>Wert 1</td><td>Wert 2</td><td>3,14</td></tr></tbody></table></div></div></div></div>
+<div
+    id="node-e39335e14d74ead2"
+    class="node"
+    style="left:940px;top:679px;width:340px;height:320px;background:var(--canvas-color-4-bg, #4a90d922);border-color:var(--canvas-color-4, #4a90d9);"
+  ><div class="node-content"><div class="md-card"><a class="md-card-title-link" href="assets/files/003_Code-Darstellungen.html" target="_blank" rel="noopener noreferrer"><div class="md-card-title">Code-Darstellungen</div></a><div class="md-card-preview"><p>Inline-Code sieht dann so aus: <code>code zeile</code> und aus.</p>
+<h2>Code-Block</h2>
+<pre><code class="language-sql">select * from personen
+where Name = &#39;Holger&#39;
+limit 1</code></pre>
+<h2>Quote-Block</h2>
+<blockquote><p>Ein Zitat wäre z.B. ein Quote<br>
+und würde dann so dargestellt werden...</p></blockquote></div></div></div></div>
+<div
+    id="node-1586bfce1328f116"
+    class="node"
+    style="left:560px;top:679px;width:320px;height:320px;background:var(--canvas-color-3-bg, #3eb37022);border-color:var(--canvas-color-3, #3eb370);"
+  ><div class="node-content"><div class="md-card"><a class="md-card-title-link" href="assets/files/004_Auszeichnungen.html" target="_blank" rel="noopener noreferrer"><div class="md-card-title">Auszeichnungen</div></a><div class="md-card-preview"><h1>H1-Überschrift</h1>
+<h2>H2-Überschrift</h2>
+<h3>H3-Überschrift</h3>
+<h4>H4-Überschrift</h4>
+<h5>H5-Überschrift</h5>
+<p>Texte sehen dann so aus:<br>
+<strong>Fettdruck</strong> wäre das hier mit den \**<br>
+<em>kursiv</em> wäre das hier mit \_<br>
+<em>kursiv</em> war das hier mit \*<br>
+<del>durchgestrichen</del> wäre das hier mit den zwei \~</p></div></div></div></div>
+<div
+    id="node-2b60ee23e15cd7d3"
+    class="node"
+    style="left:1720px;top:679px;width:240px;height:257px;background:#ffffff;border-color:#c8d0da;"
+  ><div class="node-content"><a href="assets/images/005_Holger_im_Wald.jpeg" target="_blank" rel="noopener noreferrer"><img src="assets/images/005_Holger_im_Wald.jpeg" alt="Holger_im_Wald.jpeg"></a></div></div>
+<div
+    id="node-d16ca0dcf0c2628e"
+    class="node"
+    style="left:120px;top:679px;width:398px;height:398px;background:#ffffff;border-color:#c8d0da;"
+  ><div class="node-content"><div class="md-card"><a class="md-card-title-link" href="assets/files/006_Verschachtelungen.html" target="_blank" rel="noopener noreferrer"><div class="md-card-title">Verschachtelungen</div></a><div class="md-card-preview"><p>Diese Datei dient dazu, zu testen, wie der html-Export damit umgeht, wenn...</p>
+<p>1.) eine Datei eingebettet wird, wie hier:<br>
+<h2>Quote-Block</h2>
+<blockquote><p>Ein Zitat wäre z.B. ein Quote<br>
+und würde dann so dargestellt werden...</p></blockquote></p>
+<p>und 2.) wenn Sie nur als Link eingefügt wird:<br>
+<a href="assets/files/007_Verlinkte-Seite.html" target="_blank" rel="noopener noreferrer">Verlinkte Seite</a></p>
+<h2>Bilder einfügen</h2>
+<p>ohne Parameter:<br>
+<img src="assets/images/005_Holger_im_Wald.jpeg" alt="Holger_im_Wald"></p>
+<p>Hier mit 100<br>
+<img src="assets/images/005_Holger_im_Wald.jpeg" alt="100" width="100"></p>
+<p>Hier mit 100x200<br>
+<img src="assets/images/005_Holger_im_Wald.jpeg" alt="100x200" width="100" height="200"></p></div></div></div></div>
+    </div>
+  </div>
+  <script>
+    (() => {
+      const edgeLayer = document.getElementById("edge-layer");
+      const canvas = document.getElementById("canvas");
+      const viewport = document.querySelector(".viewport");
+      const edgeColor = "#1967d2";
+      const textColor = "#24303d";
+      const obsidianColors = {"1":"#d73a4a","2":"#e8a838","3":"#3eb370","4":"#4a90d9","5":"#9b59b6","6":"#eb6ca0"};
+      const edges = [{"fromId":"35bc5a96e3145669","toId":"9767cd3bfb8c45ff","fromSide":"right","toSide":"left","label":"Verbindung","color":""},{"fromId":"9767cd3bfb8c45ff","toId":"2b60ee23e15cd7d3","fromSide":"bottom","toSide":"top","label":"Bilder","color":""},{"fromId":"9767cd3bfb8c45ff","toId":"1586bfce1328f116","fromSide":"bottom","toSide":"top","label":"Darstellung","color":""},{"fromId":"9767cd3bfb8c45ff","toId":"e39335e14d74ead2","fromSide":"bottom","toSide":"top","label":"Code","color":""},{"fromId":"9767cd3bfb8c45ff","toId":"2485acb8e5911d09","fromSide":"bottom","toSide":"top","label":"Tabellen","color":""},{"fromId":"9767cd3bfb8c45ff","toId":"d16ca0dcf0c2628e","fromSide":"bottom","toSide":"top","label":"Verlinkungen","color":""}];
+      let currentScale = 1;
+
+      function resolveEdgeColor(color) {
+        const normalized = String(color || "").trim();
+        if (!normalized) return edgeColor;
+        if (obsidianColors[normalized]) return obsidianColors[normalized];
+        if (normalized.startsWith("#")) return normalized;
+        return edgeColor;
+      }
+
+      function getAnchor(el, side) {
+        const left = parseFloat(el.style.left || "0");
+        const top = parseFloat(el.style.top || "0");
+        const width = el.offsetWidth;
+        const height = el.offsetHeight;
+
+        switch (side) {
+          case "top": return { x: left + width / 2, y: top };
+          case "bottom": return { x: left + width / 2, y: top + height };
+          case "left": return { x: left, y: top + height / 2 };
+          case "right": return { x: left + width, y: top + height / 2 };
+          default: return { x: left + width / 2, y: top + height / 2 };
+        }
+      }
+
+      function createMarker(defs, id, fill) {
+        const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+        marker.setAttribute("id", id);
+        marker.setAttribute("viewBox", "0 0 8 8");
+        marker.setAttribute("markerWidth", "15");
+        marker.setAttribute("markerHeight", "13");
+        marker.setAttribute("refX", "8");
+        marker.setAttribute("refY", "4");
+        marker.setAttribute("orient", "auto");
+        marker.setAttribute("markerUnits", "userSpaceOnUse");
+        const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        polygon.setAttribute("points", "0 0, 8 4, 0 8");
+        polygon.setAttribute("fill", fill);
+        marker.appendChild(polygon);
+        defs.appendChild(marker);
+      }
+
+      function markerIdForColor(color) {
+        return "marker-" + color.replace(/[^a-zA-Z0-9]/g, "_");
+      }
+
+      function drawEdges() {
+        edgeLayer.innerHTML = "";
+        const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        edgeLayer.appendChild(defs);
+        const seenColors = new Set();
+
+        for (const edge of edges) {
+          const fromEl = document.getElementById("node-" + edge.fromId);
+          const toEl = document.getElementById("node-" + edge.toId);
+          if (!fromEl || !toEl) continue;
+
+          const start = getAnchor(fromEl, edge.fromSide);
+          const end = getAnchor(toEl, edge.toSide);
+          const dx = Math.max(Math.abs(end.x - start.x) * 0.35, 28);
+          const dy = Math.max(Math.abs(end.y - start.y) * 0.35, 28);
+          let c1x = start.x;
+          let c1y = start.y;
+          let c2x = end.x;
+          let c2y = end.y;
+
+          if (edge.fromSide === "right") c1x += dx;
+          if (edge.fromSide === "left") c1x -= dx;
+          if (edge.fromSide === "top") c1y -= dy;
+          if (edge.fromSide === "bottom") c1y += dy;
+          if (edge.toSide === "right") c2x += dx;
+          if (edge.toSide === "left") c2x -= dx;
+          if (edge.toSide === "top") c2y -= dy;
+          if (edge.toSide === "bottom") c2y += dy;
+
+          const color = resolveEdgeColor(edge.color);
+          const markerId = markerIdForColor(color);
+          if (!seenColors.has(markerId)) {
+            createMarker(defs, markerId, color);
+            seenColors.add(markerId);
+          }
+
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", "M " + start.x + " " + start.y + " C " + c1x + " " + c1y + ", " + c2x + " " + c2y + ", " + end.x + " " + end.y);
+          path.setAttribute("fill", "none");
+          path.setAttribute("stroke", color);
+          path.setAttribute("stroke-width", "2");
+          path.setAttribute("marker-end", "url(#" + markerId + ")");
+          edgeLayer.appendChild(path);
+
+          if (edge.label) {
+            const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            label.setAttribute("x", String((start.x + end.x) / 2));
+            label.setAttribute("y", String((start.y + end.y) / 2 - 6));
+            label.setAttribute("text-anchor", "middle");
+            label.setAttribute("class", "edge-label");
+            label.setAttribute("fill", textColor);
+            label.textContent = edge.label;
+            edgeLayer.appendChild(label);
+
+            const bbox = label.getBBox();
+            const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            bg.setAttribute("x", String(bbox.x - 6));
+            bg.setAttribute("y", String(bbox.y - 3));
+            bg.setAttribute("width", String(bbox.width + 12));
+            bg.setAttribute("height", String(bbox.height + 6));
+            bg.setAttribute("rx", "6");
+            bg.setAttribute("ry", "6");
+            bg.setAttribute("class", "edge-label-background");
+            edgeLayer.insertBefore(bg, label);
+          }
+        }
+      }
+
+      window.zoomBy = function(factor) {
+        currentScale = Math.max(0.2, Math.min(4, currentScale * factor));
+        canvas.style.transform = "scale(" + currentScale + ")";
+        drawEdges();
+      };
+
+      window.resetZoom = function() {
+        const padding = 24;
+        const availableWidth = Math.max(100, viewport.clientWidth - padding * 2);
+        const availableHeight = Math.max(100, viewport.clientHeight - padding * 2);
+        const baseWidth = 2080;
+        const baseHeight = 1197;
+        const scaleX = availableWidth / baseWidth;
+        const scaleY = availableHeight / baseHeight;
+        currentScale = Math.min(scaleX, scaleY, 1);
+        canvas.style.transform = "scale(" + currentScale + ")";
+        viewport.scrollTo({ left: 0, top: 0, behavior: "auto" });
+        drawEdges();
+      };
+
+      drawEdges();
+      window.resetZoom();
+      window.addEventListener("resize", () => {
+        drawEdges();
+        window.resetZoom();
+      });
+    })();
+  </script>
+</body>
+</html>
