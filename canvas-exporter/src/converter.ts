@@ -162,7 +162,7 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       word-break: break-word;
       flex: 1 1 auto;
       min-height: 0;
-      overflow: hidden;
+      overflow-y: auto;
     }
     .node-content h1, .node-content h2, .node-content h3, .node-content h4, .node-content h5, .node-content h6 {
       margin: 0.5em 0 0.35em;
@@ -266,6 +266,7 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       padding: 12px 14px;
       height: calc(100% + 24px);
       overflow: hidden;
+      overflow-y: auto;
     }
     .md-card-title-link {
       color: inherit;
@@ -282,13 +283,13 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       margin: 0.2em 0 0;
       flex: 1 1 auto;
       min-height: 0;
-      overflow: hidden;
+      overflow-y: auto;
     }
     .md-card-preview-text {
       color: ${theme.mutedText};
       font-size: 0.92em;
       margin: 0.35em 0 0;
-      overflow: hidden;
+      overflow-y: auto;
     }
     .md-card-preview h1,
     .md-card-preview h2,
@@ -307,8 +308,7 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
     .md-card-preview h5 { font-size: 0.98em; }
     .md-card-preview h6 { font-size: 0.94em; }
     .md-card-preview pre {
-      max-height: 7.5em;
-      overflow: hidden;
+      overflow: auto;
     }
     .md-card-preview table {
       width: 100%;
