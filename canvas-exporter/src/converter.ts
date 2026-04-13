@@ -212,6 +212,11 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
     .node-content .callout-example .callout-title { background: rgba(168,85,247,0.15); color: #8b3ec9; }
     .node-content .callout-quote, .node-content .callout-cite { border-color: #94a3b8; }
     .node-content .callout-quote .callout-title, .node-content .callout-cite .callout-title { background: rgba(148,163,184,0.15); color: #64748b; }
+    .node-content details.callout { display: block; }
+    .node-content details.callout > summary.callout-title { cursor: pointer; list-style: none; user-select: none; }
+    .node-content details.callout > summary.callout-title::-webkit-details-marker { display: none; }
+    .node-content details.callout > summary.callout-title::after { content: " ›"; font-size: 0.85em; }
+    .node-content details.callout[open] > summary.callout-title::after { content: " ⌄"; }
     .node-content hr {
       border: none;
       border-top: 1px solid ${theme.rule};
@@ -583,6 +588,11 @@ export function buildMarkdownDocumentHtml(title: string, bodyHtml: string, darkM
     .callout-example .callout-title { background: rgba(168,85,247,0.15); color: #8b3ec9; }
     .callout-quote, .callout-cite { border-color: #94a3b8; }
     .callout-quote .callout-title, .callout-cite .callout-title { background: rgba(148,163,184,0.15); color: #64748b; }
+    details.callout { display: block; }
+    details.callout > summary.callout-title { cursor: pointer; list-style: none; user-select: none; }
+    details.callout > summary.callout-title::-webkit-details-marker { display: none; }
+    details.callout > summary.callout-title::after { content: " ›"; font-size: 0.85em; }
+    details.callout[open] > summary.callout-title::after { content: " ⌄"; }
     hr { border: none; border-top: 1px solid ${theme.rule}; margin: 1em 0; }
     img { display: block; max-width: 100%; border-radius: 8px; margin: 0.8em 0; }
     table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
@@ -758,13 +768,19 @@ export function markdownToHtml(markdown: string): string {
         i += 1;
       }
       const firstLine = quoteLines[0] ?? "";
-      const calloutMatch = firstLine.match(/^\[!([\w-]+)\][+-]?(?:\s+(.*))?$/i);
+      const calloutMatch = firstLine.match(/^\[!([\w-]+)\]([+-])?(?:\s+(.*))?$/i);
       if (calloutMatch) {
         const type = calloutMatch[1].toLowerCase();
-        const title = calloutMatch[2]?.trim() || (type.charAt(0).toUpperCase() + type.slice(1));
+        const indicator = calloutMatch[2];
+        const title = calloutMatch[3]?.trim() || (type.charAt(0).toUpperCase() + type.slice(1));
         const contentLines = quoteLines.slice(1);
         const inner = markdownToHtml(contentLines.join("\n"));
-        out.push(`<div class="callout callout-${escapeAttribute(type)}"><div class="callout-title">${escapeHtml(title)}</div><div class="callout-content">${inner}</div></div>`);
+        if (indicator === "+" || indicator === "-") {
+          const openAttr = indicator === "+" ? " open" : "";
+          out.push(`<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title">${escapeHtml(title)}</summary><div class="callout-content">${inner}</div></details>`);
+        } else {
+          out.push(`<div class="callout callout-${escapeAttribute(type)}"><div class="callout-title">${escapeHtml(title)}</div><div class="callout-content">${inner}</div></div>`);
+        }
       } else {
         const inner = markdownToHtml(quoteLines.join("\n"));
         out.push(`<blockquote>${inner}</blockquote>`);

@@ -16,6 +16,7 @@ Phases: 0 of 1 complete
 |-------|------|-------|--------|-----------|
 | 1 | Callouts | 1 | ✅ Complete | 2026-04-13 |
 | 2 | Callout Fixes | 1 | ✅ Complete | 2026-04-13 |
+| 3 | Collapsible Callouts | 1 | ✅ Complete | 2026-04-13 |
 
 ## Phase Details
 
