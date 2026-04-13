@@ -751,16 +751,14 @@ export function markdownToHtml(markdown: string): string {
         const current = lines[i] ?? "";
         const currentTrimmed = current.trim();
         if (!currentTrimmed) {
-          quoteLines.push("");
-          i += 1;
-          continue;
+          break;
         }
         if (!/^>\s?/.test(currentTrimmed)) break;
         quoteLines.push(current.replace(/^\s*>\s?/, ""));
         i += 1;
       }
       const firstLine = quoteLines[0] ?? "";
-      const calloutMatch = firstLine.match(/^\[!([\w-]+)\](?:\s+(.*))?$/i);
+      const calloutMatch = firstLine.match(/^\[!([\w-]+)\][+-]?(?:\s+(.*))?$/i);
       if (calloutMatch) {
         const type = calloutMatch[1].toLowerCase();
         const title = calloutMatch[2]?.trim() || (type.charAt(0).toUpperCase() + type.slice(1));
