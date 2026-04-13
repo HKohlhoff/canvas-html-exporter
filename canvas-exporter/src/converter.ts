@@ -200,6 +200,7 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
     .node-content .callout { border-radius: 6px; margin: 0.7em 0; overflow: hidden; border: 1px solid #888; }
     .node-content .callout-title { padding: 5px 10px; font-weight: 600; font-size: 0.88em; letter-spacing: 0.01em; }
     .node-content .callout-content { padding: 4px 10px 6px; }
+    .node-content .callout-icon { margin-right: 5px; font-style: normal; }
     .node-content .callout-note, .node-content .callout-info, .node-content .callout-todo, .node-content .callout-abstract, .node-content .callout-summary, .node-content .callout-tldr { border-color: #4a9eff; }
     .node-content .callout-note .callout-title, .node-content .callout-info .callout-title, .node-content .callout-todo .callout-title, .node-content .callout-abstract .callout-title, .node-content .callout-summary .callout-title, .node-content .callout-tldr .callout-title { background: rgba(74,158,255,0.15); color: #4a9eff; }
     .node-content .callout-tip, .node-content .callout-hint, .node-content .callout-important, .node-content .callout-success, .node-content .callout-check, .node-content .callout-done { border-color: #4ade80; }
@@ -576,6 +577,7 @@ export function buildMarkdownDocumentHtml(title: string, bodyHtml: string, darkM
     .callout { border-radius: 6px; margin: 0.9em 0; overflow: hidden; border: 1px solid #888; }
     .callout-title { padding: 5px 10px; font-weight: 600; font-size: 0.88em; letter-spacing: 0.01em; }
     .callout-content { padding: 4px 10px 6px; }
+    .callout-icon { margin-right: 5px; font-style: normal; }
     .callout-note, .callout-info, .callout-todo, .callout-abstract, .callout-summary, .callout-tldr { border-color: #4a9eff; }
     .callout-note .callout-title, .callout-info .callout-title, .callout-todo .callout-title, .callout-abstract .callout-title, .callout-summary .callout-title, .callout-tldr .callout-title { background: rgba(74,158,255,0.15); color: #4a9eff; }
     .callout-tip, .callout-hint, .callout-important, .callout-success, .callout-check, .callout-done { border-color: #4ade80; }
@@ -768,18 +770,30 @@ export function markdownToHtml(markdown: string): string {
         i += 1;
       }
       const firstLine = quoteLines[0] ?? "";
+      const calloutIcons: Record<string, string> = {
+        note: "✎", abstract: "≡", summary: "≡", tldr: "≡",
+        info: "ℹ", todo: "☐",
+        tip: "🔥", hint: "🔥", important: "🔥",
+        success: "✓", check: "✓", done: "✓",
+        question: "?", help: "?", faq: "?",
+        warning: "⚠", caution: "⚠", attention: "⚠",
+        failure: "✗", fail: "✗", missing: "✗",
+        danger: "⚡", error: "⚡", bug: "✗",
+        example: "≫", quote: "❝", cite: "❝",
+      };
       const calloutMatch = firstLine.match(/^\[!([\w-]+)\]([+-])?(?:\s+(.*))?$/i);
       if (calloutMatch) {
         const type = calloutMatch[1].toLowerCase();
         const indicator = calloutMatch[2];
         const title = calloutMatch[3]?.trim() || (type.charAt(0).toUpperCase() + type.slice(1));
+        const icon = calloutIcons[type] ?? "◆";
         const contentLines = quoteLines.slice(1);
         const inner = markdownToHtml(contentLines.join("\n"));
         if (indicator === "+" || indicator === "-") {
           const openAttr = indicator === "+" ? " open" : "";
-          out.push(`<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title">${escapeHtml(title)}</summary><div class="callout-content">${inner}</div></details>`);
+          out.push(`<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</summary><div class="callout-content">${inner}</div></details>`);
         } else {
-          out.push(`<div class="callout callout-${escapeAttribute(type)}"><div class="callout-title">${escapeHtml(title)}</div><div class="callout-content">${inner}</div></div>`);
+          out.push(`<div class="callout callout-${escapeAttribute(type)}"><div class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</div><div class="callout-content">${inner}</div></div>`);
         }
       } else {
         const inner = markdownToHtml(quoteLines.join("\n"));

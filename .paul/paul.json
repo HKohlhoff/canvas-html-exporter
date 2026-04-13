@@ -7,8 +7,8 @@
     "status": "not_started"
   },
   "phase": {
-    "number": 3,
-    "name": "collapsible-callouts",
+    "number": 4,
+    "name": "callout-icons",
     "status": "complete"
   },
   "loop": {
