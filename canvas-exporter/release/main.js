@@ -171,6 +171,27 @@ function convertCanvasToHtml(data, options) {
       border-left: 3px solid ${theme.link};
       color: ${theme.mutedText};
     }
+    .node-content .callout { border-radius: 6px; margin: 0.7em 0; overflow: hidden; border: 1px solid #888; }
+    .node-content .callout-title { padding: 5px 10px; font-weight: 600; font-size: 0.88em; letter-spacing: 0.01em; }
+    .node-content .callout-content { padding: 4px 10px 6px; }
+    .node-content .callout-icon { margin-right: 5px; font-style: normal; }
+    .node-content .callout-note, .node-content .callout-info, .node-content .callout-todo, .node-content .callout-abstract, .node-content .callout-summary, .node-content .callout-tldr { border-color: #4a9eff; }
+    .node-content .callout-note .callout-title, .node-content .callout-info .callout-title, .node-content .callout-todo .callout-title, .node-content .callout-abstract .callout-title, .node-content .callout-summary .callout-title, .node-content .callout-tldr .callout-title { background: rgba(74,158,255,0.15); color: #4a9eff; }
+    .node-content .callout-tip, .node-content .callout-hint, .node-content .callout-important, .node-content .callout-success, .node-content .callout-check, .node-content .callout-done { border-color: #4ade80; }
+    .node-content .callout-tip .callout-title, .node-content .callout-hint .callout-title, .node-content .callout-important .callout-title, .node-content .callout-success .callout-title, .node-content .callout-check .callout-title, .node-content .callout-done .callout-title { background: rgba(74,222,128,0.15); color: #2d9e57; }
+    .node-content .callout-warning, .node-content .callout-caution, .node-content .callout-attention, .node-content .callout-question, .node-content .callout-help, .node-content .callout-faq { border-color: #f59e0b; }
+    .node-content .callout-warning .callout-title, .node-content .callout-caution .callout-title, .node-content .callout-attention .callout-title, .node-content .callout-question .callout-title, .node-content .callout-help .callout-title, .node-content .callout-faq .callout-title { background: rgba(245,158,11,0.15); color: #b97a10; }
+    .node-content .callout-danger, .node-content .callout-error, .node-content .callout-failure, .node-content .callout-fail, .node-content .callout-missing, .node-content .callout-bug { border-color: #ef4444; }
+    .node-content .callout-danger .callout-title, .node-content .callout-error .callout-title, .node-content .callout-failure .callout-title, .node-content .callout-fail .callout-title, .node-content .callout-missing .callout-title, .node-content .callout-bug .callout-title { background: rgba(239,68,68,0.15); color: #c93535; }
+    .node-content .callout-example { border-color: #a855f7; }
+    .node-content .callout-example .callout-title { background: rgba(168,85,247,0.15); color: #8b3ec9; }
+    .node-content .callout-quote, .node-content .callout-cite { border-color: #94a3b8; }
+    .node-content .callout-quote .callout-title, .node-content .callout-cite .callout-title { background: rgba(148,163,184,0.15); color: #64748b; }
+    .node-content details.callout { display: block; }
+    .node-content details.callout > summary.callout-title { cursor: pointer; list-style: none; user-select: none; }
+    .node-content details.callout > summary.callout-title::-webkit-details-marker { display: none; }
+    .node-content details.callout > summary.callout-title::after { content: " \u203A"; font-size: 0.85em; }
+    .node-content details.callout[open] > summary.callout-title::after { content: " \u2304"; }
     .node-content hr {
       border: none;
       border-top: 1px solid ${theme.rule};
@@ -534,6 +555,27 @@ function buildMarkdownDocumentHtml(title, bodyHtml, darkMode, canvasColors) {
       border-left: 3px solid ${theme.link};
       color: ${theme.mutedText};
     }
+    .callout { border-radius: 6px; margin: 0.9em 0; overflow: hidden; border: 1px solid #888; }
+    .callout-title { padding: 5px 10px; font-weight: 600; font-size: 0.88em; letter-spacing: 0.01em; }
+    .callout-content { padding: 4px 10px 6px; }
+    .callout-icon { margin-right: 5px; font-style: normal; }
+    .callout-note, .callout-info, .callout-todo, .callout-abstract, .callout-summary, .callout-tldr { border-color: #4a9eff; }
+    .callout-note .callout-title, .callout-info .callout-title, .callout-todo .callout-title, .callout-abstract .callout-title, .callout-summary .callout-title, .callout-tldr .callout-title { background: rgba(74,158,255,0.15); color: #4a9eff; }
+    .callout-tip, .callout-hint, .callout-important, .callout-success, .callout-check, .callout-done { border-color: #4ade80; }
+    .callout-tip .callout-title, .callout-hint .callout-title, .callout-important .callout-title, .callout-success .callout-title, .callout-check .callout-title, .callout-done .callout-title { background: rgba(74,222,128,0.15); color: #2d9e57; }
+    .callout-warning, .callout-caution, .callout-attention, .callout-question, .callout-help, .callout-faq { border-color: #f59e0b; }
+    .callout-warning .callout-title, .callout-caution .callout-title, .callout-attention .callout-title, .callout-question .callout-title, .callout-help .callout-title, .callout-faq .callout-title { background: rgba(245,158,11,0.15); color: #b97a10; }
+    .callout-danger, .callout-error, .callout-failure, .callout-fail, .callout-missing, .callout-bug { border-color: #ef4444; }
+    .callout-danger .callout-title, .callout-error .callout-title, .callout-failure .callout-title, .callout-fail .callout-title, .callout-missing .callout-title, .callout-bug .callout-title { background: rgba(239,68,68,0.15); color: #c93535; }
+    .callout-example { border-color: #a855f7; }
+    .callout-example .callout-title { background: rgba(168,85,247,0.15); color: #8b3ec9; }
+    .callout-quote, .callout-cite { border-color: #94a3b8; }
+    .callout-quote .callout-title, .callout-cite .callout-title { background: rgba(148,163,184,0.15); color: #64748b; }
+    details.callout { display: block; }
+    details.callout > summary.callout-title { cursor: pointer; list-style: none; user-select: none; }
+    details.callout > summary.callout-title::-webkit-details-marker { display: none; }
+    details.callout > summary.callout-title::after { content: " \u203A"; font-size: 0.85em; }
+    details.callout[open] > summary.callout-title::after { content: " \u2304"; }
     hr { border: none; border-top: 1px solid ${theme.rule}; margin: 1em 0; }
     img { display: block; max-width: 100%; border-radius: 8px; margin: 0.8em 0; }
     table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
@@ -670,17 +712,61 @@ function markdownToHtml(markdown) {
         const current = lines[i] ?? "";
         const currentTrimmed = current.trim();
         if (!currentTrimmed) {
-          quoteLines.push("");
-          i += 1;
-          continue;
+          break;
         }
         if (!/^>\s?/.test(currentTrimmed))
           break;
         quoteLines.push(current.replace(/^\s*>\s?/, ""));
         i += 1;
       }
-      const inner = markdownToHtml(quoteLines.join("\n"));
-      out.push(`<blockquote>${inner}</blockquote>`);
+      const firstLine = quoteLines[0] ?? "";
+      const calloutIcons = {
+        note: "\u270E",
+        abstract: "\u2261",
+        summary: "\u2261",
+        tldr: "\u2261",
+        info: "\u2139",
+        todo: "\u2610",
+        tip: "\u{1F525}",
+        hint: "\u{1F525}",
+        important: "\u{1F525}",
+        success: "\u2713",
+        check: "\u2713",
+        done: "\u2713",
+        question: "?",
+        help: "?",
+        faq: "?",
+        warning: "\u26A0",
+        caution: "\u26A0",
+        attention: "\u26A0",
+        failure: "\u2717",
+        fail: "\u2717",
+        missing: "\u2717",
+        danger: "\u26A1",
+        error: "\u26A1",
+        bug: "\u2717",
+        example: "\u226B",
+        quote: "\u275D",
+        cite: "\u275D"
+      };
+      const calloutMatch = firstLine.match(/^\[!([\w-]+)\]([+-])?(?:\s+(.*))?$/i);
+      if (calloutMatch) {
+        const type = calloutMatch[1].toLowerCase();
+        const indicator = calloutMatch[2];
+        const title = calloutMatch[3]?.trim() || type.charAt(0).toUpperCase() + type.slice(1);
+        const icon = calloutIcons[type] ?? "\u25C6";
+        const contentLines = quoteLines.slice(1);
+        const inner = markdownToHtml(contentLines.join("\n"));
+        if (indicator === "+" || indicator === "-") {
+          const openAttr = indicator === "+" ? " open" : "";
+          out.push(`<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</summary><div class="callout-content">${inner}</div></details>`);
+        } else {
+          out.push(`<div class="callout callout-${escapeAttribute(type)}"><div class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</div><div class="callout-content">${inner}</div></div>`);
+        }
+      } else {
+        const inner = markdownToHtml(quoteLines.join("\n"));
+        out.push(`<blockquote>${inner}</blockquote>`);
+      }
       continue;
     }
     if (isTableStart(lines, i)) {

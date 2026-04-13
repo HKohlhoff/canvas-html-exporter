@@ -8,5 +8,8 @@
   },
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true
-  }
+  },
+  "enabledMcpjsonServers": [
+    "carl-mcp"
+  ]
 }

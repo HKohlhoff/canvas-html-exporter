@@ -19,7 +19,7 @@ npm run build:prod  # Production build (minified, no sourcemap)
 
 The build script (`build.mjs`) automatically copies the output to the Obsidian vault at `/Users/Holger/SynologyDrive/Obsidian/HolgersVault/.obsidian/plugins/canvas-exporter/` and creates a `.hotreload` marker.
 
-There are no automated tests currently — the README lists regression tests as a planned next step.
+There are no automated tests currently.
 
 ## Architecture
 
