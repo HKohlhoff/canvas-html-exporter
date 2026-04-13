@@ -1,0 +1,25 @@
+{
+  "name": "canvas-exporter",
+  "version": "0.0.0",
+  "milestone": {
+    "name": "v0.1 Initial Release",
+    "version": "0.1.0",
+    "status": "not_started"
+  },
+  "phase": {
+    "number": 1,
+    "name": "callouts",
+    "status": "complete"
+  },
+  "loop": {
+    "plan": null,
+    "position": "IDLE"
+  },
+  "timestamps": {
+    "created_at": "2026-04-13T00:00:00Z",
+    "updated_at": "2026-04-13T00:00:00Z"
+  },
+  "satellite": {
+    "groom": true
+  }
+}
