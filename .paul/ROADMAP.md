@@ -6,41 +6,29 @@ canvas-exporter is an Obsidian plugin that converts canvas files into standalone
 
 ## Current Milestone
 
-**v0.1 Initial Release** (v0.1.0)
-Status: In progress
-Phases: 5 of 5 complete
+Run `/paul:discuss-milestone` or `/paul:milestone` to define the next milestone.
 
-## Phases
+## Next Milestone
 
-| Phase | Name | Plans | Status | Completed |
-|-------|------|-------|--------|-----------|
-| 1 | Callouts | 1 | ✅ Complete | 2026-04-13 |
-| 2 | Callout Fixes | 1 | ✅ Complete | 2026-04-13 |
-| 3 | Collapsible Callouts | 1 | ✅ Complete | 2026-04-13 |
-| 4 | Callout Icons | 1 | ✅ Complete | 2026-04-13 |
-| 5 | PDF Usage | 1 | ✅ Complete | 2026-04-14 |
+To be defined. Use `/paul:discuss-milestone` to explore scope.
 
-## Phase Details
+## Completed Milestones
 
-### Phase 1: Callouts
+<details>
+<summary>v0.1 Initial Release — 2026-04-14 (5 phases)</summary>
 
-**Goal:** Render Obsidian callout blocks (`> [!TYPE] Title`) as styled HTML callout boxes in both canvas node content and standalone markdown page exports.
-**Depends on:** Nothing (first phase)
-**Research:** Unlikely (internal markdown parser modification)
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| 1 | Callouts | 1 | 2026-04-13 |
+| 2 | Callout Fixes | 1 | 2026-04-13 |
+| 3 | Collapsible Callouts | 1 | 2026-04-13 |
+| 4 | Callout Icons | 1 | 2026-04-13 |
+| 5 | PDF Usage | 1 | 2026-04-14 |
 
-**Scope:**
-- Callout detection in `markdownToHtml()`
-- Callout CSS in both inline style blocks
+Archive: `.paul/milestones/v0.1.0-ROADMAP.md`
 
-**Plans:**
-- [x] 01-01: Parse callouts + add CSS
-
-### Phase 5: PDF Usage
-
-Focus: PDF files embedded in canvas nodes are rendered in the exported HTML — scrollable inside an iframe and openable via a direct link.
-Plans: 1 (05-01 complete)
-Status: ✅ Complete (2026-04-14)
+</details>
 
 ---
 *Roadmap created: 2026-04-13*
-*Last updated: 2026-04-14 after Phase 5*
+*Last updated: 2026-04-14 after v0.1 Initial Release*
