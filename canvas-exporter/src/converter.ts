@@ -625,7 +625,8 @@ function renderNode(
   const width = Math.max(120, normalizeNumber(node.width));
   const height = Math.max(60, normalizeNumber(node.height));
   const type = (node.type || "text").toLowerCase();
-  const classes = ["node", escapeAttribute(type === "group" ? "group" : "")].filter(Boolean).join(" ");
+  const isPdf = node.fileKind === "pdf";
+  const classes = ["node", type === "group" ? "group" : "", isPdf ? "pdf" : ""].filter(Boolean).join(" ");
 
   const title = node.label ? `<div class="node-title">${markdownToHtml(node.label)}</div>` : "";
   const content = renderNodeContent(node);
