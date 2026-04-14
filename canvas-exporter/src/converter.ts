@@ -151,6 +151,30 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       border-style: dashed;
       z-index: 0;
     }
+    .node.pdf {
+      padding: 0;
+    }
+    .node.pdf .node-content {
+      overflow: hidden;
+    }
+    .pdf-embed {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .pdf-embed iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+      display: block;
+    }
+    .pdf-fallback-link {
+      display: block;
+      padding: 4px 10px;
+      font-size: 0.8em;
+      text-align: right;
+      opacity: 0.6;
+    }
     .node-title {
       font-weight: 700;
       margin-bottom: 8px;
