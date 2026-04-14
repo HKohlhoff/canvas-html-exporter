@@ -125,6 +125,33 @@ function convertCanvasToHtml(data, options) {
       border-style: dashed;
       z-index: 0;
     }
+    .node.pdf {
+      padding: 0;
+    }
+    .node.pdf .node-title {
+      padding: 6px 14px;
+    }
+    .node.pdf .node-content {
+      overflow: hidden;
+    }
+    .pdf-embed {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .pdf-embed iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+      display: block;
+    }
+    .pdf-fallback-link {
+      display: block;
+      padding: 4px 10px;
+      font-size: 0.8em;
+      text-align: right;
+      opacity: 0.6;
+    }
     .node-title {
       font-weight: 700;
       margin-bottom: 8px;
@@ -599,7 +626,8 @@ function renderNode(node, offsetX, offsetY, theme, canvasColors) {
   const width = Math.max(120, normalizeNumber(node.width));
   const height = Math.max(60, normalizeNumber(node.height));
   const type = (node.type || "text").toLowerCase();
-  const classes = ["node", escapeAttribute(type === "group" ? "group" : "")].filter(Boolean).join(" ");
+  const isPdf = node.fileKind === "pdf";
+  const classes = ["node", type === "group" ? "group" : "", isPdf ? "pdf" : ""].filter(Boolean).join(" ");
   const title = node.label ? `<div class="node-title">${markdownToHtml(node.label)}</div>` : "";
   const content = renderNodeContent(node);
   const colorKey = String(node.color || "").trim();
@@ -655,6 +683,12 @@ function renderNodeContent(node) {
     if (node.fileKind === "markdown") {
       const preview = node.previewHtml ? `<div class="md-card-preview">${node.previewHtml}</div>` : node.previewText ? `<p class="md-card-preview-text">${escapeHtml(node.previewText)}</p>` : "";
       return `<div class="md-card"><a class="md-card-title-link" href="${href}" target="_blank" rel="noopener noreferrer"><div class="md-card-title">${displayName}</div></a>${preview}</div>`;
+    }
+    if (node.fileKind === "pdf") {
+      if (!href)
+        return "<p>Leerer PDF-Knoten</p>";
+      const pdfName = escapeAttribute(node.displayName || node.file || "PDF");
+      return `<div class="pdf-embed"><iframe src="${href}" title="${pdfName}" loading="lazy" sandbox="allow-same-origin"></iframe><a class="pdf-fallback-link" href="${href}" target="_blank" rel="noopener noreferrer">PDF \xF6ffnen \u2197</a></div>`;
     }
     if (!href)
       return "<p>Leerer Datei-Knoten</p>";

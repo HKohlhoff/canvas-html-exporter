@@ -3,13 +3,14 @@
     "allow": [
       "Bash(npm run:*)",
       "Bash(git -C canvas-exporter add src/converter.ts)",
-      "Bash(git -C canvas-exporter commit -m ':*)"
+      "Bash(git -C canvas-exporter commit -m ':*)",
+      "Bash(git:*)"
     ]
-  },
-  "enabledPlugins": {
-    "superpowers@claude-plugins-official": true
   },
   "enabledMcpjsonServers": [
     "carl-mcp"
-  ]
+  ],
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  }
 }
