@@ -730,6 +730,13 @@ function renderNodeContent(node: CanvasNode): string {
       return `<div class="md-card"><a class="md-card-title-link" href="${href}" target="_blank" rel="noopener noreferrer"><div class="md-card-title">${displayName}</div></a>${preview}</div>`;
     }
 
+    if (node.fileKind === "pdf") {
+      const pdfHref = escapeAttribute(node.exportPath || node.file || "");
+      if (!pdfHref) return "<p>Leerer PDF-Knoten</p>";
+      const pdfName = escapeHtml(node.displayName || node.file || "PDF");
+      return `<div class="pdf-embed"><iframe src="${pdfHref}" title="${pdfName}" loading="lazy"></iframe><a class="pdf-fallback-link" href="${pdfHref}" target="_blank" rel="noopener noreferrer">PDF öffnen ↗</a></div>`;
+    }
+
     if (!href) return "<p>Leerer Datei-Knoten</p>";
     return `<p><a class="file-chip" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a></p>`;
   }
