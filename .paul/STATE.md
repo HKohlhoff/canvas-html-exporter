@@ -10,14 +10,14 @@ See: .paul/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Milestone: v0.1 Initial Release
-Phase: 4 — Callout Icons — Complete ✅
-Plan: 04-01 unified
+Phase: 5 — PDF Usage — Complete ✅
+Plan: 05-01 unified
 Status: Phase complete — ready for next plan
-Last activity: 2026-04-13 — Phase 4 unified, loop closed
+Last activity: 2026-04-14 — Phase 5 unified, loop closed
 
 Progress:
-- Milestone: [██░░░░░░░░] 20%
-- Phase 3: [░░░░░░░░░░] 0%
+- Milestone: [███░░░░░░░] 25%
+- Phase 5: [██████████] 100%
 
 ## Loop Position
 
@@ -35,6 +35,9 @@ PLAN ──▶ APPLY ──▶ UNIFY
 |----------|-------|--------|
 | Callout detection inline in blockquote handler (no new helper) | Phase 1 | Co-located logic; all callers of markdownToHtml() get callouts |
 | CSS injected in both style blocks independently | Phase 1 | canvas nodes and markdown pages styled consistently |
+| Added Phase 5: PDF Usage | Phase 4 | Extends milestone scope |
+| PDF iframe: no sandbox | Phase 5 | Enables browser native PDF rendering |
+| PDF viewer subpage derived from exportPath suffix | Phase 5 | Avoids double counter increment |
 
 ### Deferred Issues
 
@@ -46,10 +49,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-13
-Stopped at: Plan 02-01 created
+Last session: 2026-04-14
+Stopped at: Phase 5 complete, loop closed
 Next action: Run /paul:plan to start next phase
-Resume file: .paul/phases/04-callout-icons/04-01-SUMMARY.md
+Resume file: .paul/phases/05-pdf-usage/05-01-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*

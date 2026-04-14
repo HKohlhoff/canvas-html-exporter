@@ -171,12 +171,22 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       border: none;
       display: block;
     }
-    .pdf-fallback-link {
+    .pdf-title-link {
       display: block;
-      padding: 4px 10px;
-      font-size: 0.8em;
-      text-align: right;
-      opacity: 0.6;
+      text-decoration: none;
+      color: inherit;
+    }
+    .pdf-title {
+      padding: 6px 14px;
+      font-size: 0.85em;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-bottom: 1px solid rgba(128,128,128,0.2);
+    }
+    .pdf-title:hover {
+      text-decoration: underline;
     }
     .node-title {
       font-weight: 700;
@@ -731,9 +741,12 @@ function renderNodeContent(node: CanvasNode): string {
     }
 
     if (node.fileKind === "pdf") {
-      if (!href) return "<p>Leerer PDF-Knoten</p>";
-      const pdfName = escapeAttribute(node.displayName || node.file || "PDF");
-      return `<div class="pdf-embed"><iframe src="${href}" title="${pdfName}" loading="lazy" sandbox="allow-same-origin"></iframe><a class="pdf-fallback-link" href="${href}" target="_blank" rel="noopener noreferrer">PDF öffnen ↗</a></div>`;
+      const pdfHref = escapeAttribute(node.exportPath || node.file || "");
+      if (!pdfHref) return "<p>Leerer PDF-Knoten</p>";
+      const viewerHref = escapeAttribute(node.canvasHref || node.exportPath || node.file || "");
+      const pdfTitle = escapeHtml(node.displayName || node.file || "PDF");
+      const pdfTitleAttr = escapeAttribute(node.displayName || node.file || "PDF");
+      return `<div class="pdf-embed"><a class="pdf-title-link" href="${viewerHref}" target="_blank" rel="noopener noreferrer"><div class="pdf-title">${pdfTitle}</div></a><iframe src="${pdfHref}" title="${pdfTitleAttr}" loading="lazy"></iframe></div>`;
     }
 
     if (!href) return "<p>Leerer Datei-Knoten</p>";

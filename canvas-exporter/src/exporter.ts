@@ -185,10 +185,36 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   }
 
   const exportPath = await copyVaultFile(ctx, file, "file");
+
+  if (ext === "pdf") {
+    const pdfFilename = exportPath.split("/").pop() || "";
+    const viewerName = pdfFilename.replace(/\.pdf$/i, "-viewer.html");
+    const viewerPath = normalizePath(`${ctx.assetsFilesDir}/${viewerName}`);
+    const viewerHtml = `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtmlAttr(file.basename)}</title>
+  <style>html,body{margin:0;padding:0;height:100%;}iframe{display:block;width:100%;height:100vh;border:none;}</style>
+</head>
+<body><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
+</html>`;
+    await writeTextFile(ctx.app, viewerPath, viewerHtml);
+    const canvasHref = normalizeExportHref(`assets/files/${viewerName}`);
+    return {
+      ...node,
+      displayName: file.name,
+      fileKind: "pdf" as const,
+      exportPath,
+      canvasHref,
+    };
+  }
+
   return {
     ...node,
     displayName: file.name,
-    fileKind: ext === "pdf" ? "pdf" : "file",
+    fileKind: "file" as const,
     exportPath,
   };
 }

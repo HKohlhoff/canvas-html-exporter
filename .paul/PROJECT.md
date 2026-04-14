@@ -31,6 +31,7 @@ Obsidian users can export a canvas file to a standalone, interactive HTML packag
 - [x] Link rewriting (wiki-links → relative paths)
 - [x] Asset deduplication
 - [x] Obsidian callout rendering (`> [!TYPE] Title` → styled HTML) — Phase 1
+- [x] PDF node rendering with scrollable iframe viewer and companion viewer HTML page — Phase 5
 
 ### Active (In Progress)
 
@@ -75,6 +76,8 @@ None yet.
 | No base64 embedding | Stability — removed deliberately | - | Active |
 | Callout detection inline in blockquote handler | No new helper; co-located logic | 2026-04-13 | Active |
 | Callout CSS in both style blocks | Canvas nodes + markdown pages each need separate CSS injection | 2026-04-13 | Active |
+| PDF iframe: no sandbox attribute | `allow-same-origin` alone blocks browser PDF viewer (needs JS); removed entirely | 2026-04-14 | Active |
+| PDF viewer page derived from exportPath suffix | Avoids double `uniqueOutputName` call; predictable naming | 2026-04-14 | Active |
 
 ## Success Metrics
 
@@ -101,4 +104,4 @@ None yet.
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-04-13*
+*Last updated: 2026-04-14*

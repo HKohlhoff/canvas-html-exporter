@@ -145,12 +145,22 @@ function convertCanvasToHtml(data, options) {
       border: none;
       display: block;
     }
-    .pdf-fallback-link {
+    .pdf-title-link {
       display: block;
-      padding: 4px 10px;
-      font-size: 0.8em;
-      text-align: right;
-      opacity: 0.6;
+      text-decoration: none;
+      color: inherit;
+    }
+    .pdf-title {
+      padding: 6px 14px;
+      font-size: 0.85em;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-bottom: 1px solid rgba(128,128,128,0.2);
+    }
+    .pdf-title:hover {
+      text-decoration: underline;
     }
     .node-title {
       font-weight: 700;
@@ -685,10 +695,13 @@ function renderNodeContent(node) {
       return `<div class="md-card"><a class="md-card-title-link" href="${href}" target="_blank" rel="noopener noreferrer"><div class="md-card-title">${displayName}</div></a>${preview}</div>`;
     }
     if (node.fileKind === "pdf") {
-      if (!href)
+      const pdfHref = escapeAttribute(node.exportPath || node.file || "");
+      if (!pdfHref)
         return "<p>Leerer PDF-Knoten</p>";
-      const pdfName = escapeAttribute(node.displayName || node.file || "PDF");
-      return `<div class="pdf-embed"><iframe src="${href}" title="${pdfName}" loading="lazy" sandbox="allow-same-origin"></iframe><a class="pdf-fallback-link" href="${href}" target="_blank" rel="noopener noreferrer">PDF \xF6ffnen \u2197</a></div>`;
+      const viewerHref = escapeAttribute(node.canvasHref || node.exportPath || node.file || "");
+      const pdfTitle = escapeHtml(node.displayName || node.file || "PDF");
+      const pdfTitleAttr = escapeAttribute(node.displayName || node.file || "PDF");
+      return `<div class="pdf-embed"><a class="pdf-title-link" href="${viewerHref}" target="_blank" rel="noopener noreferrer"><div class="pdf-title">${pdfTitle}</div></a><iframe src="${pdfHref}" title="${pdfTitleAttr}" loading="lazy"></iframe></div>`;
     }
     if (!href)
       return "<p>Leerer Datei-Knoten</p>";
@@ -1206,10 +1219,34 @@ async function prepareNode(ctx, node) {
     };
   }
   const exportPath = await copyVaultFile(ctx, file, "file");
+  if (ext === "pdf") {
+    const pdfFilename = exportPath.split("/").pop() || "";
+    const viewerName = pdfFilename.replace(/\.pdf$/i, "-viewer.html");
+    const viewerPath = (0, import_obsidian.normalizePath)(`${ctx.assetsFilesDir}/${viewerName}`);
+    const viewerHtml = `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtmlAttr(file.basename)}</title>
+  <style>html,body{margin:0;padding:0;height:100%;}iframe{display:block;width:100%;height:100vh;border:none;}</style>
+</head>
+<body><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
+</html>`;
+    await writeTextFile(ctx.app, viewerPath, viewerHtml);
+    const canvasHref = normalizeExportHref(`assets/files/${viewerName}`);
+    return {
+      ...node,
+      displayName: file.name,
+      fileKind: "pdf",
+      exportPath,
+      canvasHref
+    };
+  }
   return {
     ...node,
     displayName: file.name,
-    fileKind: ext === "pdf" ? "pdf" : "file",
+    fileKind: "file",
     exportPath
   };
 }
