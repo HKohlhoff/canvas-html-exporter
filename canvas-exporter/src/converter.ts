@@ -731,10 +731,9 @@ function renderNodeContent(node: CanvasNode): string {
     }
 
     if (node.fileKind === "pdf") {
-      const pdfHref = escapeAttribute(node.exportPath || node.file || "");
-      if (!pdfHref) return "<p>Leerer PDF-Knoten</p>";
-      const pdfName = escapeHtml(node.displayName || node.file || "PDF");
-      return `<div class="pdf-embed"><iframe src="${pdfHref}" title="${pdfName}" loading="lazy"></iframe><a class="pdf-fallback-link" href="${pdfHref}" target="_blank" rel="noopener noreferrer">PDF öffnen ↗</a></div>`;
+      if (!href) return "<p>Leerer PDF-Knoten</p>";
+      const pdfName = escapeAttribute(node.displayName || node.file || "PDF");
+      return `<div class="pdf-embed"><iframe src="${href}" title="${pdfName}" loading="lazy" sandbox="allow-same-origin"></iframe><a class="pdf-fallback-link" href="${href}" target="_blank" rel="noopener noreferrer">PDF öffnen ↗</a></div>`;
     }
 
     if (!href) return "<p>Leerer Datei-Knoten</p>";
