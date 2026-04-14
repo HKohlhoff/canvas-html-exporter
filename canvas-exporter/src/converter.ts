@@ -154,6 +154,9 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
     .node.pdf {
       padding: 0;
     }
+    .node.pdf .node-title {
+      padding: 6px 14px;
+    }
     .node.pdf .node-content {
       overflow: hidden;
     }
