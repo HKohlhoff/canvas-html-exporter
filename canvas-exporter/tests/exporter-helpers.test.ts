@@ -55,3 +55,38 @@ test("prefers embedded canvas name when present", () => {
   const data = normalizeCanvasData({ name: "Mein Canvas", nodes: [], edges: [] }, "Fallback");
   assert.equal(data.name, "Mein Canvas");
 });
+
+test("falls back to safe defaults for missing node fields", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [
+        { id: "n1" },
+      ],
+      edges: [],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.nodes.length, 1);
+  assert.equal(data.nodes[0]?.type, "text");
+  assert.equal(data.nodes[0]?.x, 0);
+  assert.equal(data.nodes[0]?.y, 0);
+  assert.equal(data.nodes[0]?.width, 0);
+  assert.equal(data.nodes[0]?.height, 0);
+});
+
+test("drops invalid node and edge entries during normalization", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [null, "text", { type: "text" }, { id: "valid", type: "group" }],
+      edges: [null, { fromNode: "a" }, { fromNode: "a", toNode: "b" }],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.nodes.length, 1);
+  assert.equal(data.nodes[0]?.id, "valid");
+  assert.equal(data.edges.length, 1);
+  assert.equal(data.edges[0]?.fromNode, "a");
+  assert.equal(data.edges[0]?.toNode, "b");
+});
