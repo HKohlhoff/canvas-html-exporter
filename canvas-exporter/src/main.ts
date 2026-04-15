@@ -11,7 +11,7 @@ type PluginSettings = {
 type CanvasColorMap = Record<string, string>;
 
 const DEFAULT_SETTINGS: PluginSettings = {
-  darkMode: true,
+  darkMode: false,
   outputDir: "Canvas-Exports",
   highlightingTheme: "shiki",
 };
@@ -191,6 +191,9 @@ class CanvasExporterSettingTab extends PluginSettingTab {
         dropdown
           .addOption("shiki", "Shiki")
           .addOption("github", "GitHub")
+          .addOption("vscode", "VS Code")
+          .addOption("catppuccin", "Catppuccin")
+          .addOption("material", "Material")
           .setValue(this.plugin.settings.highlightingTheme)
           .onChange(async (value: string) => {
             this.plugin.settings.highlightingTheme = (value as HighlightingThemeChoice) || DEFAULT_SETTINGS.highlightingTheme;

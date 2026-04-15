@@ -55,7 +55,7 @@ export interface ExportOptions {
 
 export const EXPORTER_VERSION = "0.2.0";
 export const EXPORTER_SIGNATURE = `canvas-exporter v${EXPORTER_VERSION}`;
-export type HighlightingThemeChoice = "shiki" | "github";
+export type HighlightingThemeChoice = "shiki" | "github" | "vscode" | "catppuccin" | "material";
 
 function buildExporterBuildMeta(highlightingTheme: HighlightingThemeChoice | undefined): string {
   const theme = highlightingTheme === "github" ? "github" : "shiki";
@@ -92,6 +92,18 @@ const SHIKI_THEMES: Record<HighlightingThemeChoice, { dark: BundledTheme; light:
   github: {
     dark: "github-dark-default",
     light: "github-light-default",
+  },
+  vscode: {
+    dark: "dark-plus",
+    light: "light-plus",
+  },
+  catppuccin: {
+    dark: "catppuccin-mocha",
+    light: "catppuccin-latte",
+  },
+  material: {
+    dark: "material-theme",
+    light: "material-theme-lighter",
   },
 };
 const SHIKI_FALLBACK_LANGUAGE = "text";
@@ -143,7 +155,7 @@ function normalizeCodeLanguage(lang: string): string {
 }
 
 function resolveHighlightingTheme(choice: HighlightingThemeChoice | undefined, darkMode: boolean): BundledTheme {
-  const selected = choice === "github" ? SHIKI_THEMES.github : SHIKI_THEMES.shiki;
+  const selected = SHIKI_THEMES[choice || "shiki"] || SHIKI_THEMES.shiki;
   return darkMode ? selected.dark : selected.light;
 }
 
