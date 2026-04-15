@@ -120,8 +120,7 @@ await test("renders highlighted code blocks on the canvas page", async () => {
   const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /class="shiki/);
   assert.match(html, /style="color:#[0-9A-Fa-f]{6}/);
-  assert.match(html, /&#x3C;/);
-  assert.match(html, />\?</);
+  assert.match(html, /&#x3C;\?/);
   assert.match(html, /meta name="canvas-exporter-build" content="0\.2\.0-shiki"/);
 });
 

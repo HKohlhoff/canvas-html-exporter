@@ -98,7 +98,7 @@ await test("treats csharp fences as code blocks", async () => {
   assert.match(html, /string/);
   assert.match(html, /\[\]/);
   assert.match(html, />args</);
-  assert.match(html, /Console</);
+  assert.match(html, /Console\./);
   assert.match(html, />WriteLine</);
   assert.doesNotMatch(html, /<p>using System;/);
 });
@@ -110,8 +110,7 @@ await test("highlights sql and php fences with shiki", async () => {
   assert.match(sqlHtml, /class="shiki/);
   assert.ok(countDistinctHighlightColors(sqlHtml) >= 2);
   assert.match(phpHtml, /class="shiki/);
-  assert.match(phpHtml, /&#x3C;/);
-  assert.match(phpHtml, />\?</);
+  assert.match(phpHtml, /&#x3C;\?/);
   assert.ok(countDistinctHighlightColors(phpHtml) >= 3);
 });
 
