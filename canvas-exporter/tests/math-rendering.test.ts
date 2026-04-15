@@ -29,6 +29,15 @@ test("keeps inline code literal when it contains math markers", () => {
   assert.doesNotMatch(html, /<math/);
 });
 
+test("treats escaped dollar signs as literal text before inline math", () => {
+  const html = markdownToHtml(
+    "steht in einfachen \\$-Zeichen und zeigt z.B. $\\nu = \\frac{\\omega}{2\\pi}$ eine Formel",
+  );
+  assert.match(html, /einfachen \$-Zeichen und zeigt z\.B\./);
+  assert.match(html, /<math/);
+  assert.match(html, /<mi>\u03bd<\/mi>/);
+});
+
 test("keeps fenced code blocks literal when they contain math markers", () => {
   const html = markdownToHtml("```tex\n$x$\n$$y$$\n```");
   assert.match(html, /<pre><code class="language-tex">\$x\$\n\$\$y\$\$<\/code><\/pre>/);

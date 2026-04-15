@@ -973,10 +973,16 @@ function renderInline(text: string): string {
     return `@@CODE_${codeStore.length - 1}@@`;
   });
 
+  const escapedDollarStore: string[] = [];
+  const withEscapedDollarPlaceholders = withCodePlaceholders.replace(/\\\$/g, () => {
+    escapedDollarStore.push("$");
+    return `@@EDOLLAR_${escapedDollarStore.length - 1}@@`;
+  });
+
   // Extract inline math before HTML escaping to protect LaTeX content.
   // Code spans are already protected above and must remain literal.
   const mathStore: string[] = [];
-  const withMathPlaceholders = withCodePlaceholders.replace(
+  const withMathPlaceholders = withEscapedDollarPlaceholders.replace(
     /(?<!\$)\$(?!\$)([^$\n]+?)(?<!\$)\$(?!\$)/g,
     (_match, content) => {
       mathStore.push(renderMath(content.trim(), false));
@@ -1002,6 +1008,9 @@ function renderInline(text: string): string {
   html = html.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
   if (codeStore.length > 0) {
     html = html.replace(/@@CODE_(\d+)@@/g, (_m, idx) => codeStore[parseInt(idx, 10)] ?? "");
+  }
+  if (escapedDollarStore.length > 0) {
+    html = html.replace(/@@EDOLLAR_(\d+)@@/g, (_m, idx) => escapedDollarStore[parseInt(idx, 10)] ?? "$");
   }
   // Restore inline math after text-level markdown transforms.
   if (mathStore.length > 0) {

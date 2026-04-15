@@ -15239,8 +15239,13 @@ function renderInline(text2) {
     codeStore.push(`<code>${escapeHtml(content)}</code>`);
     return `@@CODE_${codeStore.length - 1}@@`;
   });
+  const escapedDollarStore = [];
+  const withEscapedDollarPlaceholders = withCodePlaceholders.replace(/\\\$/g, () => {
+    escapedDollarStore.push("$");
+    return `@@EDOLLAR_${escapedDollarStore.length - 1}@@`;
+  });
   const mathStore = [];
-  const withMathPlaceholders = withCodePlaceholders.replace(
+  const withMathPlaceholders = withEscapedDollarPlaceholders.replace(
     /(?<!\$)\$(?!\$)([^$\n]+?)(?<!\$)\$(?!\$)/g,
     (_match, content) => {
       mathStore.push(renderMath(content.trim(), false));
@@ -15265,6 +15270,9 @@ function renderInline(text2) {
   html = html.replace(/~~([^~\n]+)~~/g, "<del>$1</del>");
   if (codeStore.length > 0) {
     html = html.replace(/@@CODE_(\d+)@@/g, (_m, idx) => codeStore[parseInt(idx, 10)] ?? "");
+  }
+  if (escapedDollarStore.length > 0) {
+    html = html.replace(/@@EDOLLAR_(\d+)@@/g, (_m, idx) => escapedDollarStore[parseInt(idx, 10)] ?? "$");
   }
   if (mathStore.length > 0) {
     html = html.replace(/@@MATH_(\d+)@@/g, (_m, idx) => mathStore[parseInt(idx, 10)] ?? "");
