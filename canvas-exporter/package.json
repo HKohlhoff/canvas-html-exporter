@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "build": "node build.mjs",
+    "test:math": "tsc -p tsconfig.tests.json && node .test-build/tests/math-rendering.test.js",
     "dev": "node build.mjs --watch",
     "build:prod": "node build.mjs --production",
     "dev:prod": "node build.mjs --watch --production"
@@ -12,9 +13,13 @@
   "keywords": [],
   "author": "Holger Kohlhoff",
   "license": "MIT",
+  "dependencies": {
+    "katex": "^0.16.0"
+  },
   "devDependencies": {
     "esbuild": "^0.20.0",
     "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "@types/katex": "^0.16.0"
   }
 }

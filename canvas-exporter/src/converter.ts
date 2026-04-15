@@ -1,3 +1,5 @@
+import katex from "katex";
+
 export interface CanvasNode {
   id: string;
   type: string;
@@ -775,6 +777,27 @@ export function markdownToHtml(markdown: string): string {
       continue;
     }
 
+    // Single-line block math: $$content$$
+    const singleBlockMath = trimmed.match(/^\$\$(.+)\$\$$/);
+    if (singleBlockMath) {
+      out.push(renderMath(singleBlockMath[1].trim(), true));
+      i += 1;
+      continue;
+    }
+
+    // Multi-line block math: $$ ... $$
+    if (trimmed === "$$") {
+      i += 1;
+      const mathLines: string[] = [];
+      while (i < lines.length && lines[i]?.trim() !== "$$") {
+        mathLines.push(lines[i] ?? "");
+        i += 1;
+      }
+      if (i < lines.length) i += 1;
+      out.push(renderMath(mathLines.join("\n"), true));
+      continue;
+    }
+
     const fence = trimmed.match(/^```([\w-]+)?\s*$/);
     if (fence) {
       const lang = fence[1] || "";
@@ -883,6 +906,7 @@ export function markdownToHtml(markdown: string): string {
       if (!currentTrimmed) break;
       if (/^(#{1,6})\s+/.test(currentTrimmed)) break;
       if (/^```/.test(currentTrimmed)) break;
+      if (/^\$\$/.test(currentTrimmed)) break;
       if (/^>\s?/.test(currentTrimmed)) break;
       if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(currentTrimmed)) break;
       if (/^[-*+]\s+/.test(currentTrimmed)) break;
@@ -943,7 +967,24 @@ function splitTableRow(row: string): string[] {
 }
 
 function renderInline(text: string): string {
-  let html = escapeHtml(text);
+  const codeStore: string[] = [];
+  const withCodePlaceholders = text.replace(/`([^`]+)`/g, (_match, content) => {
+    codeStore.push(`<code>${escapeHtml(content)}</code>`);
+    return `@@CODE_${codeStore.length - 1}@@`;
+  });
+
+  // Extract inline math before HTML escaping to protect LaTeX content.
+  // Code spans are already protected above and must remain literal.
+  const mathStore: string[] = [];
+  const withMathPlaceholders = withCodePlaceholders.replace(
+    /(?<!\$)\$(?!\$)([^$\n]+?)(?<!\$)\$(?!\$)/g,
+    (_match, content) => {
+      mathStore.push(renderMath(content.trim(), false));
+      return `@@MATH_${mathStore.length - 1}@@`;
+    },
+  );
+
+  let html = escapeHtml(withMathPlaceholders);
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt, src) => {
     return `<img src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}">`;
   });
@@ -952,7 +993,6 @@ function renderInline(text: string): string {
   });
   html = html.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "[[$1|$2]]");
   html = html.replace(/\[\[([^\]]+)\]\]/g, "[[$1]]");
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
   html = html.replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>');
   html = html.replace(/___([^_\n]+)___/g, '<strong><em>$1</em></strong>');
   html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
@@ -960,6 +1000,13 @@ function renderInline(text: string): string {
   html = html.replace(/(^|[\s(\[{>])\*([^*\n]+)\*(?=$|[\s)\]}<.,!?;:])/g, '$1<em>$2</em>');
   html = html.replace(/(^|[\s(\[{>])_([^_\n]+)_(?=$|[\s)\]}<.,!?;:])/g, '$1<em>$2</em>');
   html = html.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+  if (codeStore.length > 0) {
+    html = html.replace(/@@CODE_(\d+)@@/g, (_m, idx) => codeStore[parseInt(idx, 10)] ?? "");
+  }
+  // Restore inline math after text-level markdown transforms.
+  if (mathStore.length > 0) {
+    html = html.replace(/@@MATH_(\d+)@@/g, (_m, idx) => mathStore[parseInt(idx, 10)] ?? "");
+  }
   return html;
 }
 
@@ -1140,6 +1187,18 @@ function normalizeSide(side: string | undefined): "top" | "bottom" | "left" | "r
 
 function normalizeNumber(value: number | undefined): number {
   return Number.isFinite(value) ? Number(value) : 0;
+}
+
+function renderMath(content: string, displayMode: boolean): string {
+  try {
+    return katex.renderToString(content, {
+      output: "mathml",
+      displayMode,
+      throwOnError: true,
+    });
+  } catch {
+    return `<code>${escapeHtml(content)}</code>`;
+  }
 }
 
 function escapeHtml(text: string): string {
