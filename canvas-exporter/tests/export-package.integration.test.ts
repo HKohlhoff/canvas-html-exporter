@@ -236,6 +236,81 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       /Ungültiges Canvas-JSON/,
     );
   });
+
+  await test("exports markdown fixtures with heading links and section embeds", async () => {
+    const canvasJson = JSON.stringify({
+      name: "Wiki Export",
+      nodes: [
+        { id: "main", type: "file", x: 0, y: 0, width: 360, height: 220, file: "notes/main.md" },
+      ],
+      edges: [],
+    });
+
+    const { app, files } = createMockApp([
+      {
+        path: "canvases/wiki.canvas",
+        text: canvasJson,
+      },
+      {
+        path: "notes/main.md",
+        text: [
+          "# Start",
+          "Link zu [[second#Abschnitt|Kapitel]].",
+          "",
+          "Embed:",
+          "![[second#Abschnitt]]",
+          "",
+          "Ganzes Dokument: [[third|Dritte Seite]]",
+        ].join("\n"),
+      },
+      {
+        path: "notes/second.md",
+        text: [
+          "# Intro",
+          "Vorwort",
+          "",
+          "## Abschnitt",
+          "Nur dieser Teil soll im Embed erscheinen.",
+          "",
+          "### Unterpunkt",
+          "Zusatz",
+          "",
+          "## Weiter",
+          "Nicht mehr Teil des Embeds",
+        ].join("\n"),
+      },
+      {
+        path: "notes/third.md",
+        text: "# Dritte Seite\nInhalt",
+      },
+    ]);
+
+    const canvasFile = files.get("canvases/wiki.canvas") as MockFile;
+    const result = await exportCanvasPackage(app as never, canvasFile as never, {
+      darkMode: true,
+      outputDir: "Canvas-Exports",
+    });
+
+    const mainNode = result.data.nodes.find((node) => node.id === "main");
+    assert.equal(mainNode?.fileKind, "markdown");
+    assert.ok(mainNode?.exportHtmlPath);
+
+    const mainExport = files.get(`Canvas-Exports/wiki/${mainNode?.exportHtmlPath || ""}`);
+    assert.ok(mainExport);
+
+    const mainHtml = mainExport?.text || "";
+    assert.match(mainHtml, />Kapitel<\/a>/);
+    assert.match(mainHtml, /href="[^"]+#Abschnitt"/);
+    assert.match(mainHtml, /Nur dieser Teil soll im Embed erscheinen\./);
+    assert.match(mainHtml, /<h2>Abschnitt<\/h2>/);
+    assert.doesNotMatch(mainHtml, /Nicht mehr Teil des Embeds/);
+    assert.match(mainHtml, />Dritte Seite<\/a>/);
+
+    const exportedSubpages = [...files.keys()].filter(
+      (path) => path.startsWith("Canvas-Exports/wiki/assets/files/") && path.endsWith(".html"),
+    );
+    assert.ok(exportedSubpages.length >= 3);
+  });
 })().catch((error) => {
   console.error(error);
   process.exit(1);
