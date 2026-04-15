@@ -1,6 +1,7 @@
 import katex from "katex";
 import { getSingletonHighlighter } from "shiki/bundle/web";
 import type { BundledTheme, Highlighter } from "shiki/bundle/web";
+import csharpLanguage from "shiki/langs/csharp.mjs";
 import latexLanguage from "shiki/langs/latex.mjs";
 import texLanguage from "shiki/langs/tex.mjs";
 
@@ -79,6 +80,7 @@ const SHIKI_DARK_THEME: BundledTheme = "one-dark-pro";
 const SHIKI_LIGHT_THEME: BundledTheme = "one-light";
 const SHIKI_FALLBACK_LANGUAGE = "text";
 const shikiLanguageModules: Record<string, unknown> = {
+  csharp: csharpLanguage,
   latex: latexLanguage,
   tex: texLanguage,
 };

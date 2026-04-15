@@ -92,10 +92,14 @@ await test("treats csharp fences as code blocks", async () => {
   const html = await markdownToHtml(
     "```c#\nusing System;\nstatic void Main(string[] args)\n{\n    Console.WriteLine(\"Hello World!\");\n}\n```",
   );
-  assert.match(html, /class="shiki|<pre><code class="language-c#">/);
-  assert.match(html, /using System;/);
-  assert.match(html, /string\[\] args/);
-  assert.match(html, /Console\.WriteLine/);
+  assert.match(html, /class="shiki/);
+  assert.match(html, />using</);
+  assert.match(html, /> System</);
+  assert.match(html, /string/);
+  assert.match(html, /\[\]/);
+  assert.match(html, />args</);
+  assert.match(html, /Console</);
+  assert.match(html, />WriteLine</);
   assert.doesNotMatch(html, /<p>using System;/);
 });
 
