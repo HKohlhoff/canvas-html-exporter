@@ -15545,6 +15545,63 @@ function toFiniteNumber(value) {
   return 0;
 }
 
+// src/link-helpers.ts
+function splitTargetSuffix(value) {
+  const hashIndex = value.indexOf("#");
+  const queryIndex = value.indexOf("?");
+  let cut = -1;
+  if (hashIndex >= 0 && queryIndex >= 0)
+    cut = Math.min(hashIndex, queryIndex);
+  else
+    cut = Math.max(hashIndex, queryIndex);
+  if (cut < 0)
+    return { path: value, suffix: "" };
+  return { path: value.slice(0, cut), suffix: value.slice(cut) };
+}
+function parseWikiReference(value) {
+  const normalized = normalizeWikiTarget(value);
+  const pipeIndex = normalized.indexOf("|");
+  const core = (pipeIndex >= 0 ? normalized.slice(0, pipeIndex) : normalized).trim();
+  const displayRaw = pipeIndex >= 0 ? normalized.slice(pipeIndex + 1).trim() : "";
+  return { core, display: displayRaw || null, size: parseEmbedSize(displayRaw) };
+}
+function parseEmbedSize(value) {
+  const raw = (value || "").trim();
+  if (!raw)
+    return null;
+  const cleaned = raw.replace(/\s+/g, "");
+  const pair = cleaned.match(/^(\d+)x(\d+)$/i);
+  if (pair) {
+    return { width: Number(pair[1]), height: Number(pair[2]) };
+  }
+  const single = cleaned.match(/^(\d+)$/);
+  if (single) {
+    return { width: Number(single[1]) };
+  }
+  return null;
+}
+function embedSizeAttributes(size) {
+  if (!size)
+    return "";
+  const attrs = [];
+  if (size.width && Number.isFinite(size.width))
+    attrs.push(` width="${Math.max(1, Math.round(size.width))}"`);
+  if (size.height && Number.isFinite(size.height))
+    attrs.push(` height="${Math.max(1, Math.round(size.height))}"`);
+  return attrs.join("");
+}
+function normalizeWikiTarget(value) {
+  let out = value.trim();
+  if (!out)
+    return out;
+  if (out.startsWith("![[") && out.endsWith("]]")) {
+    out = out.slice(3, -2);
+  } else if (out.startsWith("[[") && out.endsWith("]]")) {
+    out = out.slice(2, -2);
+  }
+  return out.trim();
+}
+
 // src/exporter.ts
 function stripFrontmatter(markdown) {
   const normalized = markdown.replace(/\r\n/g, "\n");
@@ -16046,61 +16103,6 @@ function parsedTargetSection(target) {
     return null;
   const section = target.slice(hashIndex + 1).trim();
   return section || null;
-}
-function splitTargetSuffix(value) {
-  const hashIndex = value.indexOf("#");
-  const queryIndex = value.indexOf("?");
-  let cut = -1;
-  if (hashIndex >= 0 && queryIndex >= 0)
-    cut = Math.min(hashIndex, queryIndex);
-  else
-    cut = Math.max(hashIndex, queryIndex);
-  if (cut < 0)
-    return { path: value, suffix: "" };
-  return { path: value.slice(0, cut), suffix: value.slice(cut) };
-}
-function parseWikiReference(value) {
-  const normalized = normalizeWikiTarget(value);
-  const pipeIndex = normalized.indexOf("|");
-  const core = (pipeIndex >= 0 ? normalized.slice(0, pipeIndex) : normalized).trim();
-  const displayRaw = pipeIndex >= 0 ? normalized.slice(pipeIndex + 1).trim() : "";
-  return { core, display: displayRaw || null, size: parseEmbedSize(displayRaw) };
-}
-function parseEmbedSize(value) {
-  const raw = (value || "").trim();
-  if (!raw)
-    return null;
-  const cleaned = raw.replace(/\s+/g, "");
-  const pair = cleaned.match(/^(\d+)x(\d+)$/i);
-  if (pair) {
-    return { width: Number(pair[1]), height: Number(pair[2]) };
-  }
-  const single = cleaned.match(/^(\d+)$/);
-  if (single) {
-    return { width: Number(single[1]) };
-  }
-  return null;
-}
-function embedSizeAttributes(size) {
-  if (!size)
-    return "";
-  const attrs = [];
-  if (size.width && Number.isFinite(size.width))
-    attrs.push(` width="${Math.max(1, Math.round(size.width))}"`);
-  if (size.height && Number.isFinite(size.height))
-    attrs.push(` height="${Math.max(1, Math.round(size.height))}"`);
-  return attrs.join("");
-}
-function normalizeWikiTarget(value) {
-  let out = value.trim();
-  if (!out)
-    return out;
-  if (out.startsWith("![[") && out.endsWith("]]")) {
-    out = out.slice(3, -2);
-  } else if (out.startsWith("[[") && out.endsWith("]]")) {
-    out = out.slice(2, -2);
-  }
-  return out.trim();
 }
 function isImageExt(ext) {
   return ["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp"].includes(ext.toLowerCase());

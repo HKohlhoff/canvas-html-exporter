@@ -5,9 +5,10 @@
   "main": "main.js",
   "scripts": {
     "build": "node build.mjs",
-    "test": "npm run test:math && npm run test:markdown && npm run test:export && npm run test:canvas-html",
+    "test": "npm run test:math && npm run test:markdown && npm run test:export && npm run test:canvas-html && npm run test:links",
     "test:canvas-html": "tsc -p tsconfig.tests.json && node .test-build/tests/canvas-html-rendering.test.js",
     "test:export": "tsc -p tsconfig.tests.json && node .test-build/tests/exporter-helpers.test.js",
+    "test:links": "tsc -p tsconfig.tests.json && node .test-build/tests/link-helpers.test.js",
     "test:math": "tsc -p tsconfig.tests.json && node .test-build/tests/math-rendering.test.js",
     "test:markdown": "tsc -p tsconfig.tests.json && node .test-build/tests/markdown-rendering.test.js",
     "dev": "node build.mjs --watch",
