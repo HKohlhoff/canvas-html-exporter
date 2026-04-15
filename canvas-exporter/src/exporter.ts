@@ -824,8 +824,12 @@ function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, ca
         <p class="link-page-note">Es besteht keine Internetverbindung.</p>
         <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
       </div>
+      <div id="blocked-message" class="link-page-offline" hidden>
+        <p class="link-page-note">Diese Website erlaubt keine Anzeige im eingebetteten Frame.</p>
+        <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
+      </div>
       <div id="link-preview" class="pdf-embed-block link-page-preview">
-        <iframe src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
+        <iframe id="link-preview-frame" src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
       </div>
     </section>`,
     darkMode,
@@ -847,13 +851,34 @@ function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, ca
     `  <script>
     (() => {
       const offlineMessage = document.getElementById("offline-message");
+      const blockedMessage = document.getElementById("blocked-message");
       const linkPreview = document.getElementById("link-preview");
+      const linkFrame = document.getElementById("link-preview-frame");
+      let frameLoaded = false;
+
+      if (linkFrame) {
+        linkFrame.addEventListener("load", () => {
+          frameLoaded = true;
+          if (blockedMessage) blockedMessage.hidden = true;
+        });
+      }
+
       function syncOfflineState() {
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
         if (offlineMessage) offlineMessage.hidden = !offline;
+        if (blockedMessage) blockedMessage.hidden = true;
         if (linkPreview) linkPreview.hidden = offline;
       }
+
+      function checkBlockedState() {
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        if (offline || frameLoaded) return;
+        if (blockedMessage) blockedMessage.hidden = false;
+        if (linkPreview) linkPreview.hidden = true;
+      }
+
       syncOfflineState();
+      window.setTimeout(checkBlockedState, 4000);
       window.addEventListener("online", syncOfflineState);
       window.addEventListener("offline", syncOfflineState);
     })();

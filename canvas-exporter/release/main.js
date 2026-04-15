@@ -14590,6 +14590,9 @@ function convertCanvasToHtml(data, options) {
     .link-offline-note[hidden] {
       display: none;
     }
+    .link-blocked-action {
+      margin-top: 0.35em;
+    }
     .link-preview-frame {
       flex: 1 1 auto;
       min-height: 180px;
@@ -14954,10 +14957,27 @@ function convertCanvasToHtml(data, options) {
       function syncLinkOfflineState() {
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
         document.querySelectorAll(".link-preview").forEach((preview) => {
-          const note = preview.querySelector(".link-offline-note");
+          const offlineNote = preview.querySelector("[data-link-offline]");
+          const blockedNote = preview.querySelector("[data-link-blocked]");
           const frame = preview.querySelector(".link-preview-frame");
-          if (note) note.hidden = !offline;
+          const iframe = preview.querySelector("iframe");
+          if (offlineNote) offlineNote.hidden = !offline;
+          if (blockedNote) blockedNote.hidden = true;
           if (frame) frame.hidden = offline;
+          if (iframe && !iframe.dataset.linkFallbackBound) {
+            iframe.dataset.linkFallbackBound = "true";
+            iframe.addEventListener("load", () => {
+              iframe.dataset.linkLoaded = "true";
+              if (blockedNote) blockedNote.hidden = true;
+            });
+            window.setTimeout(() => {
+              const currentlyOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+              if (!currentlyOffline && iframe.dataset.linkLoaded !== "true") {
+                if (blockedNote) blockedNote.hidden = false;
+                if (frame) frame.hidden = true;
+              }
+            }, 4000);
+          }
         });
       }
 
@@ -15153,7 +15173,8 @@ function renderNodeContent(node) {
     const href = escapeAttribute(node.canvasHref || node.exportHtmlPath || url);
     return `<div class="link-preview">
       <a class="link-preview-title" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a>
-      <div class="link-offline-note" hidden>Es besteht keine Internetverbindung.</div>
+      <div class="link-offline-note" data-link-offline hidden>Es besteht keine Internetverbindung.</div>
+      <div class="link-offline-note" data-link-blocked hidden>Diese Website erlaubt keine Anzeige im eingebetteten Frame.<div class="link-blocked-action"><a class="file-chip" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a></div></div>
       <div class="link-preview-frame"><iframe src="${iframeSrc}" title="${escapeAttribute(node.displayName || url)}" loading="lazy"></iframe></div>
     </div>`;
   }
@@ -16667,8 +16688,12 @@ function buildLinkDocumentHtml(title, url, darkMode, canvasColors) {
         <p class="link-page-note">Es besteht keine Internetverbindung.</p>
         <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
       </div>
+      <div id="blocked-message" class="link-page-offline" hidden>
+        <p class="link-page-note">Diese Website erlaubt keine Anzeige im eingebetteten Frame.</p>
+        <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
+      </div>
       <div id="link-preview" class="pdf-embed-block link-page-preview">
-        <iframe src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
+        <iframe id="link-preview-frame" src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
       </div>
     </section>`,
     darkMode,
@@ -16688,13 +16713,34 @@ function buildLinkDocumentHtml(title, url, darkMode, canvasColors) {
     `  <script>
     (() => {
       const offlineMessage = document.getElementById("offline-message");
+      const blockedMessage = document.getElementById("blocked-message");
       const linkPreview = document.getElementById("link-preview");
+      const linkFrame = document.getElementById("link-preview-frame");
+      let frameLoaded = false;
+
+      if (linkFrame) {
+        linkFrame.addEventListener("load", () => {
+          frameLoaded = true;
+          if (blockedMessage) blockedMessage.hidden = true;
+        });
+      }
+
       function syncOfflineState() {
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
         if (offlineMessage) offlineMessage.hidden = !offline;
+        if (blockedMessage) blockedMessage.hidden = true;
         if (linkPreview) linkPreview.hidden = offline;
       }
+
+      function checkBlockedState() {
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        if (offline || frameLoaded) return;
+        if (blockedMessage) blockedMessage.hidden = false;
+        if (linkPreview) linkPreview.hidden = true;
+      }
+
       syncOfflineState();
+      window.setTimeout(checkBlockedState, 4000);
       window.addEventListener("online", syncOfflineState);
       window.addEventListener("offline", syncOfflineState);
     })();

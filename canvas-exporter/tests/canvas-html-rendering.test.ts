@@ -127,7 +127,9 @@ test("renders link nodes with preview iframe and exported title link", () => {
   assert.match(html, /<iframe src="https:\/\/openai\.com\/\?a=1&amp;b=2"/);
   assert.match(html, />https:\/\/openai\.com\/\?a=1&amp;b=2<\/a>/);
   assert.match(html, /Es besteht keine Internetverbindung\./);
+  assert.match(html, /Diese Website erlaubt keine Anzeige im eingebetteten Frame\./);
   assert.match(html, /function syncLinkOfflineState\(\)/);
+  assert.match(html, /window\.setTimeout\(\(\) => \{/);
   assert.doesNotMatch(html, /class="link-meta"/);
 });
 

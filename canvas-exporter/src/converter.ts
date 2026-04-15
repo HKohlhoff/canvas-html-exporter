@@ -321,6 +321,9 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
     .link-offline-note[hidden] {
       display: none;
     }
+    .link-blocked-action {
+      margin-top: 0.35em;
+    }
     .link-preview-frame {
       flex: 1 1 auto;
       min-height: 180px;
@@ -685,10 +688,27 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       function syncLinkOfflineState() {
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
         document.querySelectorAll(".link-preview").forEach((preview) => {
-          const note = preview.querySelector(".link-offline-note");
+          const offlineNote = preview.querySelector("[data-link-offline]");
+          const blockedNote = preview.querySelector("[data-link-blocked]");
           const frame = preview.querySelector(".link-preview-frame");
-          if (note) note.hidden = !offline;
+          const iframe = preview.querySelector("iframe");
+          if (offlineNote) offlineNote.hidden = !offline;
+          if (blockedNote) blockedNote.hidden = true;
           if (frame) frame.hidden = offline;
+          if (iframe && !iframe.dataset.linkFallbackBound) {
+            iframe.dataset.linkFallbackBound = "true";
+            iframe.addEventListener("load", () => {
+              iframe.dataset.linkLoaded = "true";
+              if (blockedNote) blockedNote.hidden = true;
+            });
+            window.setTimeout(() => {
+              const currentlyOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+              if (!currentlyOffline && iframe.dataset.linkLoaded !== "true") {
+                if (blockedNote) blockedNote.hidden = false;
+                if (frame) frame.hidden = true;
+              }
+            }, 4000);
+          }
         });
       }
 
@@ -895,7 +915,8 @@ function renderNodeContent(node: CanvasNode): string {
     const href = escapeAttribute(node.canvasHref || node.exportHtmlPath || url);
     return `<div class="link-preview">
       <a class="link-preview-title" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a>
-      <div class="link-offline-note" hidden>Es besteht keine Internetverbindung.</div>
+      <div class="link-offline-note" data-link-offline hidden>Es besteht keine Internetverbindung.</div>
+      <div class="link-offline-note" data-link-blocked hidden>Diese Website erlaubt keine Anzeige im eingebetteten Frame.<div class="link-blocked-action"><a class="file-chip" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a></div></div>
       <div class="link-preview-frame"><iframe src="${iframeSrc}" title="${escapeAttribute(node.displayName || url)}" loading="lazy"></iframe></div>
     </div>`;
   }
