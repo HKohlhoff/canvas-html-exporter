@@ -16660,7 +16660,7 @@ function buildMarkdownAnchorSuffix(section) {
 function buildLinkDocumentHtml(title, url, darkMode, canvasColors) {
   const safeTitle = escapeHtmlAttr(url || title || "Link");
   const safeUrl = escapeHtmlAttr(url);
-  const page = buildMarkdownDocumentHtml(
+  let page = buildMarkdownDocumentHtml(
     url || title || "Link",
     `<section class="link-page-card">
       <div id="offline-message" class="link-page-offline" hidden>
@@ -16674,15 +16674,18 @@ function buildLinkDocumentHtml(title, url, darkMode, canvasColors) {
     darkMode,
     canvasColors
   );
-  return page.replace(
-    "</body>",
+  page = page.replace(
+    "</style>",
     `
     .link-page-card { display: flex; flex-direction: column; gap: 0.8em; }
     .link-page-note { margin: 0; }
     .link-page-offline[hidden] { display: none; }
     .link-page-preview iframe { min-height: 70vh; }
-  </style>
-  <script>
+  </style>`
+  );
+  return page.replace(
+    "</body>",
+    `  <script>
     (() => {
       const offlineMessage = document.getElementById("offline-message");
       const linkPreview = document.getElementById("link-preview");

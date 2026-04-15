@@ -510,6 +510,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.match(linkHtml, /<iframe src="https:\/\/openai\.com\/index\/" title="https:\/\/openai\.com\/index\/" loading="lazy"><\/iframe>/);
     assert.match(linkHtml, /id="offline-message" class="link-page-offline" hidden/);
     assert.match(linkHtml, /function syncOfflineState\(\)/);
+    assert.doesNotMatch(linkHtml, />\s*\.link-page-card \{/);
   });
 
   await test("keeps embedded markdown images relative to exported subpages", async () => {
