@@ -3,6 +3,7 @@ import { buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markd
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-helpers";
 import { embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTargetSuffix } from "./link-helpers";
 import { getHrefForMarkdownPage } from "./path-helpers";
+import { buildPreviewText } from "./preview-helpers";
 
 export type ExportSettings = {
   darkMode: boolean;
@@ -524,17 +525,7 @@ async function resolveObsidianTarget(
 async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<{ text: string; html: string }> {
   const raw = stripFrontmatter(await ctx.app.vault.read(file));
   const previewSource = raw.slice(0, 2000);
-  const text = raw
-    .replace(/^```[\s\S]*?```/gm, " ")
-    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
-    .replace(/!\[\[([^\]]+)\]\]/g, " $1 ")
-    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
-    .replace(/\[\[([^\]]+)\]\]/g, "$1")
-    .replace(/\[[^\]]+\]\([^)]+\)/g, " ")
-    .replace(/[#>*`_~-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 220);
+  const text = buildPreviewText(raw);
 
   let html = markdownToHtml(previewSource);
   try {
