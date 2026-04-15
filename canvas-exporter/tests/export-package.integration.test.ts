@@ -430,6 +430,87 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.doesNotMatch(mainHtml, /<p>\s*<div class="pdf-embed-block">/);
     assert.doesNotMatch(mainHtml, /<p>\s*<div class="file-embed-block">/);
   });
+
+  await test("rewrites markdown image paths for exported markdown subpages", async () => {
+    const png = new Uint8Array([137, 80, 78, 71]).buffer;
+    const canvasJson = JSON.stringify({
+      name: "Image Export",
+      nodes: [
+        { id: "main", type: "file", x: 0, y: 0, width: 360, height: 220, file: "notes/image-note.md" },
+      ],
+      edges: [],
+    });
+
+    const { app, files } = createMockApp([
+      { path: "canvases/image.canvas", text: canvasJson },
+      {
+        path: "notes/image-note.md",
+        text: [
+          "# Bilder",
+          "![Skizze](../assets/picture.png)",
+        ].join("\n"),
+      },
+      { path: "assets/picture.png", binary: png },
+    ]);
+
+    const canvasFile = files.get("canvases/image.canvas") as MockFile;
+    const result = await exportCanvasPackage(app as never, canvasFile as never, {
+      darkMode: true,
+      outputDir: "Canvas-Exports",
+    });
+
+    const mainNode = result.data.nodes.find((node) => node.id === "main");
+    const mainExport = files.get(`Canvas-Exports/image/${mainNode?.exportHtmlPath || ""}`);
+    assert.ok(mainExport);
+
+    const mainHtml = mainExport?.text || "";
+    assert.match(mainHtml, /<img src="\.\.\/images\/\d+_picture\.png" alt="Skizze">/);
+  });
+
+  await test("keeps embedded markdown images relative to exported subpages", async () => {
+    const png = new Uint8Array([137, 80, 78, 71]).buffer;
+    const canvasJson = JSON.stringify({
+      name: "Nested Image Export",
+      nodes: [
+        { id: "main", type: "file", x: 0, y: 0, width: 360, height: 220, file: "notes/main.md" },
+      ],
+      edges: [],
+    });
+
+    const { app, files } = createMockApp([
+      { path: "canvases/nested-image.canvas", text: canvasJson },
+      {
+        path: "notes/main.md",
+        text: [
+          "# Start",
+          "![[child]]",
+        ].join("\n"),
+      },
+      {
+        path: "notes/child.md",
+        text: [
+          "# Kind",
+          "![[picture.png]]",
+        ].join("\n"),
+      },
+      { path: "assets/picture.png", binary: png },
+    ]);
+
+    const canvasFile = files.get("canvases/nested-image.canvas") as MockFile;
+    const result = await exportCanvasPackage(app as never, canvasFile as never, {
+      darkMode: true,
+      outputDir: "Canvas-Exports",
+    });
+
+    const mainNode = result.data.nodes.find((node) => node.id === "main");
+    const mainExport = files.get(`Canvas-Exports/nested-image/${mainNode?.exportHtmlPath || ""}`);
+    assert.ok(mainExport);
+
+    const mainHtml = mainExport?.text || "";
+    assert.match(mainHtml, /<div class="md-embed-block">/);
+    assert.match(mainHtml, /<img src="\.\.\/images\/\d+_picture\.png" alt="picture\.png">/);
+    assert.doesNotMatch(mainHtml, /<img src="assets\/images\//);
+  });
 })().catch((error) => {
   console.error(error);
   process.exit(1);

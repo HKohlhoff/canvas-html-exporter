@@ -228,16 +228,25 @@ async function exportMarkdownNote(ctx: MarkdownContext, file: TFile): Promise<st
   return renderMarkdownFileToHtml(ctx, file, "page", "page");
 }
 
-async function exportMarkdownContentInline(ctx: MarkdownContext, file: TFile): Promise<string> {
-  return renderMarkdownFileToHtml(ctx, file, "inline", "canvas");
+async function exportMarkdownContentInline(
+  ctx: MarkdownContext,
+  file: TFile,
+  linkBase: LinkBase,
+): Promise<string> {
+  return renderMarkdownFileToHtml(ctx, file, "inline", linkBase);
 }
 
-async function exportMarkdownSectionInline(ctx: MarkdownContext, file: TFile, heading: string): Promise<string> {
+async function exportMarkdownSectionInline(
+  ctx: MarkdownContext,
+  file: TFile,
+  heading: string,
+  linkBase: LinkBase,
+): Promise<string> {
   const content = stripFrontmatter(await ctx.app.vault.read(file));
   const section = extractMarkdownSection(content, heading);
   if (!section) return "";
   let htmlBody = markdownToHtml(section);
-  htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", "canvas");
+  htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", linkBase);
   return htmlBody;
 }
 
@@ -474,8 +483,8 @@ async function rewriteWikiLinks(
           await exportMarkdownNote(ctx, targetFile);
         }
         replacement = parsedTargetSection(parsed.core)
-          ? await exportMarkdownSectionInline(ctx, targetFile, parsedTargetSection(parsed.core)!)
-          : await exportMarkdownContentInline(ctx, targetFile);
+          ? await exportMarkdownSectionInline(ctx, targetFile, parsedTargetSection(parsed.core)!, linkBase)
+          : await exportMarkdownContentInline(ctx, targetFile, linkBase);
         if (!replacement) {
           replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
         } else {

@@ -16016,16 +16016,16 @@ async function prepareNode(ctx, node) {
 async function exportMarkdownNote(ctx, file) {
   return renderMarkdownFileToHtml(ctx, file, "page", "page");
 }
-async function exportMarkdownContentInline(ctx, file) {
-  return renderMarkdownFileToHtml(ctx, file, "inline", "canvas");
+async function exportMarkdownContentInline(ctx, file, linkBase) {
+  return renderMarkdownFileToHtml(ctx, file, "inline", linkBase);
 }
-async function exportMarkdownSectionInline(ctx, file, heading) {
+async function exportMarkdownSectionInline(ctx, file, heading, linkBase) {
   const content = stripFrontmatter(await ctx.app.vault.read(file));
   const section = extractMarkdownSection(content, heading);
   if (!section)
     return "";
   let htmlBody = markdownToHtml(section);
-  htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", "canvas");
+  htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", linkBase);
   return htmlBody;
 }
 function extractMarkdownSection(markdown, headingRef) {
@@ -16205,7 +16205,7 @@ async function rewriteWikiLinks(ctx, sourceFile, html, mode, linkBase) {
         if (mode === "page") {
           await exportMarkdownNote(ctx, targetFile);
         }
-        replacement = parsedTargetSection(parsed.core) ? await exportMarkdownSectionInline(ctx, targetFile, parsedTargetSection(parsed.core)) : await exportMarkdownContentInline(ctx, targetFile);
+        replacement = parsedTargetSection(parsed.core) ? await exportMarkdownSectionInline(ctx, targetFile, parsedTargetSection(parsed.core), linkBase) : await exportMarkdownContentInline(ctx, targetFile, linkBase);
         if (!replacement) {
           replacement = `<span class="unresolved-link">Nicht aufl\xF6sbarer Embed: ${escapeHtmlAttr(target)}</span>`;
         } else {
