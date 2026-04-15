@@ -15272,7 +15272,7 @@ function markdownToHtml(markdown) {
       out.push(html2);
       continue;
     }
-    const fence = trimmed.match(/^```([\w-]+)?\s*$/);
+    const fence = trimmed.match(/^```([^\s`]+)?\s*$/);
     if (fence) {
       const lang = fence[1] || "";
       i += 1;
@@ -16104,6 +16104,7 @@ function normalizeExportHref2(href) {
   return normalizePath(href).replace(/^\/+/, "");
 }
 async function exportCanvasPackage(app, canvasFile, settings) {
+  console.log("[canvas-exporter] Lese Canvas-Datei", { path: canvasFile.path });
   const rawContent = await app.vault.read(canvasFile);
   let parsed;
   try {
@@ -16112,15 +16113,18 @@ async function exportCanvasPackage(app, canvasFile, settings) {
     throw new Error(`Ung\xFCltiges Canvas-JSON in ${canvasFile.path}`);
   }
   const baseFolder = normalizeFolder(settings.outputDir);
+  console.log("[canvas-exporter] Stelle Ausgabeordner sicher", { baseFolder });
   await ensureFolderExists(app, baseFolder);
   const exportFolder = normalizePath(`${baseFolder}/${safeSegment(canvasFile.basename)}`);
   const assetsDir = normalizePath(`${exportFolder}/assets`);
   const imagesDir = normalizePath(`${assetsDir}/images`);
   const filesDir = normalizePath(`${assetsDir}/files`);
+  console.log("[canvas-exporter] Stelle Exportstruktur sicher", { exportFolder, assetsDir, imagesDir, filesDir });
   await ensureFolderExists(app, exportFolder);
   await ensureFolderExists(app, assetsDir);
   await ensureFolderExists(app, imagesDir);
   await ensureFolderExists(app, filesDir);
+  console.log("[canvas-exporter] Exportstruktur vorhanden");
   const normalized = normalizeCanvasData(parsed, canvasFile.basename);
   const nodes = normalized.nodes;
   const edges = normalized.edges;
@@ -16630,8 +16634,16 @@ async function ensureFolderExists(app, folderPath) {
   let current = "";
   for (const part of parts) {
     current = current ? `${current}/${part}` : part;
-    if (!await app.vault.adapter.exists(current)) {
+    const existing = app.vault.getAbstractFileByPath(current);
+    if (existing)
+      continue;
+    try {
       await app.vault.createFolder(current);
+    } catch (error) {
+      const retry = app.vault.getAbstractFileByPath(current);
+      if (!retry) {
+        throw error;
+      }
     }
   }
 }
@@ -16948,10 +16960,13 @@ var CanvasExporterPlugin = class extends import_obsidian.Plugin {
       return;
     }
     try {
+      console.log("[canvas-exporter] Starte Export", { canvas: file.path, outputDir: this.settings.outputDir });
       const canvasColors = this.readCanvasPaletteColors();
       const result = await exportCanvasPackage(this.app, file, { ...this.settings, canvasColors });
+      console.log("[canvas-exporter] Paket vorbereitet", { folderPath: result.folderPath, nodes: result.data.nodes.length, edges: result.data.edges.length });
       const html = convertCanvasToHtml(result.data, result.options);
       await this.writeIndexFile(result.folderPath, html);
+      console.log("[canvas-exporter] index.html geschrieben", { folderPath: result.folderPath });
       new import_obsidian.Notice(`Canvas-Paket exportiert: ${result.folderPath}`, 6e3);
     } catch (error) {
       console.error("[canvas-exporter] Export fehlgeschlagen", error);

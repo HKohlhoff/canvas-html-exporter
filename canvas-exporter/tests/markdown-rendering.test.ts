@@ -72,6 +72,17 @@ test("renders fenced code blocks without inline markdown parsing", () => {
   assert.doesNotMatch(html, /<strong>/);
 });
 
+test("treats csharp fences as code blocks", () => {
+  const html = markdownToHtml(
+    "```c#\nusing System;\nstatic void Main(string[] args)\n{\n    Console.WriteLine(\"Hello World!\");\n}\n```",
+  );
+  assert.match(html, /<pre><code class="language-c#">/);
+  assert.match(html, /using System;/);
+  assert.match(html, /string\[\] args/);
+  assert.match(html, /Console\.WriteLine/);
+  assert.doesNotMatch(html, /<p>using System;/);
+});
+
 test("renders unordered lists", () => {
   const html = markdownToHtml("- Eins\n- Zwei");
   assert.match(html, /<ul><li>Eins<\/li><li>Zwei<\/li><\/ul>/);

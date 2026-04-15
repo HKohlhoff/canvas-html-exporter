@@ -1030,7 +1030,7 @@ export function markdownToHtml(markdown: string): string {
       continue;
     }
 
-    const fence = trimmed.match(/^```([\w-]+)?\s*$/);
+    const fence = trimmed.match(/^```([^\s`]+)?\s*$/);
     if (fence) {
       const lang = fence[1] || "";
       i += 1;

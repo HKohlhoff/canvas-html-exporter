@@ -43,10 +43,13 @@ export default class CanvasExporterPlugin extends Plugin {
     }
 
     try {
+      console.log("[canvas-exporter] Starte Export", { canvas: file.path, outputDir: this.settings.outputDir });
       const canvasColors = this.readCanvasPaletteColors();
       const result = await exportCanvasPackage(this.app, file, { ...this.settings, canvasColors });
+      console.log("[canvas-exporter] Paket vorbereitet", { folderPath: result.folderPath, nodes: result.data.nodes.length, edges: result.data.edges.length });
       const html = convertCanvasToHtml(result.data, result.options);
       await this.writeIndexFile(result.folderPath, html);
+      console.log("[canvas-exporter] index.html geschrieben", { folderPath: result.folderPath });
       new Notice(`Canvas-Paket exportiert: ${result.folderPath}`, 6000);
     } catch (error) {
       console.error("[canvas-exporter] Export fehlgeschlagen", error);

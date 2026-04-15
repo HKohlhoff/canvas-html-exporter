@@ -61,6 +61,7 @@ export async function exportCanvasPackage(
   canvasFile: TFile,
   settings: ExportSettings,
 ): Promise<{ folderPath: string; data: PreparedCanvasData; options: ExportOptions }> {
+  console.log("[canvas-exporter] Lese Canvas-Datei", { path: canvasFile.path });
   const rawContent = await app.vault.read(canvasFile);
   let parsed: unknown;
 
@@ -71,6 +72,7 @@ export async function exportCanvasPackage(
   }
 
   const baseFolder = normalizeFolder(settings.outputDir);
+  console.log("[canvas-exporter] Stelle Ausgabeordner sicher", { baseFolder });
   await ensureFolderExists(app, baseFolder);
 
   const exportFolder = normalizePath(`${baseFolder}/${safeSegment(canvasFile.basename)}`);
@@ -78,10 +80,12 @@ export async function exportCanvasPackage(
   const imagesDir = normalizePath(`${assetsDir}/images`);
   const filesDir = normalizePath(`${assetsDir}/files`);
 
+  console.log("[canvas-exporter] Stelle Exportstruktur sicher", { exportFolder, assetsDir, imagesDir, filesDir });
   await ensureFolderExists(app, exportFolder);
   await ensureFolderExists(app, assetsDir);
   await ensureFolderExists(app, imagesDir);
   await ensureFolderExists(app, filesDir);
+  console.log("[canvas-exporter] Exportstruktur vorhanden");
 
   const normalized = normalizeCanvasData(parsed, canvasFile.basename);
   const nodes = normalized.nodes;
@@ -727,8 +731,15 @@ async function ensureFolderExists(app: App, folderPath: string): Promise<void> {
   let current = "";
   for (const part of parts) {
     current = current ? `${current}/${part}` : part;
-    if (!(await app.vault.adapter.exists(current))) {
+    const existing = app.vault.getAbstractFileByPath(current);
+    if (existing) continue;
+    try {
       await app.vault.createFolder(current);
+    } catch (error) {
+      const retry = app.vault.getAbstractFileByPath(current);
+      if (!retry) {
+        throw error;
+      }
     }
   }
 }
