@@ -506,14 +506,12 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.ok(exportedLinkPage);
     const linkHtml = exportedLinkPage?.text || "";
     assert.match(linkHtml, /Es besteht keine Internetverbindung\./);
-    assert.match(linkHtml, /Diese Website erlaubt keine Anzeige im eingebetteten Frame\./);
-    assert.match(linkHtml, /<a class="file-chip" href="https:\/\/openai\.com\/index\/"/);
-    assert.match(linkHtml, /<iframe id="link-preview-frame" src="https:\/\/openai\.com\/index\/" title="https:\/\/openai\.com\/index\/" loading="lazy"><\/iframe>/);
-    assert.match(linkHtml, /id="offline-message" class="link-page-offline" hidden/);
-    assert.match(linkHtml, /id="blocked-message" class="link-page-offline" hidden/);
-    assert.match(linkHtml, /function syncOfflineState\(\)/);
-    assert.match(linkHtml, /function checkBlockedState\(\)/);
-    assert.doesNotMatch(linkHtml, />\s*\.link-page-card \{/);
+    assert.match(linkHtml, /Wenn du online bist, wird die Zielseite direkt im Browser geoeffnet\./);
+    assert.match(linkHtml, /Falls keine Weiterleitung moeglich ist oder keine Internetverbindung besteht, nutze "Direkt oeffnen"\./);
+    assert.match(linkHtml, /<a class="link-page-title" href="https:\/\/openai\.com\/index\/"/);
+    assert.match(linkHtml, /<a class="link-page-action" href="https:\/\/openai\.com\/index\/"/);
+    assert.match(linkHtml, /window\.location\.replace\(url\)/);
+    assert.doesNotMatch(linkHtml, /<iframe id="link-preview-frame"/);
   });
 
   await test("keeps embedded markdown images relative to exported subpages", async () => {

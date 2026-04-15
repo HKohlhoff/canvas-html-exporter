@@ -1,5 +1,5 @@
 import type { App, TAbstractFile, TFile } from "obsidian";
-import { buildBlockAnchorId, buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markdownToHtml } from "./converter";
+import { buildBlockAnchorId, buildCanvasColorVariables, buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markdownToHtml } from "./converter";
 import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePath } from "./export-file-helpers";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-helpers";
 import { embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTargetSuffix } from "./link-helpers";
@@ -815,76 +815,174 @@ function buildMarkdownAnchorSuffix(section: string): string {
 }
 
 function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, canvasColors?: Record<string, string>): string {
+  const theme = getLinkPageTheme(darkMode);
   const safeTitle = escapeHtmlAttr(url || title || "Link");
   const safeUrl = escapeHtmlAttr(url);
-  let page = buildMarkdownDocumentHtml(
-    url || title || "Link",
-    `<section class="link-page-card">
-      <div id="offline-message" class="link-page-offline" hidden>
-        <p class="link-page-note">Es besteht keine Internetverbindung.</p>
-        <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
-      </div>
-      <div id="blocked-message" class="link-page-offline" hidden>
-        <p class="link-page-note">Diese Website erlaubt keine Anzeige im eingebetteten Frame.</p>
-        <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
-      </div>
-      <div id="link-preview" class="pdf-embed-block link-page-preview">
-        <iframe id="link-preview-frame" src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
-      </div>
-    </section>`,
-    darkMode,
-    canvasColors,
-  );
+  const canvasColorVars = buildCanvasColorVariables(canvasColors);
 
-  page = page.replace(
-    "</style>",
-    `
-    .link-page-card { display: flex; flex-direction: column; gap: 0.8em; }
-    .link-page-note { margin: 0; }
-    .link-page-offline[hidden] { display: none; }
-    .link-page-preview iframe { min-height: 70vh; }
-  </style>`,
-  );
-
-  return page.replace(
-    "</body>",
-    `  <script>
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${safeTitle}</title>
+  <style>
+    :root { ${canvasColorVars} }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      display: flex;
+      flex-direction: column;
+      background: ${theme.bodyBackground};
+      color: ${theme.text};
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .link-page-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid ${theme.rule};
+      background: ${theme.canvasBackground};
+    }
+    .link-page-title {
+      color: ${theme.text};
+      text-decoration: none;
+      font-weight: 700;
+      word-break: break-all;
+    }
+    .link-page-title:hover {
+      text-decoration: underline;
+    }
+    .link-page-action {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5em 0.85em;
+      border-radius: 999px;
+      border: 1px solid ${theme.rule};
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      text-decoration: none;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .link-page-status {
+      display: none;
+      padding: 10px 16px;
+      border-bottom: 1px solid ${theme.rule};
+      background: ${theme.nodeBackground};
+      color: ${theme.mutedText};
+    }
+    .link-page-status.is-visible {
+      display: block;
+    }
+    .link-page-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 16px;
+      background: ${theme.bodyBackground};
+    }
+    .link-page-card {
+      max-width: 720px;
+      width: 100%;
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid ${theme.rule};
+      background: ${theme.canvasBackground};
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .link-page-card p {
+      margin: 0;
+      line-height: 1.55;
+      color: ${theme.mutedText};
+    }
+    .link-page-card p + p {
+      margin-top: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="link-page-toolbar">
+    <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
+    <a class="link-page-action" href="${safeUrl}" target="_blank" rel="noopener noreferrer">Direkt oeffnen</a>
+  </div>
+  <div id="link-status" class="link-page-status"></div>
+  <div class="link-page-body">
+    <div class="link-page-card">
+      <p>Wenn du online bist, wird die Zielseite direkt im Browser geoeffnet.</p>
+      <p>Falls keine Weiterleitung moeglich ist oder keine Internetverbindung besteht, nutze "Direkt oeffnen".</p>
+    </div>
+  </div>
+  <script>
     (() => {
-      const offlineMessage = document.getElementById("offline-message");
-      const blockedMessage = document.getElementById("blocked-message");
-      const linkPreview = document.getElementById("link-preview");
-      const linkFrame = document.getElementById("link-preview-frame");
-      let frameLoaded = false;
+      const status = document.getElementById("link-status");
+      const url = ${JSON.stringify(url)};
+      let redirected = false;
 
-      if (linkFrame) {
-        linkFrame.addEventListener("load", () => {
-          frameLoaded = true;
-          if (blockedMessage) blockedMessage.hidden = true;
-        });
+      function showStatus(message) {
+        if (!status) return;
+        status.textContent = message;
+        status.classList.add("is-visible");
       }
 
-      function syncOfflineState() {
+      function hideStatus() {
+        if (!status) return;
+        status.textContent = "";
+        status.classList.remove("is-visible");
+      }
+
+      function syncState() {
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-        if (offlineMessage) offlineMessage.hidden = !offline;
-        if (blockedMessage) blockedMessage.hidden = true;
-        if (linkPreview) linkPreview.hidden = offline;
+        if (offline) {
+          showStatus("Es besteht keine Internetverbindung.");
+          return;
+        }
+        hideStatus();
+        if (!redirected) {
+          redirected = true;
+          window.location.replace(url);
+        }
       }
 
-      function checkBlockedState() {
-        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-        if (offline || frameLoaded) return;
-        if (blockedMessage) blockedMessage.hidden = false;
-        if (linkPreview) linkPreview.hidden = true;
-      }
-
-      syncOfflineState();
-      window.setTimeout(checkBlockedState, 4000);
-      window.addEventListener("online", syncOfflineState);
-      window.addEventListener("offline", syncOfflineState);
+      syncState();
+      window.addEventListener("online", syncState);
+      window.addEventListener("offline", syncState);
     })();
   </script>
-</body>`,
-  );
+</body>
+</html>`;
+}
+
+function getLinkPageTheme(darkMode: boolean): {
+  bodyBackground: string;
+  canvasBackground: string;
+  nodeBackground: string;
+  text: string;
+  mutedText: string;
+  rule: string;
+} {
+  return darkMode
+    ? {
+        bodyBackground: "#15181d",
+        canvasBackground: "#1d2229",
+        nodeBackground: "#2b2f36",
+        text: "#e7edf5",
+        mutedText: "#aeb8c5",
+        rule: "#404855",
+      }
+    : {
+        bodyBackground: "#f3f5f8",
+        canvasBackground: "#ffffff",
+        nodeBackground: "#ffffff",
+        text: "#1b2733",
+        mutedText: "#5a6573",
+        rule: "#d6dde7",
+      };
 }
 
 function isImageExt(ext: string): boolean {

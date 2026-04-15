@@ -161,14 +161,22 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       border-style: dashed;
       z-index: 0;
     }
-    .node.pdf {
+    .node.pdf,
+    .node.link {
       padding: 0;
     }
-    .node.pdf .node-title {
+    .node.pdf .node-title,
+    .node.link .node-title {
       padding: 6px 14px;
     }
-    .node.pdf .node-content {
+    .node.pdf .node-content,
+    .node.link .node-content {
       overflow: hidden;
+    }
+    .node.link .node-content {
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px 12px;
     }
     .pdf-embed {
       display: flex;
@@ -303,15 +311,28 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       gap: 8px;
       min-height: 0;
       flex: 1 1 auto;
+      height: 100%;
+    }
+    .link-preview-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .link-preview-title {
       font-weight: 700;
       color: inherit;
       text-decoration: none;
       word-break: break-all;
+      flex: 1 1 220px;
     }
     .link-preview-title:hover {
       text-decoration: underline;
+    }
+    .link-preview-action {
+      flex: 0 0 auto;
+      margin-top: 0;
     }
     .link-offline-note {
       color: ${theme.mutedText};
@@ -326,7 +347,7 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
     }
     .link-preview-frame {
       flex: 1 1 auto;
-      min-height: 180px;
+      min-height: 0;
       border: 1px solid ${theme.canvasBorder};
       border-radius: 10px;
       overflow: hidden;
@@ -336,7 +357,7 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       display: block;
       width: 100%;
       height: 100%;
-      min-height: 180px;
+      min-height: 100%;
       border: none;
       background: ${theme.canvasBackground};
     }
@@ -857,7 +878,7 @@ function renderNode(
   const height = Math.max(60, normalizeNumber(node.height));
   const type = (node.type || "text").toLowerCase();
   const isPdf = node.fileKind === "pdf";
-  const classes = ["node", type === "group" ? "group" : "", isPdf ? "pdf" : ""].filter(Boolean).join(" ");
+  const classes = ["node", type, type === "group" ? "group" : "", isPdf ? "pdf" : ""].filter(Boolean).join(" ");
 
   const title = type !== "link" && node.label ? `<div class="node-title">${markdownToHtml(node.label)}</div>` : "";
   const content = renderNodeContent(node);
@@ -914,9 +935,12 @@ function renderNodeContent(node: CanvasNode): string {
     const iframeSrc = escapeAttribute(url);
     const href = escapeAttribute(node.canvasHref || node.exportHtmlPath || url);
     return `<div class="link-preview">
-      <a class="link-preview-title" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a>
+      <div class="link-preview-header">
+        <a class="link-preview-title" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a>
+        <a class="file-chip link-preview-action" href="${href}" target="_blank" rel="noopener noreferrer">Direkt oeffnen</a>
+      </div>
       <div class="link-offline-note" data-link-offline hidden>Es besteht keine Internetverbindung.</div>
-      <div class="link-offline-note" data-link-blocked hidden>Diese Website erlaubt keine Anzeige im eingebetteten Frame.<div class="link-blocked-action"><a class="file-chip" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a></div></div>
+      <div class="link-offline-note" data-link-blocked hidden>Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame. Nutze "Direkt oeffnen".</div>
       <div class="link-preview-frame"><iframe src="${iframeSrc}" title="${escapeAttribute(node.displayName || url)}" loading="lazy"></iframe></div>
     </div>`;
   }
@@ -1446,7 +1470,7 @@ function getNodePalette(color: string | undefined, darkMode: boolean): NodePalet
     : { background: "#ffffff", border: "#c8d0da" };
 }
 
-function buildCanvasColorVariables(canvasColors?: Record<string, string>): string {
+export function buildCanvasColorVariables(canvasColors?: Record<string, string>): string {
   const parts: string[] = [];
   const source = canvasColors ?? {};
   for (const [key, raw] of Object.entries(source)) {

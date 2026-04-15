@@ -63,7 +63,7 @@ test("renders pdf nodes with viewer link and iframe", () => {
   };
 
   const html = convertCanvasToHtml(data, baseOptions);
-  assert.match(html, /class="node pdf"/);
+  assert.match(html, /class="node file pdf"/);
   assert.match(html, /class="pdf-title-link" href="assets\/files\/dokument-viewer\.html"/);
   assert.match(html, /<iframe src="assets\/files\/dokument\.pdf"/);
 });
@@ -87,7 +87,7 @@ test("renders canvas text nodes with markdown content", () => {
 
   const html = convertCanvasToHtml(data, baseOptions);
   assert.match(html, /<strong>starker<\/strong>/);
-  assert.match(html, /class="node"/);
+  assert.match(html, /class="node text"/);
 });
 
 test("renders standalone markdown documents with wrapper and title", () => {
@@ -102,7 +102,7 @@ test("escapes markdown document titles", () => {
   assert.match(html, /<title>A &amp; B &lt;Test&gt;<\/title>/);
 });
 
-test("renders link nodes with preview iframe and exported title link", () => {
+test("renders link nodes with preview iframe and direct-open action", () => {
   const data: CanvasData = {
     name: "Test",
     nodes: [
@@ -123,11 +123,14 @@ test("renders link nodes with preview iframe and exported title link", () => {
   };
 
   const html = convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /class="node link"/);
   assert.match(html, /class="link-preview-title" href="assets\/files\/openai\.html"/);
+  assert.match(html, /class="file-chip link-preview-action" href="assets\/files\/openai\.html"/);
   assert.match(html, /<iframe src="https:\/\/openai\.com\/\?a=1&amp;b=2"/);
   assert.match(html, />https:\/\/openai\.com\/\?a=1&amp;b=2<\/a>/);
+  assert.match(html, />Direkt oeffnen<\/a>/);
   assert.match(html, /Es besteht keine Internetverbindung\./);
-  assert.match(html, /Diese Website erlaubt keine Anzeige im eingebetteten Frame\./);
+  assert.match(html, /Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame\. Nutze "Direkt oeffnen"\./);
   assert.match(html, /function syncLinkOfflineState\(\)/);
   assert.match(html, /window\.setTimeout\(\(\) => \{/);
   assert.doesNotMatch(html, /class="link-meta"/);
