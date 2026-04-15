@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { markdownToHtml } from "../src/converter";
+import { buildBlockAnchorId, markdownToHtml } from "../src/converter";
 
 function test(name: string, fn: () => void): void {
   try {
@@ -41,6 +41,13 @@ test("renders markdown links as anchors", () => {
 test("adds normalized ids to headings", () => {
   const html = markdownToHtml("## Über Café");
   assert.match(html, /<h2 id="uber-cafe">Über Café<\/h2>/);
+});
+
+test("adds anchor ids for standalone block references", () => {
+  const html = markdownToHtml("Wichtiger Absatz\n^kern-aussage");
+  assert.equal(buildBlockAnchorId("^kern-aussage"), "block-kern-aussage");
+  assert.match(html, /<p id="block-kern-aussage">Wichtiger Absatz<\/p>/);
+  assert.doesNotMatch(html, /\^kern-aussage/);
 });
 
 test("renders markdown images", () => {

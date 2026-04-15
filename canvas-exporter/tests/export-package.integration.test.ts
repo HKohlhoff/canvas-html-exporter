@@ -255,6 +255,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         path: "notes/main.md",
         text: [
           "# Start",
+          "Sprung im Dokument zu [[#Start|oben]].",
           "Link zu [[second#Abschnitt|Kapitel]].",
           "",
           "Embed:",
@@ -299,6 +300,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.ok(mainExport);
 
     const mainHtml = mainExport?.text || "";
+    assert.match(mainHtml, /href="#start"/);
+    assert.match(mainHtml, />oben<\/a>/);
     assert.match(mainHtml, />Kapitel<\/a>/);
     assert.match(mainHtml, /href="[^"]+#abschnitt"/);
     assert.match(mainHtml, /Nur dieser Teil soll im Embed erscheinen\./);
@@ -312,6 +315,69 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       (path) => path.startsWith("Canvas-Exports/wiki/assets/files/") && path.endsWith(".html"),
     );
     assert.ok(exportedSubpages.length >= 3);
+  });
+
+  await test("exports markdown block references as anchors and embeds", async () => {
+    const canvasJson = JSON.stringify({
+      name: "Block Export",
+      nodes: [
+        { id: "main", type: "file", x: 0, y: 0, width: 360, height: 220, file: "notes/main.md" },
+      ],
+      edges: [],
+    });
+
+    const { app, files } = createMockApp([
+      {
+        path: "canvases/block.canvas",
+        text: canvasJson,
+      },
+      {
+        path: "notes/main.md",
+        text: [
+          "# Start",
+          "Sprung im Dokument zu [[#^kern-aussage|hier]].",
+          "Direkter Sprung zu [[blocks#^kern-aussage|Kernaussage]].",
+          "",
+          "Embed:",
+          "![[blocks#^kern-aussage]]",
+        ].join("\n"),
+      },
+      {
+        path: "notes/blocks.md",
+        text: [
+          "# Sammlung",
+          "",
+          "Wichtiger Absatz",
+          "^kern-aussage",
+          "",
+          "Noch ein Absatz",
+        ].join("\n"),
+      },
+    ]);
+
+    const canvasFile = files.get("canvases/block.canvas") as MockFile;
+    const result = await exportCanvasPackage(app as never, canvasFile as never, {
+      darkMode: true,
+      outputDir: "Canvas-Exports",
+    });
+
+    const mainNode = result.data.nodes.find((node) => node.id === "main");
+    const mainExport = files.get(`Canvas-Exports/block/${mainNode?.exportHtmlPath || ""}`);
+    assert.ok(mainExport);
+
+    const mainHtml = mainExport?.text || "";
+    assert.match(mainHtml, /href="#block-kern-aussage"/);
+    assert.match(mainHtml, />hier<\/a>/);
+    assert.match(mainHtml, /href="[^"]+#block-kern-aussage"/);
+    assert.match(mainHtml, /<div class="md-embed-block"><p id="block-kern-aussage">Wichtiger Absatz<\/p><\/div>/);
+
+    const exportedBlockPagePath = [...files.keys()].find(
+      (path) => path.startsWith("Canvas-Exports/block/assets/files/") && path.endsWith(".html") && !path.endsWith(`${mainNode?.exportHtmlPath || ""}`),
+    );
+    assert.ok(exportedBlockPagePath);
+
+    const exportedBlockPage = files.get(exportedBlockPagePath || "");
+    assert.match(exportedBlockPage?.text || "", /<p id="block-kern-aussage">Wichtiger Absatz<\/p>/);
   });
 })().catch((error) => {
   console.error(error);

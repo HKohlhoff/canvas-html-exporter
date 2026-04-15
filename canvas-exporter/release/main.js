@@ -15034,10 +15034,18 @@ function markdownToHtml(markdown) {
       i += 1;
       continue;
     }
+    if (parseStandaloneBlockRef(trimmed)) {
+      i += 1;
+      continue;
+    }
     const singleBlockMath = trimmed.match(/^\$\$(.+)\$\$$/);
     if (singleBlockMath) {
-      out.push(renderMath(singleBlockMath[1].trim(), true));
+      let html2 = renderMath(singleBlockMath[1].trim(), true);
       i += 1;
+      const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+      html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+      i = blockAnchor2.nextIndex;
+      out.push(html2);
       continue;
     }
     if (trimmed === "$$") {
@@ -15049,7 +15057,11 @@ function markdownToHtml(markdown) {
       }
       if (i < lines.length)
         i += 1;
-      out.push(renderMath(mathLines.join("\n"), true));
+      let html2 = renderMath(mathLines.join("\n"), true);
+      const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+      html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+      i = blockAnchor2.nextIndex;
+      out.push(html2);
       continue;
     }
     const fence = trimmed.match(/^```([\w-]+)?\s*$/);
@@ -15064,12 +15076,20 @@ function markdownToHtml(markdown) {
       if (i < lines.length)
         i += 1;
       const className = lang ? ` class="language-${escapeAttribute(lang)}"` : "";
-      out.push(`<pre><code${className}>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+      let html2 = `<pre><code${className}>${escapeHtml(codeLines.join("\n"))}</code></pre>`;
+      const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+      html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+      i = blockAnchor2.nextIndex;
+      out.push(html2);
       continue;
     }
     if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(trimmed)) {
-      out.push("<hr>");
+      let html2 = "<hr>";
       i += 1;
+      const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+      html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+      i = blockAnchor2.nextIndex;
+      out.push(html2);
       continue;
     }
     const heading = line.match(/^(#{1,6})\s+(.+)$/);
@@ -15078,8 +15098,12 @@ function markdownToHtml(markdown) {
       const headingText = heading[2].trim();
       const headingId = buildHeadingId(headingText, headingIds);
       const idAttr = headingId ? ` id="${escapeAttribute(headingId)}"` : "";
-      out.push(`<h${level}${idAttr}>${renderInline(headingText)}</h${level}>`);
+      let html2 = `<h${level}${idAttr}>${renderInline(headingText)}</h${level}>`;
       i += 1;
+      const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+      html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+      i = blockAnchor2.nextIndex;
+      out.push(html2);
       continue;
     }
     if (/^>\s?/.test(trimmed)) {
@@ -15135,20 +15159,36 @@ function markdownToHtml(markdown) {
         const inner2 = markdownToHtml(contentLines.join("\n"));
         if (indicator === "+" || indicator === "-") {
           const openAttr = indicator === "+" ? " open" : "";
-          out.push(`<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</summary><div class="callout-content">${inner2}</div></details>`);
+          let html2 = `<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</summary><div class="callout-content">${inner2}</div></details>`;
+          const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+          html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+          i = blockAnchor2.nextIndex;
+          out.push(html2);
         } else {
-          out.push(`<div class="callout callout-${escapeAttribute(type)}"><div class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</div><div class="callout-content">${inner2}</div></div>`);
+          let html2 = `<div class="callout callout-${escapeAttribute(type)}"><div class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</div><div class="callout-content">${inner2}</div></div>`;
+          const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+          html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+          i = blockAnchor2.nextIndex;
+          out.push(html2);
         }
       } else {
         const inner2 = markdownToHtml(quoteLines.join("\n"));
-        out.push(`<blockquote>${inner2}</blockquote>`);
+        let html2 = `<blockquote>${inner2}</blockquote>`;
+        const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+        html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+        i = blockAnchor2.nextIndex;
+        out.push(html2);
       }
       continue;
     }
     if (isTableStart(lines, i)) {
       const table = renderTable(lines, i);
-      out.push(table.html);
+      let html2 = table.html;
       i = table.nextIndex;
+      const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+      html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+      i = blockAnchor2.nextIndex;
+      out.push(html2);
       continue;
     }
     if (/^[-*+]\s+/.test(trimmed)) {
@@ -15157,7 +15197,11 @@ function markdownToHtml(markdown) {
         items.push((lines[i] ?? "").replace(/^\s*[-*+]\s+/, ""));
         i += 1;
       }
-      out.push(`<ul>${items.map((item) => `<li>${renderInline(item.trim())}</li>`).join("")}</ul>`);
+      let html2 = `<ul>${items.map((item) => `<li>${renderInline(item.trim())}</li>`).join("")}</ul>`;
+      const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+      html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+      i = blockAnchor2.nextIndex;
+      out.push(html2);
       continue;
     }
     if (/^\d+\.\s+/.test(trimmed)) {
@@ -15166,7 +15210,11 @@ function markdownToHtml(markdown) {
         items.push((lines[i] ?? "").replace(/^\s*\d+\.\s+/, ""));
         i += 1;
       }
-      out.push(`<ol>${items.map((item) => `<li>${renderInline(item.trim())}</li>`).join("")}</ol>`);
+      let html2 = `<ol>${items.map((item) => `<li>${renderInline(item.trim())}</li>`).join("")}</ol>`;
+      const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
+      html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
+      i = blockAnchor2.nextIndex;
+      out.push(html2);
       continue;
     }
     const paraLines = [];
@@ -15191,15 +15239,44 @@ function markdownToHtml(markdown) {
         break;
       if (isTableStart(lines, i))
         break;
+      if (parseStandaloneBlockRef(currentTrimmed))
+        break;
       paraLines.push(current.replace(/\s+$/, ""));
       i += 1;
     }
-    out.push(`<p>${renderParagraphLines(paraLines)}</p>`);
+    let html = `<p>${renderParagraphLines(paraLines)}</p>`;
+    const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+    html = applyBlockAnchor(html, blockAnchor.anchorId);
+    i = blockAnchor.nextIndex;
+    out.push(html);
   }
   return out.join("\n");
 }
 function renderParagraphLines(lines) {
   return renderInline(lines.join("\n")).replace(/\n/g, "<br>\n");
+}
+function parseStandaloneBlockRef(value) {
+  const match = /^\^([A-Za-z0-9_-]+)$/.exec(String(value || "").trim());
+  return match ? match[1] : null;
+}
+function consumeFollowingBlockAnchor(lines, index) {
+  const blockRef = parseStandaloneBlockRef(lines[index] ?? "");
+  if (!blockRef) {
+    return { anchorId: "", nextIndex: index };
+  }
+  return { anchorId: buildBlockAnchorId(blockRef), nextIndex: index + 1 };
+}
+function applyBlockAnchor(html, anchorId) {
+  if (!anchorId)
+    return html;
+  const openingTag = /^<([a-z0-9-]+)([^>]*)>/i;
+  const match = openingTag.exec(html);
+  if (!match)
+    return html;
+  if (/\sid=/.test(match[0])) {
+    return `<div id="${escapeAttribute(anchorId)}">${html}</div>`;
+  }
+  return html.replace(openingTag, `<$1$2 id="${escapeAttribute(anchorId)}">`);
 }
 function isTableStart(lines, index) {
   const header = (lines[index] ?? "").trim();
@@ -15383,6 +15460,11 @@ function buildHeadingId(text2, seen) {
 }
 function normalizeHeadingId(value) {
   return String(value || "").trim().toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^[-]+|[-]+$/g, "");
+}
+function buildBlockAnchorId(value) {
+  const raw = String(value || "").trim().replace(/^#?\^/, "");
+  const normalized = raw.replace(/[^A-Za-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^[-]+|[-]+$/g, "");
+  return normalized ? `block-${normalized}` : "";
 }
 function buildCanvasColorVariables(canvasColors) {
   const parts = [];
@@ -15893,12 +15975,18 @@ async function exportMarkdownContentInline(ctx, file) {
 }
 async function exportMarkdownSectionInline(ctx, file, heading) {
   const content = stripFrontmatter(await ctx.app.vault.read(file));
-  const section = extractMarkdownHeadingSection(content, heading);
+  const section = extractMarkdownSection(content, heading);
   if (!section)
     return "";
   let htmlBody = markdownToHtml(section);
   htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", "canvas");
   return htmlBody;
+}
+function extractMarkdownSection(markdown, headingRef) {
+  if (isBlockReference(headingRef)) {
+    return extractMarkdownBlockByRef(markdown, headingRef);
+  }
+  return extractMarkdownHeadingSection(markdown, headingRef);
 }
 function extractMarkdownHeadingSection(markdown, headingRef) {
   const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
@@ -15933,8 +16021,48 @@ function extractMarkdownHeadingSection(markdown, headingRef) {
   }
   return lines.slice(start, end).join("\n").trim();
 }
+function extractMarkdownBlockByRef(markdown, blockRef) {
+  const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
+  const ref = normalizeBlockRef(blockRef);
+  if (!ref)
+    return "";
+  for (let i = 0; i < lines.length; i++) {
+    if (normalizeBlockRef(lines[i] ?? "") !== ref)
+      continue;
+    let start = i - 1;
+    while (start >= 0 && !(lines[start] ?? "").trim()) {
+      start -= 1;
+    }
+    if (start < 0)
+      return "";
+    let end = i;
+    if (/^```/.test((lines[start] ?? "").trim())) {
+      let fenceStart = start;
+      while (fenceStart > 0) {
+        if (/^```/.test((lines[fenceStart - 1] ?? "").trim())) {
+          fenceStart -= 1;
+          break;
+        }
+        fenceStart -= 1;
+      }
+      start = fenceStart;
+    } else {
+      while (start > 0 && (lines[start - 1] ?? "").trim()) {
+        start -= 1;
+      }
+    }
+    return lines.slice(start, end + 1).join("\n").trim();
+  }
+  return "";
+}
 function normalizeHeadingRef(value) {
   return String(value || "").trim().toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^[-]+|[-]+$/g, "");
+}
+function normalizeBlockRef(value) {
+  return String(value || "").trim().replace(/^#?\^/, "").toLowerCase();
+}
+function isBlockReference(value) {
+  return /^\^/.test(String(value || "").trim());
 }
 async function renderMarkdownFileToHtml(ctx, file, mode, linkBase) {
   const activeStack = mode === "page" ? ctx.pageStack : ctx.inlineStack;
@@ -16086,8 +16214,10 @@ async function resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, al
     return null;
   if (isExternalLink2(target))
     return { href: target, found: true, kind: "external" };
-  if (target.startsWith("#"))
-    return { href: target, found: true, kind: "anchor" };
+  if (target.startsWith("#")) {
+    const href2 = buildMarkdownAnchorSuffix(target.slice(1)) || target;
+    return { href: href2, found: true, kind: "anchor" };
+  }
   if (!shouldRewriteInternalTarget(target))
     return null;
   const { path: cleaned, suffix } = splitTargetSuffix(target);
@@ -16106,7 +16236,7 @@ async function resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, al
     const cached = ctx.htmlMap.get(resolved.path);
     const exported = cached || await exportMarkdownNote(ctx, resolved);
     const headingSuffix = parsedTargetSection(target);
-    const normalizedSuffix = headingSuffix ? `#${normalizeHeadingRef(headingSuffix)}` : suffix;
+    const normalizedSuffix = headingSuffix ? buildMarkdownAnchorSuffix(headingSuffix) : suffix;
     const href2 = linkBase === "page" ? getHrefForMarkdownPage(ctx.htmlMap.get(sourceFile.path) || "", exported) : `${exported}`;
     return { href: `${href2}${normalizedSuffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
@@ -16212,6 +16342,14 @@ function parsedTargetSection(target) {
     return null;
   const section = target.slice(hashIndex + 1).trim();
   return section || null;
+}
+function buildMarkdownAnchorSuffix(section) {
+  if (isBlockReference(section)) {
+    const blockId = buildBlockAnchorId(section);
+    return blockId ? `#${blockId}` : "";
+  }
+  const headingId = normalizeHeadingRef(section);
+  return headingId ? `#${headingId}` : "";
 }
 function isImageExt(ext) {
   return ["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp"].includes(ext.toLowerCase());

@@ -784,11 +784,20 @@ export function markdownToHtml(markdown: string): string {
       continue;
     }
 
+    if (parseStandaloneBlockRef(trimmed)) {
+      i += 1;
+      continue;
+    }
+
     // Single-line block math: $$content$$
     const singleBlockMath = trimmed.match(/^\$\$(.+)\$\$$/);
     if (singleBlockMath) {
-      out.push(renderMath(singleBlockMath[1].trim(), true));
+      let html = renderMath(singleBlockMath[1].trim(), true);
       i += 1;
+      const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+      html = applyBlockAnchor(html, blockAnchor.anchorId);
+      i = blockAnchor.nextIndex;
+      out.push(html);
       continue;
     }
 
@@ -801,7 +810,11 @@ export function markdownToHtml(markdown: string): string {
         i += 1;
       }
       if (i < lines.length) i += 1;
-      out.push(renderMath(mathLines.join("\n"), true));
+      let html = renderMath(mathLines.join("\n"), true);
+      const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+      html = applyBlockAnchor(html, blockAnchor.anchorId);
+      i = blockAnchor.nextIndex;
+      out.push(html);
       continue;
     }
 
@@ -816,13 +829,21 @@ export function markdownToHtml(markdown: string): string {
       }
       if (i < lines.length) i += 1;
       const className = lang ? ` class="language-${escapeAttribute(lang)}"` : "";
-      out.push(`<pre><code${className}>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+      let html = `<pre><code${className}>${escapeHtml(codeLines.join("\n"))}</code></pre>`;
+      const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+      html = applyBlockAnchor(html, blockAnchor.anchorId);
+      i = blockAnchor.nextIndex;
+      out.push(html);
       continue;
     }
 
     if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(trimmed)) {
-      out.push("<hr>");
+      let html = "<hr>";
       i += 1;
+      const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+      html = applyBlockAnchor(html, blockAnchor.anchorId);
+      i = blockAnchor.nextIndex;
+      out.push(html);
       continue;
     }
 
@@ -832,8 +853,12 @@ export function markdownToHtml(markdown: string): string {
       const headingText = heading[2].trim();
       const headingId = buildHeadingId(headingText, headingIds);
       const idAttr = headingId ? ` id="${escapeAttribute(headingId)}"` : "";
-      out.push(`<h${level}${idAttr}>${renderInline(headingText)}</h${level}>`);
+      let html = `<h${level}${idAttr}>${renderInline(headingText)}</h${level}>`;
       i += 1;
+      const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+      html = applyBlockAnchor(html, blockAnchor.anchorId);
+      i = blockAnchor.nextIndex;
+      out.push(html);
       continue;
     }
 
@@ -871,21 +896,37 @@ export function markdownToHtml(markdown: string): string {
         const inner = markdownToHtml(contentLines.join("\n"));
         if (indicator === "+" || indicator === "-") {
           const openAttr = indicator === "+" ? " open" : "";
-          out.push(`<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</summary><div class="callout-content">${inner}</div></details>`);
+          let html = `<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</summary><div class="callout-content">${inner}</div></details>`;
+          const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+          html = applyBlockAnchor(html, blockAnchor.anchorId);
+          i = blockAnchor.nextIndex;
+          out.push(html);
         } else {
-          out.push(`<div class="callout callout-${escapeAttribute(type)}"><div class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</div><div class="callout-content">${inner}</div></div>`);
+          let html = `<div class="callout callout-${escapeAttribute(type)}"><div class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</div><div class="callout-content">${inner}</div></div>`;
+          const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+          html = applyBlockAnchor(html, blockAnchor.anchorId);
+          i = blockAnchor.nextIndex;
+          out.push(html);
         }
       } else {
         const inner = markdownToHtml(quoteLines.join("\n"));
-        out.push(`<blockquote>${inner}</blockquote>`);
+        let html = `<blockquote>${inner}</blockquote>`;
+        const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+        html = applyBlockAnchor(html, blockAnchor.anchorId);
+        i = blockAnchor.nextIndex;
+        out.push(html);
       }
       continue;
     }
 
     if (isTableStart(lines, i)) {
       const table = renderTable(lines, i);
-      out.push(table.html);
+      let html = table.html;
       i = table.nextIndex;
+      const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+      html = applyBlockAnchor(html, blockAnchor.anchorId);
+      i = blockAnchor.nextIndex;
+      out.push(html);
       continue;
     }
 
@@ -895,7 +936,11 @@ export function markdownToHtml(markdown: string): string {
         items.push((lines[i] ?? "").replace(/^\s*[-*+]\s+/, ""));
         i += 1;
       }
-      out.push(`<ul>${items.map((item) => `<li>${renderInline(item.trim())}</li>`).join("")}</ul>`);
+      let html = `<ul>${items.map((item) => `<li>${renderInline(item.trim())}</li>`).join("")}</ul>`;
+      const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+      html = applyBlockAnchor(html, blockAnchor.anchorId);
+      i = blockAnchor.nextIndex;
+      out.push(html);
       continue;
     }
 
@@ -905,7 +950,11 @@ export function markdownToHtml(markdown: string): string {
         items.push((lines[i] ?? "").replace(/^\s*\d+\.\s+/, ""));
         i += 1;
       }
-      out.push(`<ol>${items.map((item) => `<li>${renderInline(item.trim())}</li>`).join("")}</ol>`);
+      let html = `<ol>${items.map((item) => `<li>${renderInline(item.trim())}</li>`).join("")}</ol>`;
+      const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+      html = applyBlockAnchor(html, blockAnchor.anchorId);
+      i = blockAnchor.nextIndex;
+      out.push(html);
       continue;
     }
 
@@ -922,10 +971,15 @@ export function markdownToHtml(markdown: string): string {
       if (/^[-*+]\s+/.test(currentTrimmed)) break;
       if (/^\d+\.\s+/.test(currentTrimmed)) break;
       if (isTableStart(lines, i)) break;
+      if (parseStandaloneBlockRef(currentTrimmed)) break;
       paraLines.push(current.replace(/\s+$/, ""));
       i += 1;
     }
-    out.push(`<p>${renderParagraphLines(paraLines)}</p>`);
+    let html = `<p>${renderParagraphLines(paraLines)}</p>`;
+    const blockAnchor = consumeFollowingBlockAnchor(lines, i);
+    html = applyBlockAnchor(html, blockAnchor.anchorId);
+    i = blockAnchor.nextIndex;
+    out.push(html);
   }
 
   return out.join("\n");
@@ -933,6 +987,30 @@ export function markdownToHtml(markdown: string): string {
 
 function renderParagraphLines(lines: string[]): string {
   return renderInline(lines.join("\n")).replace(/\n/g, "<br>\n");
+}
+
+function parseStandaloneBlockRef(value: string): string | null {
+  const match = /^\^([A-Za-z0-9_-]+)$/.exec(String(value || "").trim());
+  return match ? match[1] : null;
+}
+
+function consumeFollowingBlockAnchor(lines: string[], index: number): { anchorId: string; nextIndex: number } {
+  const blockRef = parseStandaloneBlockRef(lines[index] ?? "");
+  if (!blockRef) {
+    return { anchorId: "", nextIndex: index };
+  }
+  return { anchorId: buildBlockAnchorId(blockRef), nextIndex: index + 1 };
+}
+
+function applyBlockAnchor(html: string, anchorId: string): string {
+  if (!anchorId) return html;
+  const openingTag = /^<([a-z0-9-]+)([^>]*)>/i;
+  const match = openingTag.exec(html);
+  if (!match) return html;
+  if (/\sid=/.test(match[0])) {
+    return `<div id="${escapeAttribute(anchorId)}">${html}</div>`;
+  }
+  return html.replace(openingTag, `<$1$2 id="${escapeAttribute(anchorId)}">`);
 }
 
 function isTableStart(lines: string[], index: number): boolean {
@@ -1147,6 +1225,12 @@ function normalizeHeadingId(value: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^[-]+|[-]+$/g, "");
+}
+
+export function buildBlockAnchorId(value: string): string {
+  const raw = String(value || "").trim().replace(/^#?\^/, "");
+  const normalized = raw.replace(/[^A-Za-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^[-]+|[-]+$/g, "");
+  return normalized ? `block-${normalized}` : "";
 }
 
 function getNodePalette(color: string | undefined, darkMode: boolean): NodePalette {

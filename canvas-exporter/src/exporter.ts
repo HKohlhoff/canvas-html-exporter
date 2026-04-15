@@ -1,5 +1,5 @@
 import type { App, TAbstractFile, TFile } from "obsidian";
-import { buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markdownToHtml } from "./converter";
+import { buildBlockAnchorId, buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markdownToHtml } from "./converter";
 import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePath } from "./export-file-helpers";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-helpers";
 import { embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTargetSuffix } from "./link-helpers";
@@ -234,11 +234,18 @@ async function exportMarkdownContentInline(ctx: MarkdownContext, file: TFile): P
 
 async function exportMarkdownSectionInline(ctx: MarkdownContext, file: TFile, heading: string): Promise<string> {
   const content = stripFrontmatter(await ctx.app.vault.read(file));
-  const section = extractMarkdownHeadingSection(content, heading);
+  const section = extractMarkdownSection(content, heading);
   if (!section) return "";
   let htmlBody = markdownToHtml(section);
   htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", "canvas");
   return htmlBody;
+}
+
+function extractMarkdownSection(markdown: string, headingRef: string): string {
+  if (isBlockReference(headingRef)) {
+    return extractMarkdownBlockByRef(markdown, headingRef);
+  }
+  return extractMarkdownHeadingSection(markdown, headingRef);
 }
 
 function extractMarkdownHeadingSection(markdown: string, headingRef: string): string {
@@ -276,6 +283,44 @@ function extractMarkdownHeadingSection(markdown: string, headingRef: string): st
   return lines.slice(start, end).join("\n").trim();
 }
 
+function extractMarkdownBlockByRef(markdown: string, blockRef: string): string {
+  const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
+  const ref = normalizeBlockRef(blockRef);
+  if (!ref) return "";
+
+  for (let i = 0; i < lines.length; i++) {
+    if (normalizeBlockRef(lines[i] ?? "") !== ref) continue;
+
+    let start = i - 1;
+    while (start >= 0 && !(lines[start] ?? "").trim()) {
+      start -= 1;
+    }
+    if (start < 0) return "";
+
+    let end = i;
+
+    if (/^```/.test((lines[start] ?? "").trim())) {
+      let fenceStart = start;
+      while (fenceStart > 0) {
+        if (/^```/.test((lines[fenceStart - 1] ?? "").trim())) {
+          fenceStart -= 1;
+          break;
+        }
+        fenceStart -= 1;
+      }
+      start = fenceStart;
+    } else {
+      while (start > 0 && (lines[start - 1] ?? "").trim()) {
+        start -= 1;
+      }
+    }
+
+    return lines.slice(start, end + 1).join("\n").trim();
+  }
+
+  return "";
+}
+
 function normalizeHeadingRef(value: string): string {
   return String(value || "")
     .trim()
@@ -286,6 +331,17 @@ function normalizeHeadingRef(value: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^[-]+|[-]+$/g, "");
+}
+
+function normalizeBlockRef(value: string): string {
+  return String(value || "")
+    .trim()
+    .replace(/^#?\^/, "")
+    .toLowerCase();
+}
+
+function isBlockReference(value: string): boolean {
+  return /^\^/.test(String(value || "").trim());
 }
 
 async function renderMarkdownFileToHtml(
@@ -496,7 +552,10 @@ async function resolveObsidianTarget(
   const target = parsedTarget.core;
   if (!target) return null;
   if (isExternalLink(target)) return { href: target, found: true, kind: "external" };
-  if (target.startsWith("#")) return { href: target, found: true, kind: "anchor" };
+  if (target.startsWith("#")) {
+    const href = buildMarkdownAnchorSuffix(target.slice(1)) || target;
+    return { href, found: true, kind: "anchor" };
+  }
   if (!shouldRewriteInternalTarget(target)) return null;
 
   const { path: cleaned, suffix } = splitTargetSuffix(target);
@@ -516,7 +575,7 @@ async function resolveObsidianTarget(
     const cached = ctx.htmlMap.get(resolved.path);
     const exported = cached || await exportMarkdownNote(ctx, resolved);
     const headingSuffix = parsedTargetSection(target);
-    const normalizedSuffix = headingSuffix ? `#${normalizeHeadingRef(headingSuffix)}` : suffix;
+    const normalizedSuffix = headingSuffix ? buildMarkdownAnchorSuffix(headingSuffix) : suffix;
     const href = linkBase === "page"
       ? getHrefForMarkdownPage(ctx.htmlMap.get(sourceFile.path) || "", exported)
       : `${exported}`;
@@ -652,6 +711,15 @@ function parsedTargetSection(target: string): string | null {
   if (hashIndex < 0) return null;
   const section = target.slice(hashIndex + 1).trim();
   return section || null;
+}
+
+function buildMarkdownAnchorSuffix(section: string): string {
+  if (isBlockReference(section)) {
+    const blockId = buildBlockAnchorId(section);
+    return blockId ? `#${blockId}` : "";
+  }
+  const headingId = normalizeHeadingRef(section);
+  return headingId ? `#${headingId}` : "";
 }
 
 function isImageExt(ext: string): boolean {
