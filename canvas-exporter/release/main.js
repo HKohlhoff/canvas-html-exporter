@@ -23,7 +23,7 @@ __export(main_exports, {
   default: () => CanvasExporterPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian2 = require("obsidian");
+var import_obsidian = require("obsidian");
 
 // node_modules/katex/dist/katex.mjs
 var ParseError = class _ParseError extends Error {
@@ -15506,9 +15506,6 @@ function escapeAttribute(text2) {
   return escapeHtml(text2).replace(/`/g, "&#96;");
 }
 
-// src/exporter.ts
-var import_obsidian = require("obsidian");
-
 // src/export-file-helpers.ts
 function safeSegment(value) {
   const normalized = value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").replace(/^[-.]+|[-.]+$/g, "");
@@ -15723,7 +15720,7 @@ function stripFrontmatter(markdown) {
   return normalized.slice(end + 5).replace(/^\n+/, "");
 }
 function normalizeExportHref2(href) {
-  return (0, import_obsidian.normalizePath)(href).replace(/^\/+/, "");
+  return normalizePath(href).replace(/^\/+/, "");
 }
 async function exportCanvasPackage(app, canvasFile, settings) {
   const rawContent = await app.vault.read(canvasFile);
@@ -15735,10 +15732,10 @@ async function exportCanvasPackage(app, canvasFile, settings) {
   }
   const baseFolder = normalizeFolder(settings.outputDir);
   await ensureFolderExists(app, baseFolder);
-  const exportFolder = (0, import_obsidian.normalizePath)(`${baseFolder}/${safeSegment(canvasFile.basename)}`);
-  const assetsDir = (0, import_obsidian.normalizePath)(`${exportFolder}/assets`);
-  const imagesDir = (0, import_obsidian.normalizePath)(`${assetsDir}/images`);
-  const filesDir = (0, import_obsidian.normalizePath)(`${assetsDir}/files`);
+  const exportFolder = normalizePath(`${baseFolder}/${safeSegment(canvasFile.basename)}`);
+  const assetsDir = normalizePath(`${exportFolder}/assets`);
+  const imagesDir = normalizePath(`${assetsDir}/images`);
+  const filesDir = normalizePath(`${assetsDir}/files`);
   await ensureFolderExists(app, exportFolder);
   await ensureFolderExists(app, assetsDir);
   await ensureFolderExists(app, imagesDir);
@@ -15780,7 +15777,7 @@ async function prepareNode(ctx, node) {
   if (!sourcePath)
     return { ...node };
   const file = resolveVaultFile(ctx.app, sourcePath);
-  if (!(file instanceof import_obsidian.TFile)) {
+  if (!isTFile(file)) {
     return { ...node, displayName: sourcePath, fileKind: "file" };
   }
   const ext = file.extension.toLowerCase();
@@ -15839,7 +15836,7 @@ async function prepareNode(ctx, node) {
   if (ext === "pdf") {
     const pdfFilename = exportPath.split("/").pop() || "";
     const viewerName = pdfFilename.replace(/\.pdf$/i, "-viewer.html");
-    const viewerPath = (0, import_obsidian.normalizePath)(`${ctx.assetsFilesDir}/${viewerName}`);
+    const viewerPath = normalizePath(`${ctx.assetsFilesDir}/${viewerName}`);
     const viewerHtml = `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -15932,7 +15929,7 @@ async function renderMarkdownFileToHtml(ctx, file, mode, linkBase) {
     let rel2 = "";
     if (mode === "page") {
       const outputName = uniqueOutputName(ctx, file.basename, "html");
-      outputPath = (0, import_obsidian.normalizePath)(`${ctx.assetsFilesDir}/${outputName}`);
+      outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
       rel2 = normalizeExportHref2(toExportRelativePath(outputPath, ctx.outputRoot));
       ctx.htmlMap.set(file.path, rel2);
     }
@@ -16044,7 +16041,7 @@ async function rewriteWikiLinks(ctx, sourceFile, html, mode, linkBase) {
 function resolveLinkedFileForEmbed(ctx, sourceFile, target) {
   const cleaned = splitTargetSuffix(normalizeWikiTarget(target)).path;
   const resolved = resolveLinkedVaultFile(ctx.app, sourceFile, cleaned);
-  if (!(resolved instanceof import_obsidian.TFile)) {
+  if (!isTFile(resolved)) {
     return null;
   }
   return resolved;
@@ -16070,7 +16067,7 @@ async function resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, al
   if (!shouldRewriteInternalTarget(cleaned))
     return null;
   const resolved = resolveLinkedVaultFile(ctx.app, sourceFile, cleaned);
-  if (!(resolved instanceof import_obsidian.TFile)) {
+  if (!isTFile(resolved)) {
     return {
       href: `#missing-${encodeURIComponent(cleaned)}`,
       found: false,
@@ -16112,7 +16109,7 @@ async function copyVaultFile(ctx, file, kind) {
     return cached;
   const folder = kind === "image" ? ctx.assetsImagesDir : ctx.assetsFilesDir;
   const outputName = uniqueOutputName(ctx, file.basename, file.extension);
-  const outputPath = (0, import_obsidian.normalizePath)(`${folder}/${outputName}`);
+  const outputPath = normalizePath(`${folder}/${outputName}`);
   const bytes = await ctx.app.vault.readBinary(file);
   await writeBinaryFile(ctx.app, outputPath, bytes);
   const rel2 = toExportRelativePath(outputPath, ctx.outputRoot);
@@ -16124,7 +16121,7 @@ function uniqueOutputName(ctx, basename, extension) {
   return buildUniqueOutputName(ctx.counter, basename, extension);
 }
 async function ensureFolderExists(app, folderPath) {
-  const parts = (0, import_obsidian.normalizePath)(folderPath).split("/").filter(Boolean);
+  const parts = normalizePath(folderPath).split("/").filter(Boolean);
   let current = "";
   for (const part of parts) {
     current = current ? `${current}/${part}` : part;
@@ -16135,7 +16132,7 @@ async function ensureFolderExists(app, folderPath) {
 }
 async function writeTextFile(app, filePath, content) {
   const existing = app.vault.getAbstractFileByPath(filePath);
-  if (existing instanceof import_obsidian.TFile) {
+  if (isTFile(existing)) {
     await app.vault.modify(existing, content);
     return;
   }
@@ -16143,23 +16140,23 @@ async function writeTextFile(app, filePath, content) {
 }
 async function writeBinaryFile(app, filePath, data) {
   const existing = app.vault.getAbstractFileByPath(filePath);
-  if (existing instanceof import_obsidian.TFile) {
+  if (isTFile(existing)) {
     await app.vault.modifyBinary(existing, data);
     return;
   }
   await app.vault.createBinary(filePath, data);
 }
 function resolveVaultFile(app, pathLike) {
-  return app.vault.getAbstractFileByPath((0, import_obsidian.normalizePath)(pathLike));
+  return app.vault.getAbstractFileByPath(normalizePath(pathLike));
 }
 function resolveLinkedVaultFile(app, sourceFile, target) {
-  const normalizedTarget = (0, import_obsidian.normalizePath)(target);
+  const normalizedTarget = normalizePath(target);
   const direct = app.vault.getAbstractFileByPath(normalizedTarget);
   if (direct)
     return direct;
   const folder = sourceFile.parent?.path ?? "";
   if (folder) {
-    const relative = (0, import_obsidian.normalizePath)(`${folder}/${normalizedTarget}`);
+    const relative = normalizePath(`${folder}/${normalizedTarget}`);
     const relFile = app.vault.getAbstractFileByPath(relative);
     if (relFile)
       return relFile;
@@ -16167,6 +16164,15 @@ function resolveLinkedVaultFile(app, sourceFile, target) {
   const basename = normalizedTarget.split("/").pop() || normalizedTarget;
   const byName = app.metadataCache.getFirstLinkpathDest(normalizedTarget, sourceFile.path) ?? app.metadataCache.getFirstLinkpathDest(basename, sourceFile.path);
   return byName ?? null;
+}
+function isTFile(value) {
+  if (!value || typeof value !== "object")
+    return false;
+  const file = value;
+  return typeof file.path === "string" && typeof file.name === "string" && typeof file.basename === "string" && typeof file.extension === "string";
+}
+function normalizePath(pathLike) {
+  return String(pathLike || "").replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/\.\//g, "/").replace(/^\.\/+/, "").replace(/^\/+/, "").replace(/\/+$/, "");
 }
 function isExternalLink2(value) {
   return /^(https?:|mailto:|file:)/i.test(value);
@@ -16190,7 +16196,7 @@ var DEFAULT_SETTINGS = {
   darkMode: true,
   outputDir: "Canvas-Exports"
 };
-var CanvasExporterPlugin = class extends import_obsidian2.Plugin {
+var CanvasExporterPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -16212,7 +16218,7 @@ var CanvasExporterPlugin = class extends import_obsidian2.Plugin {
   async exportCurrentCanvas() {
     const file = this.getActiveCanvasFile();
     if (!file) {
-      new import_obsidian2.Notice("Keine aktive Canvas-Datei gefunden.", 4e3);
+      new import_obsidian.Notice("Keine aktive Canvas-Datei gefunden.", 4e3);
       return;
     }
     try {
@@ -16220,17 +16226,17 @@ var CanvasExporterPlugin = class extends import_obsidian2.Plugin {
       const result = await exportCanvasPackage(this.app, file, { ...this.settings, canvasColors });
       const html = convertCanvasToHtml(result.data, result.options);
       await this.writeIndexFile(result.folderPath, html);
-      new import_obsidian2.Notice(`Canvas-Paket exportiert: ${result.folderPath}`, 6e3);
+      new import_obsidian.Notice(`Canvas-Paket exportiert: ${result.folderPath}`, 6e3);
     } catch (error) {
       console.error("[canvas-exporter] Export fehlgeschlagen", error);
       const message = error instanceof Error ? error.message : "Unbekannter Fehler";
-      new import_obsidian2.Notice(`Canvas-Export fehlgeschlagen: ${message}`, 7e3);
+      new import_obsidian.Notice(`Canvas-Export fehlgeschlagen: ${message}`, 7e3);
     }
   }
   async writeIndexFile(folderPath, html) {
     const filePath = `${folderPath}/index.html`;
     const existing = this.app.vault.getAbstractFileByPath(filePath);
-    if (existing instanceof import_obsidian2.TFile) {
+    if (existing instanceof import_obsidian.TFile) {
       await this.app.vault.modify(existing, html);
       return;
     }
@@ -16301,7 +16307,7 @@ var CanvasExporterPlugin = class extends import_obsidian2.Plugin {
     await this.saveData(this.settings);
   }
 };
-var CanvasExporterSettingTab = class extends import_obsidian2.PluginSettingTab {
+var CanvasExporterSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -16313,13 +16319,13 @@ var CanvasExporterSettingTab = class extends import_obsidian2.PluginSettingTab {
     containerEl.createEl("p", {
       text: "Exportiert ein portables Paket pro Canvas mit index.html sowie assets/images und assets/files. Markdown-Dateiknoten werden dabei zus\xE4tzlich als einfache HTML-Unterseiten exportiert."
     });
-    new import_obsidian2.Setting(containerEl).setName("Dunkles Standard-Theme").setDesc("Verwendet beim Export standardm\xE4\xDFig ein dunkles HTML-Layout.").addToggle(
+    new import_obsidian.Setting(containerEl).setName("Dunkles Standard-Theme").setDesc("Verwendet beim Export standardm\xE4\xDFig ein dunkles HTML-Layout.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.darkMode).onChange(async (value) => {
         this.plugin.settings.darkMode = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian2.Setting(containerEl).setName("Ausgabeordner").setDesc("Relativer Zielordner im Vault, zum Beispiel Canvas-Exports.").addText(
+    new import_obsidian.Setting(containerEl).setName("Ausgabeordner").setDesc("Relativer Zielordner im Vault, zum Beispiel Canvas-Exports.").addText(
       (text2) => text2.setPlaceholder("Canvas-Exports").setValue(this.plugin.settings.outputDir).onChange(async (value) => {
         this.plugin.settings.outputDir = value || DEFAULT_SETTINGS.outputDir;
         await this.plugin.saveSettings();

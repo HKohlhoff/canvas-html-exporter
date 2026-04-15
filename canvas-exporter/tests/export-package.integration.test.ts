@@ -1,0 +1,242 @@
+import assert from "node:assert/strict";
+import { exportCanvasPackage } from "../src/exporter";
+
+type MockFile = {
+  path: string;
+  name: string;
+  basename: string;
+  extension: string;
+  parent: MockFolder | null;
+  kind: "text" | "binary";
+  text?: string;
+  binary?: ArrayBuffer;
+};
+
+type MockFolder = {
+  path: string;
+  name: string;
+  parent: MockFolder | null;
+};
+
+function test(name: string, fn: () => Promise<void> | void): Promise<void> | void {
+  try {
+    const result = fn();
+    if (result && typeof (result as Promise<void>).then === "function") {
+      return (result as Promise<void>).then(
+        () => console.log(`PASS ${name}`),
+        (error) => {
+          console.error(`FAIL ${name}`);
+          throw error;
+        },
+      );
+    }
+    console.log(`PASS ${name}`);
+  } catch (error) {
+    console.error(`FAIL ${name}`);
+    throw error;
+  }
+}
+
+function createMockApp(initialFiles: Array<{ path: string; text?: string; binary?: ArrayBuffer }>) {
+  const files = new Map<string, MockFile>();
+  const folders = new Set<string>();
+  const encoder = new TextEncoder();
+
+  function normalizePath(pathLike: string): string {
+    return String(pathLike || "")
+      .replace(/\\/g, "/")
+      .replace(/\/+/g, "/")
+      .replace(/^\/+/, "")
+      .replace(/\/+$/, "");
+  }
+
+  function ensureFolder(folderPath: string): void {
+    const normalized = normalizePath(folderPath);
+    if (!normalized) return;
+    const parts = normalized.split("/").filter(Boolean);
+    let current = "";
+    for (const part of parts) {
+      current = current ? `${current}/${part}` : part;
+      folders.add(current);
+    }
+  }
+
+  function makeParent(folderPath: string): MockFolder | null {
+    const normalized = normalizePath(folderPath);
+    if (!normalized) return null;
+    const name = normalized.split("/").pop() || normalized;
+    const parentPath = normalized.split("/").slice(0, -1).join("/");
+    return {
+      path: normalized,
+      name,
+      parent: parentPath ? makeParent(parentPath) : null,
+    };
+  }
+
+  function addTextFile(path: string, text: string): MockFile {
+    const normalized = normalizePath(path);
+    const name = normalized.split("/").pop() || normalized;
+    const dot = name.lastIndexOf(".");
+    const basename = dot >= 0 ? name.slice(0, dot) : name;
+    const extension = dot >= 0 ? name.slice(dot + 1) : "";
+    const parentPath = normalized.split("/").slice(0, -1).join("/");
+    ensureFolder(parentPath);
+    const file: MockFile = {
+      path: normalized,
+      name,
+      basename,
+      extension,
+      parent: makeParent(parentPath),
+      kind: "text",
+      text,
+    };
+    files.set(normalized, file);
+    return file;
+  }
+
+  function addBinaryFile(path: string, binary: ArrayBuffer): MockFile {
+    const normalized = normalizePath(path);
+    const name = normalized.split("/").pop() || normalized;
+    const dot = name.lastIndexOf(".");
+    const basename = dot >= 0 ? name.slice(0, dot) : name;
+    const extension = dot >= 0 ? name.slice(dot + 1) : "";
+    const parentPath = normalized.split("/").slice(0, -1).join("/");
+    ensureFolder(parentPath);
+    const file: MockFile = {
+      path: normalized,
+      name,
+      basename,
+      extension,
+      parent: makeParent(parentPath),
+      kind: "binary",
+      binary,
+    };
+    files.set(normalized, file);
+    return file;
+  }
+
+  for (const entry of initialFiles) {
+    if (entry.binary) addBinaryFile(entry.path, entry.binary);
+    else addTextFile(entry.path, entry.text || "");
+  }
+
+  const app = {
+    vault: {
+      adapter: {
+        exists: async (path: string) => {
+          const normalized = normalizePath(path);
+          return folders.has(normalized) || files.has(normalized);
+        },
+      },
+      read: async (file: MockFile) => file.text || "",
+      readBinary: async (file: MockFile) => file.binary || encoder.encode(file.text || "").buffer,
+      create: async (path: string, data: string) => addTextFile(path, data),
+      createBinary: async (path: string, data: ArrayBuffer) => addBinaryFile(path, data),
+      createFolder: async (path: string) => {
+        ensureFolder(path);
+      },
+      modify: async (file: MockFile, data: string) => {
+        file.text = data;
+        file.kind = "text";
+      },
+      modifyBinary: async (file: MockFile, data: ArrayBuffer) => {
+        file.binary = data;
+        file.kind = "binary";
+      },
+      getAbstractFileByPath: (path: string) => {
+        const normalized = normalizePath(path);
+        return files.get(normalized) || null;
+      },
+    },
+    workspace: {
+      getActiveFile: () => null,
+    },
+    metadataCache: {
+      getFirstLinkpathDest: (linkpath: string) => {
+        const normalized = normalizePath(linkpath);
+        if (files.has(normalized)) return files.get(normalized) || null;
+        const basename = normalized.split("/").pop() || normalized;
+        for (const file of files.values()) {
+          if (file.path === normalized || file.name === basename || file.basename === basename.replace(/\.[^.]+$/, "")) {
+            return file;
+          }
+        }
+        return null;
+      },
+    },
+  };
+
+  return { app, files, folders, addTextFile };
+}
+
+(async () => {
+  await test("exports markdown and image file nodes into a package", async () => {
+    const png = new Uint8Array([137, 80, 78, 71]).buffer;
+    const canvasJson = JSON.stringify({
+      name: "Demo Canvas",
+      nodes: [
+        { id: "md", type: "file", x: 0, y: 0, width: 320, height: 180, file: "notes/main.md" },
+        { id: "img", type: "file", x: 360, y: 0, width: 240, height: 180, file: "assets/picture.png" },
+      ],
+      edges: [{ fromNode: "md", toNode: "img", label: "zeigt" }],
+    });
+
+    const { app, files } = createMockApp([
+      { path: "canvases/demo.canvas", text: canvasJson },
+      { path: "notes/main.md", text: "# Titel\nSiehe [[second|zweite Notiz]] und ![[picture.png]]" },
+      { path: "notes/second.md", text: "## Abschnitt\nMehr Inhalt" },
+      { path: "assets/picture.png", binary: png },
+    ]);
+
+    const canvasFile = files.get("canvases/demo.canvas") as MockFile;
+    const result = await exportCanvasPackage(app as never, canvasFile as never, {
+      darkMode: true,
+      outputDir: "Canvas-Exports",
+    });
+
+    assert.equal(result.folderPath, "Canvas-Exports/demo");
+    assert.equal(result.data.nodes.length, 2);
+    assert.equal(result.data.edges.length, 1);
+
+    const markdownNode = result.data.nodes.find((node) => node.id === "md");
+    const imageNode = result.data.nodes.find((node) => node.id === "img");
+
+    assert.equal(markdownNode?.fileKind, "markdown");
+    assert.ok(markdownNode?.exportHtmlPath?.startsWith("assets/files/"));
+    assert.ok(markdownNode?.canvasHref?.startsWith("assets/files/"));
+    assert.match(markdownNode?.previewHtml || "", /zweite Notiz/);
+    assert.match(markdownNode?.previewHtml || "", /assets\/images\//);
+
+    assert.equal(imageNode?.fileKind, "image");
+    assert.ok(imageNode?.exportPath?.startsWith("assets/images/"));
+
+    const exportedMarkdownPath = `Canvas-Exports/demo/${markdownNode?.exportHtmlPath}`;
+    const exportedImagePath = `Canvas-Exports/demo/${imageNode?.exportPath}`;
+    const exportedMarkdown = files.get(exportedMarkdownPath);
+    const exportedImage = files.get(exportedImagePath);
+
+    assert.ok(exportedMarkdown);
+    assert.ok(exportedImage);
+    assert.match(exportedMarkdown?.text || "", /zweite Notiz/);
+    assert.match(exportedMarkdown?.text || "", /<img src="\.\.\/images\//);
+  });
+
+  await test("throws a readable error for invalid canvas json", async () => {
+    const { app, files } = createMockApp([
+      { path: "canvases/bad.canvas", text: "{not-json" },
+    ]);
+
+    const canvasFile = files.get("canvases/bad.canvas") as MockFile;
+    await assert.rejects(
+      () =>
+        exportCanvasPackage(app as never, canvasFile as never, {
+          darkMode: true,
+          outputDir: "Canvas-Exports",
+        }),
+      /Ungültiges Canvas-JSON/,
+    );
+  });
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -1,4 +1,4 @@
-import { App, normalizePath, TAbstractFile, TFile } from "obsidian";
+import type { App, TAbstractFile, TFile } from "obsidian";
 import { buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markdownToHtml } from "./converter";
 import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePath } from "./export-file-helpers";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-helpers";
@@ -126,7 +126,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   if (!sourcePath) return { ...node };
 
   const file = resolveVaultFile(ctx.app, sourcePath);
-  if (!(file instanceof TFile)) {
+  if (!isTFile(file)) {
     return { ...node, displayName: sourcePath, fileKind: "file" };
   }
 
@@ -455,7 +455,7 @@ async function rewriteWikiLinks(
 function resolveLinkedFileForEmbed(ctx: MarkdownContext, sourceFile: TFile, target: string): TFile | null {
   const cleaned = splitTargetSuffix(normalizeWikiTarget(target)).path;
   const resolved = resolveLinkedVaultFile(ctx.app, sourceFile, cleaned);
-  if (!(resolved instanceof TFile)) {
+  if (!isTFile(resolved)) {
     return null;
   }
   return resolved;
@@ -493,7 +493,7 @@ async function resolveObsidianTarget(
   if (!shouldRewriteInternalTarget(cleaned)) return null;
 
   const resolved = resolveLinkedVaultFile(ctx.app, sourceFile, cleaned);
-  if (!(resolved instanceof TFile)) {
+  if (!isTFile(resolved)) {
     return {
       href: `#missing-${encodeURIComponent(cleaned)}`,
       found: false,
@@ -572,7 +572,7 @@ async function ensureFolderExists(app: App, folderPath: string): Promise<void> {
 
 async function writeTextFile(app: App, filePath: string, content: string): Promise<void> {
   const existing = app.vault.getAbstractFileByPath(filePath);
-  if (existing instanceof TFile) {
+  if (isTFile(existing)) {
     await app.vault.modify(existing, content);
     return;
   }
@@ -581,7 +581,7 @@ async function writeTextFile(app: App, filePath: string, content: string): Promi
 
 async function writeBinaryFile(app: App, filePath: string, data: ArrayBuffer): Promise<void> {
   const existing = app.vault.getAbstractFileByPath(filePath);
-  if (existing instanceof TFile) {
+  if (isTFile(existing)) {
     await app.vault.modifyBinary(existing, data);
     return;
   }
@@ -608,6 +608,27 @@ function resolveLinkedVaultFile(app: App, sourceFile: TFile, target: string): TA
   const byName = app.metadataCache.getFirstLinkpathDest(normalizedTarget, sourceFile.path)
     ?? app.metadataCache.getFirstLinkpathDest(basename, sourceFile.path);
   return byName ?? null;
+}
+
+function isTFile(value: unknown): value is TFile {
+  if (!value || typeof value !== "object") return false;
+  const file = value as Record<string, unknown>;
+  return (
+    typeof file.path === "string" &&
+    typeof file.name === "string" &&
+    typeof file.basename === "string" &&
+    typeof file.extension === "string"
+  );
+}
+
+function normalizePath(pathLike: string): string {
+  return String(pathLike || "")
+    .replace(/\\/g, "/")
+    .replace(/\/+/g, "/")
+    .replace(/\/\.\//g, "/")
+    .replace(/^\.\/+/, "")
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "");
 }
 
 function isExternalLink(value: string): boolean {
