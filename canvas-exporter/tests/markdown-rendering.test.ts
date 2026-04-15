@@ -72,3 +72,13 @@ test("renders plain blockquotes when no callout syntax is present", () => {
   const html = markdownToHtml("> Zitat");
   assert.match(html, /<blockquote><p>Zitat<\/p><\/blockquote>/);
 });
+
+test("escapes special characters in markdown image attributes", () => {
+  const html = markdownToHtml('![A "Zitat" & mehr](bild(1).png?x=1&y=2)');
+  assert.match(html, /alt="A &quot;Zitat&quot; &amp; mehr"/);
+});
+
+test("escapes special characters in markdown link hrefs", () => {
+  const html = markdownToHtml('[Link](https://example.com?a=1&b=2"c")');
+  assert.match(html, /href="https:\/\/example\.com\?a=1&amp;b=2&quot;c&quot;"/);
+});
