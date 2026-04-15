@@ -72,8 +72,8 @@ const OBSIDIAN_COLORS: Record<string, NodePalette> = {
   "6": { background: "#9c6bae22", border: "#9c6bae" }, // purple
 };
 
-const SHIKI_DARK_THEME: BundledTheme = "github-dark-default";
-const SHIKI_LIGHT_THEME: BundledTheme = "github-light-default";
+const SHIKI_DARK_THEME: BundledTheme = "one-dark-pro";
+const SHIKI_LIGHT_THEME: BundledTheme = "one-light";
 const SHIKI_FALLBACK_LANGUAGE = "text";
 const shikiImport = new Function("return import('shiki/bundle/web')") as () => Promise<ShikiModule>;
 const shikiLanguageImports: Record<string, () => Promise<ShikiLanguageModule>> = {

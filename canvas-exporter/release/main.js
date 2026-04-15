@@ -14341,8 +14341,8 @@ var OBSIDIAN_COLORS = {
   "6": { background: "#9c6bae22", border: "#9c6bae" }
   // purple
 };
-var SHIKI_DARK_THEME = "github-dark-default";
-var SHIKI_LIGHT_THEME = "github-light-default";
+var SHIKI_DARK_THEME = "one-dark-pro";
+var SHIKI_LIGHT_THEME = "one-light";
 var SHIKI_FALLBACK_LANGUAGE = "text";
 var shikiImport = new Function("return import('shiki/bundle/web')");
 var shikiLanguageImports = {

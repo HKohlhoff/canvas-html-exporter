@@ -515,6 +515,35 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.match(linkHtml, /window\.setTimeout\(\(\) => \{/);
   });
 
+  await test("keeps shiki highlighting in exported markdown html pages", async () => {
+    const canvasJson = JSON.stringify({
+      nodes: [
+        { id: "md1", type: "file", file: "notes/code.md", x: 0, y: 0, width: 320, height: 220 },
+      ],
+      edges: [],
+    });
+
+    const { app, files } = createMockApp([
+      { path: "canvases/code.canvas", text: canvasJson },
+      { path: "notes/code.md", text: "```php\n<?php echo 'hi';\n```" },
+    ]);
+
+    const canvasFile = files.get("canvases/code.canvas") as MockFile;
+    const result = await exportCanvasPackage(app as never, canvasFile as never, {
+      darkMode: true,
+      outputDir: "Canvas-Exports",
+    });
+
+    const markdownNode = result.data.nodes.find((node) => node.id === "md1");
+    const markdownPage = files.get(`Canvas-Exports/code/${markdownNode?.exportHtmlPath || ""}`);
+
+    assert.ok(markdownPage);
+    assert.match(markdownPage?.text || "", /class="shiki/);
+    assert.match(markdownPage?.text || "", /style="color:#[0-9A-Fa-f]{6}/);
+    assert.match(markdownPage?.text || "", /&#x3C;/);
+    assert.match(markdownPage?.text || "", />\?</);
+  });
+
   await test("keeps embedded markdown images relative to exported subpages", async () => {
     const png = new Uint8Array([137, 80, 78, 71]).buffer;
     const canvasJson = JSON.stringify({

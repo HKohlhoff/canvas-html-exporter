@@ -100,6 +100,30 @@ await test("renders canvas text nodes with markdown content", async () => {
   assert.match(html, /class="node text"/);
 });
 
+await test("renders highlighted code blocks on the canvas page", async () => {
+  const data: CanvasData = {
+    name: "Test",
+    nodes: [
+      {
+        id: "code1",
+        type: "text",
+        x: 0,
+        y: 0,
+        width: 360,
+        height: 220,
+        text: "```php\n<?php echo 'hi';\n```",
+      },
+    ],
+    edges: [],
+  };
+
+  const html = await convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /class="shiki/);
+  assert.match(html, /style="color:#[0-9A-Fa-f]{6}/);
+  assert.match(html, /&#x3C;/);
+  assert.match(html, />\?</);
+});
+
 await test("renders standalone markdown documents with wrapper and title", () => {
   const html = buildMarkdownDocumentHtml("Dokument", "<p>Inhalt</p>", true);
   assert.match(html, /<title>Dokument<\/title>/);

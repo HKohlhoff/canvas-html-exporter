@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { buildBlockAnchorId, markdownToHtml } from "../src/converter";
 
+function countDistinctHighlightColors(html: string): number {
+  const matches = html.match(/style="color:#([0-9A-Fa-f]{6})/g) || [];
+  return new Set(matches).size;
+}
+
 function test(name: string, fn: () => Promise<void> | void): Promise<void> | void {
   try {
     const result = fn();
@@ -99,10 +104,11 @@ await test("highlights sql and php fences with shiki", async () => {
   const phpHtml = await markdownToHtml("```php\n<?php echo 'hi';\n```");
 
   assert.match(sqlHtml, /class="shiki/);
-  assert.match(sqlHtml, />select<\/span>/i);
+  assert.ok(countDistinctHighlightColors(sqlHtml) >= 2);
   assert.match(phpHtml, /class="shiki/);
-  assert.match(phpHtml, /&#x3C;\?/);
-  assert.match(phpHtml, />php<\/span>/);
+  assert.match(phpHtml, /&#x3C;/);
+  assert.match(phpHtml, />\?</);
+  assert.ok(countDistinctHighlightColors(phpHtml) >= 3);
 });
 
 await test("highlights tex and latex fences with shiki", async () => {
