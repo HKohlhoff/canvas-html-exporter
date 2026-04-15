@@ -1,10 +1,11 @@
 import { App, Notice, Plugin, PluginSettingTab, Setting, TFile } from "obsidian";
-import { convertCanvasToHtml } from "./converter";
+import { convertCanvasToHtml, HighlightingThemeChoice } from "./converter";
 import { exportCanvasPackage } from "./exporter";
 
 type PluginSettings = {
   darkMode: boolean;
   outputDir: string;
+  highlightingTheme: HighlightingThemeChoice;
 };
 
 type CanvasColorMap = Record<string, string>;
@@ -12,6 +13,7 @@ type CanvasColorMap = Record<string, string>;
 const DEFAULT_SETTINGS: PluginSettings = {
   darkMode: true,
   outputDir: "Canvas-Exports",
+  highlightingTheme: "shiki",
 };
 
 export default class CanvasExporterPlugin extends Plugin {
@@ -180,6 +182,20 @@ class CanvasExporterSettingTab extends PluginSettingTab {
           this.plugin.settings.darkMode = value;
           await this.plugin.saveSettings();
         }),
+      );
+
+    (new Setting(containerEl) as any)
+      .setName("Syntax-Highlighting")
+      .setDesc("Waehlt das Farbschema fuer Codebloecke im HTML-Export.")
+      .addDropdown((dropdown: any) =>
+        dropdown
+          .addOption("shiki", "Shiki")
+          .addOption("github", "GitHub")
+          .setValue(this.plugin.settings.highlightingTheme)
+          .onChange(async (value: string) => {
+            this.plugin.settings.highlightingTheme = (value as HighlightingThemeChoice) || DEFAULT_SETTINGS.highlightingTheme;
+            await this.plugin.saveSettings();
+          }),
       );
 
     new Setting(containerEl)

@@ -1,5 +1,16 @@
 import type { App, TAbstractFile, TFile } from "obsidian";
-import { buildBlockAnchorId, buildCanvasColorVariables, buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, EXPORTER_SIGNATURE, EXPORTER_VERSION, markdownToHtml } from "./converter";
+import {
+  buildBlockAnchorId,
+  buildCanvasColorVariables,
+  buildMarkdownDocumentHtml,
+  CanvasData,
+  CanvasNode,
+  ExportOptions,
+  EXPORTER_SIGNATURE,
+  EXPORTER_VERSION,
+  HighlightingThemeChoice,
+  markdownToHtml,
+} from "./converter";
 import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePath } from "./export-file-helpers";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-helpers";
 import { embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTargetSuffix } from "./link-helpers";
@@ -10,6 +21,7 @@ export type ExportSettings = {
   darkMode: boolean;
   outputDir: string;
   canvasColors?: Record<string, string>;
+  highlightingTheme?: HighlightingThemeChoice;
 };
 
 type PreparedCanvasData = CanvasData;
@@ -20,6 +32,7 @@ type MarkdownContext = {
   assetsFilesDir: string;
   assetsImagesDir: string;
   darkMode: boolean;
+  highlightingTheme?: HighlightingThemeChoice;
   fileMap: Map<string, string>;
   htmlMap: Map<string, string>;
   counter: number;
@@ -94,6 +107,7 @@ export async function exportCanvasPackage(
     assetsFilesDir: filesDir,
     assetsImagesDir: imagesDir,
     darkMode: settings.darkMode,
+    highlightingTheme: settings.highlightingTheme,
     fileMap: new Map<string, string>(),
     htmlMap: new Map<string, string>(),
     counter: 0,
@@ -113,7 +127,7 @@ export async function exportCanvasPackage(
   return {
     folderPath: exportFolder,
     data: { nodes: preparedNodes, edges: preparedEdges, name: title },
-    options: { darkMode: settings.darkMode, title },
+    options: { darkMode: settings.darkMode, title, highlightingTheme: settings.highlightingTheme },
   };
 }
 
@@ -219,7 +233,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="${EXPORTER_SIGNATURE}">
-  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-${ctx.highlightingTheme === "github" ? "github" : "shiki"}">
   <title>${escapeHtmlAttr(file.basename)}</title>
   <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>html,body{margin:0;padding:0;height:100%;}iframe{display:block;width:100%;height:100vh;border:none;}</style>
@@ -251,7 +265,7 @@ async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promi
   const outputName = uniqueOutputName(ctx, title || "Link", "html");
   const outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
   const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
-  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors);
+  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme);
   await writeTextFile(ctx.app, outputPath, html);
   return rel;
 }
@@ -277,7 +291,7 @@ async function exportMarkdownSectionInline(
   const content = stripFrontmatter(await ctx.app.vault.read(file));
   const section = extractMarkdownSection(content, heading);
   if (!section) return "";
-  let htmlBody = await markdownToHtml(section, { darkMode: ctx.darkMode });
+  let htmlBody = await markdownToHtml(section, { darkMode: ctx.darkMode, highlightingTheme: ctx.highlightingTheme });
   htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", linkBase);
   return htmlBody;
 }
@@ -415,7 +429,7 @@ async function renderMarkdownFileToHtml(
     }
 
     const content = stripFrontmatter(await ctx.app.vault.read(file));
-    let htmlBody = await markdownToHtml(content, { darkMode: ctx.darkMode });
+    let htmlBody = await markdownToHtml(content, { darkMode: ctx.darkMode, highlightingTheme: ctx.highlightingTheme });
     htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, mode, linkBase);
 
     if (mode === "inline") {
@@ -423,7 +437,7 @@ async function renderMarkdownFileToHtml(
     }
 
     const title = file.basename;
-    const htmlDoc = buildMarkdownDocumentHtml(title, htmlBody, ctx.darkMode, ctx.canvasColors);
+    const htmlDoc = buildMarkdownDocumentHtml(title, htmlBody, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme);
     await writeTextFile(ctx.app, outputPath, htmlDoc);
 
     return rel;
@@ -694,12 +708,12 @@ async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<
   const previewSource = raw.slice(0, 2000);
   const text = buildPreviewText(raw);
 
-  let html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode });
+  let html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode, highlightingTheme: ctx.highlightingTheme });
   try {
     html = await rewriteMarkdownHtmlAssets(ctx, file, html, "inline", "canvas");
   } catch (error) {
     console.error(`[canvas-exporter] Vorschau-Render fehlgeschlagen für ${file.path}`, error);
-    html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode });
+    html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode, highlightingTheme: ctx.highlightingTheme });
   }
 
   return { text, html };
@@ -829,6 +843,7 @@ function buildLinkDocumentHtml(
   url: string,
   darkMode: boolean,
   canvasColors?: Record<string, string>,
+  highlightingTheme?: HighlightingThemeChoice,
 ): string {
   const theme = getLinkPageTheme(darkMode);
   const safeTitle = escapeHtmlAttr(url || title || "Link");
@@ -841,7 +856,7 @@ function buildLinkDocumentHtml(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="${EXPORTER_SIGNATURE}">
-  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-${highlightingTheme === "github" ? "github" : "shiki"}">
   <title>${safeTitle}</title>
   <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>

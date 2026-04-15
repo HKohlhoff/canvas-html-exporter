@@ -50,10 +50,17 @@ export interface ExportOptions {
   darkMode: boolean;
   title: string;
   canvasColors?: Record<string, string>;
+  highlightingTheme?: HighlightingThemeChoice;
 }
 
 export const EXPORTER_VERSION = "0.2.0";
 export const EXPORTER_SIGNATURE = `canvas-exporter v${EXPORTER_VERSION}`;
+export type HighlightingThemeChoice = "shiki" | "github";
+
+function buildExporterBuildMeta(highlightingTheme: HighlightingThemeChoice | undefined): string {
+  const theme = highlightingTheme === "github" ? "github" : "shiki";
+  return `${EXPORTER_VERSION}-${theme}`;
+}
 
 type NodePalette = {
   background: string;
@@ -62,6 +69,7 @@ type NodePalette = {
 
 type MarkdownRenderOptions = {
   darkMode?: boolean;
+  highlightingTheme?: HighlightingThemeChoice;
 };
 
 // Fallback-Farben, falls keine CSS-Variablen aus Obsidian ausgelesen werden konnten.
@@ -76,8 +84,16 @@ const OBSIDIAN_COLORS: Record<string, NodePalette> = {
   "6": { background: "#9c6bae22", border: "#9c6bae" }, // purple
 };
 
-const SHIKI_DARK_THEME: BundledTheme = "github-dark-default";
-const SHIKI_LIGHT_THEME: BundledTheme = "github-light-default";
+const SHIKI_THEMES: Record<HighlightingThemeChoice, { dark: BundledTheme; light: BundledTheme }> = {
+  shiki: {
+    dark: "one-dark-pro",
+    light: "one-light",
+  },
+  github: {
+    dark: "github-dark-default",
+    light: "github-light-default",
+  },
+};
 const SHIKI_FALLBACK_LANGUAGE = "text";
 const shikiLanguageModules: Record<string, unknown> = {
   csharp: csharpLanguage,
@@ -90,7 +106,12 @@ async function getShikiHighlighter(): Promise<Highlighter> {
   if (!shikiHighlighterPromise) {
     shikiHighlighterPromise = (async () => {
       return getSingletonHighlighter({
-        themes: [SHIKI_DARK_THEME, SHIKI_LIGHT_THEME],
+        themes: [
+          SHIKI_THEMES.shiki.dark,
+          SHIKI_THEMES.shiki.light,
+          SHIKI_THEMES.github.dark,
+          SHIKI_THEMES.github.light,
+        ],
       });
     })();
   }
@@ -121,8 +142,19 @@ function normalizeCodeLanguage(lang: string): string {
   return aliases[normalized] ?? normalized;
 }
 
-async function renderCodeBlock(code: string, lang: string, darkMode: boolean): Promise<string> {
+function resolveHighlightingTheme(choice: HighlightingThemeChoice | undefined, darkMode: boolean): BundledTheme {
+  const selected = choice === "github" ? SHIKI_THEMES.github : SHIKI_THEMES.shiki;
+  return darkMode ? selected.dark : selected.light;
+}
+
+async function renderCodeBlock(
+  code: string,
+  lang: string,
+  darkMode: boolean,
+  highlightingTheme?: HighlightingThemeChoice,
+): Promise<string> {
   const normalizedLang = normalizeCodeLanguage(lang);
+  const shikiTheme = resolveHighlightingTheme(highlightingTheme, darkMode);
 
   try {
     const highlighter = await getShikiHighlighter();
@@ -137,7 +169,7 @@ async function renderCodeBlock(code: string, lang: string, darkMode: boolean): P
     }
     return highlighter.codeToHtml(code, {
       lang: normalizedLang as never,
-      theme: darkMode ? SHIKI_DARK_THEME : SHIKI_LIGHT_THEME,
+      theme: shikiTheme,
     });
   } catch {
     const className = lang ? ` class="language-${escapeAttribute(lang)}"` : "";
@@ -153,7 +185,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const theme = getTheme(options.darkMode);
 
   const nodeHtml = (await Promise.all(
-    nodes.map((node) => renderNode(node, bounds.offsetX, bounds.offsetY, theme, options.darkMode, options.canvasColors)),
+    nodes.map((node) =>
+      renderNode(node, bounds.offsetX, bounds.offsetY, theme, options.darkMode, options.canvasColors, options.highlightingTheme),
+    ),
   )).join("\n");
 
   const edgesData = edges.map((edge) => ({
@@ -178,7 +212,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="${EXPORTER_SIGNATURE}">
-  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">
+  <meta name="canvas-exporter-build" content="${buildExporterBuildMeta(options.highlightingTheme)}">
   <base href="./">
   <title>${escapeHtml(options.title)}</title>
   <!-- Exported by ${EXPORTER_SIGNATURE} -->
@@ -830,9 +864,15 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 </html>`;
 }
 
-export function buildMarkdownDocumentHtml(title: string, bodyHtml: string, darkMode: boolean, canvasColors?: Record<string, string>): string {
+export function buildMarkdownDocumentHtml(
+  title: string,
+  bodyHtml: string,
+  darkMode: boolean,
+  canvasColors?: Record<string, string>,
+  highlightingTheme?: HighlightingThemeChoice,
+): string {
   const theme = getTheme(darkMode);
-  return `<!DOCTYPE html>\n<html lang="de">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="generator" content="${EXPORTER_SIGNATURE}">\n  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">\n  <title>${escapeHtml(title)}</title>\n  <!-- Exported by ${EXPORTER_SIGNATURE} -->\n  <style>\n    :root { ${buildCanvasColorVariables(canvasColors)} }\n    html, body { margin: 0; padding: 0; }
+  return `<!DOCTYPE html>\n<html lang="de">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="generator" content="${EXPORTER_SIGNATURE}">\n  <meta name="canvas-exporter-build" content="${buildExporterBuildMeta(highlightingTheme)}">\n  <title>${escapeHtml(title)}</title>\n  <!-- Exported by ${EXPORTER_SIGNATURE} -->\n  <style>\n    :root { ${buildCanvasColorVariables(canvasColors)} }\n    html, body { margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: ${theme.bodyBackground};
@@ -954,6 +994,7 @@ async function renderNode(
   theme: ReturnType<typeof getTheme>,
   darkMode: boolean,
   canvasColors?: Record<string, string>,
+  highlightingTheme?: HighlightingThemeChoice,
 ): Promise<string> {
   const left = normalizeNumber(node.x) + offsetX;
   const top = normalizeNumber(node.y) + offsetY;
@@ -963,8 +1004,10 @@ async function renderNode(
   const isPdf = node.fileKind === "pdf";
   const classes = ["node", type, type === "group" ? "group" : "", isPdf ? "pdf" : ""].filter(Boolean).join(" ");
 
-  const title = type !== "link" && node.label ? `<div class="node-title">${await markdownToHtml(node.label, { darkMode })}</div>` : "";
-  const content = await renderNodeContent(node, darkMode);
+  const title = type !== "link" && node.label
+    ? `<div class="node-title">${await markdownToHtml(node.label, { darkMode, highlightingTheme })}</div>`
+    : "";
+  const content = await renderNodeContent(node, darkMode, highlightingTheme);
 
   const colorKey = String(node.color || "").trim();
   const isNumericColor = /^\d+$/.test(colorKey);
@@ -1004,11 +1047,15 @@ async function renderNode(
   >${title}<div class="node-content">${content}</div></div>`;
 }
 
-async function renderNodeContent(node: CanvasNode, darkMode: boolean): Promise<string> {
+async function renderNodeContent(
+  node: CanvasNode,
+  darkMode: boolean,
+  highlightingTheme?: HighlightingThemeChoice,
+): Promise<string> {
   const type = (node.type || "text").toLowerCase();
 
   if (type === "group") {
-    return node.text ? markdownToHtml(node.text, { darkMode }) : "";
+    return node.text ? markdownToHtml(node.text, { darkMode, highlightingTheme }) : "";
   }
 
   if (type === "link") {
@@ -1062,7 +1109,7 @@ async function renderNodeContent(node: CanvasNode, darkMode: boolean): Promise<s
 
   const text = typeof node.text === "string" ? node.text : "";
   if (!text.trim()) return "";
-  return markdownToHtml(text, { darkMode });
+  return markdownToHtml(text, { darkMode, highlightingTheme });
 }
 
 export async function markdownToHtml(markdown: string, options: MarkdownRenderOptions = {}): Promise<string> {
@@ -1073,6 +1120,7 @@ export async function markdownToHtml(markdown: string, options: MarkdownRenderOp
   const out: string[] = [];
   const headingIds = new Map<string, number>();
   const darkMode = options.darkMode ?? true;
+  const highlightingTheme = options.highlightingTheme;
   let i = 0;
 
   while (i < lines.length) {
@@ -1128,7 +1176,7 @@ export async function markdownToHtml(markdown: string, options: MarkdownRenderOp
         i += 1;
       }
       if (i < lines.length) i += 1;
-      let html = await renderCodeBlock(codeLines.join("\n"), lang, darkMode);
+      let html = await renderCodeBlock(codeLines.join("\n"), lang, darkMode, highlightingTheme);
       const blockAnchor = consumeFollowingBlockAnchor(lines, i);
       html = applyBlockAnchor(html, blockAnchor.anchorId);
       i = blockAnchor.nextIndex;
@@ -1192,7 +1240,7 @@ export async function markdownToHtml(markdown: string, options: MarkdownRenderOp
         const title = calloutMatch[3]?.trim() || (type.charAt(0).toUpperCase() + type.slice(1));
         const icon = calloutIcons[type] ?? "◆";
         const contentLines = quoteLines.slice(1);
-        const inner = await markdownToHtml(contentLines.join("\n"), { darkMode });
+        const inner = await markdownToHtml(contentLines.join("\n"), { darkMode, highlightingTheme });
         if (indicator === "+" || indicator === "-") {
           const openAttr = indicator === "+" ? " open" : "";
           let html = `<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</summary><div class="callout-content">${inner}</div></details>`;
@@ -1208,7 +1256,7 @@ export async function markdownToHtml(markdown: string, options: MarkdownRenderOp
           out.push(html);
         }
       } else {
-        const inner = await markdownToHtml(quoteLines.join("\n"), { darkMode });
+        const inner = await markdownToHtml(quoteLines.join("\n"), { darkMode, highlightingTheme });
         let html = `<blockquote>${inner}</blockquote>`;
         const blockAnchor = consumeFollowingBlockAnchor(lines, i);
         html = applyBlockAnchor(html, blockAnchor.anchorId);
