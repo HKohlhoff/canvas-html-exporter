@@ -248,7 +248,7 @@ async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promi
   const outputName = uniqueOutputName(ctx, title || "Link", "html");
   const outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
   const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
-  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors);
+  const html = buildLinkDocumentHtml(title, url, "../../index.html", ctx.darkMode, ctx.canvasColors);
   await writeTextFile(ctx.app, outputPath, html);
   return rel;
 }
@@ -814,10 +814,17 @@ function buildMarkdownAnchorSuffix(section: string): string {
   return headingId ? `#${headingId}` : "";
 }
 
-function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, canvasColors?: Record<string, string>): string {
+function buildLinkDocumentHtml(
+  title: string,
+  url: string,
+  canvasHref: string,
+  darkMode: boolean,
+  canvasColors?: Record<string, string>,
+): string {
   const theme = getLinkPageTheme(darkMode);
   const safeTitle = escapeHtmlAttr(url || title || "Link");
   const safeUrl = escapeHtmlAttr(url);
+  const safeCanvasHref = escapeHtmlAttr(canvasHref);
   const canvasColorVars = buildCanvasColorVariables(canvasColors);
 
   return `<!DOCTYPE html>
@@ -842,9 +849,17 @@ function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, ca
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      flex-wrap: wrap;
       padding: 12px 16px;
       border-bottom: 1px solid ${theme.rule};
       background: ${theme.canvasBackground};
+    }
+    .link-page-nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      min-width: 0;
     }
     .link-page-title {
       color: ${theme.text};
@@ -855,6 +870,7 @@ function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, ca
     .link-page-title:hover {
       text-decoration: underline;
     }
+    .link-page-back,
     .link-page-action {
       display: inline-flex;
       align-items: center;
@@ -866,6 +882,9 @@ function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, ca
       text-decoration: none;
       font-weight: 600;
       white-space: nowrap;
+    }
+    .link-page-back {
+      flex: 0 0 auto;
     }
     .link-page-status {
       display: none;
@@ -882,10 +901,35 @@ function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, ca
       min-height: 0;
       display: flex;
       flex-direction: column;
+      padding: 0;
+      background: ${theme.bodyBackground};
+    }
+    .link-page-preview {
+      flex: 1 1 auto;
+      min-height: 0;
+      background: ${theme.canvasBackground};
+    }
+    .link-page-preview iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      border: none;
+      background: ${theme.canvasBackground};
+    }
+    .link-page-preview[hidden] {
+      display: none;
+    }
+    .link-page-fallback {
+      display: none;
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 24px 16px;
       justify-content: center;
       align-items: center;
-      padding: 24px 16px;
-      background: ${theme.bodyBackground};
+    }
+    .link-page-fallback.is-visible {
+      display: flex;
     }
     .link-page-card {
       max-width: 720px;
@@ -908,21 +952,31 @@ function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, ca
 </head>
 <body>
   <div class="link-page-toolbar">
-    <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
+    <div class="link-page-nav">
+      <a class="link-page-back" href="${safeCanvasHref}">Zurueck zum Canvas</a>
+      <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
+    </div>
     <a class="link-page-action" href="${safeUrl}" target="_blank" rel="noopener noreferrer">Direkt oeffnen</a>
   </div>
   <div id="link-status" class="link-page-status"></div>
   <div class="link-page-body">
-    <div class="link-page-card">
-      <p>Wenn du online bist, wird die Zielseite direkt im Browser geoeffnet.</p>
-      <p>Falls keine Weiterleitung moeglich ist oder keine Internetverbindung besteht, nutze "Direkt oeffnen".</p>
+    <div id="link-preview" class="link-page-preview">
+      <iframe id="link-preview-frame" src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
+    </div>
+    <div id="link-fallback" class="link-page-fallback">
+      <div class="link-page-card">
+        <p>Nutze "Direkt oeffnen", wenn die Website das Einbetten blockiert oder du die Seite in einem eigenen Browser-Tab sehen willst.</p>
+        <p>Wenn keine Internetverbindung besteht, bleibt nur der Direktaufruf sichtbar.</p>
+      </div>
     </div>
   </div>
   <script>
     (() => {
       const status = document.getElementById("link-status");
-      const url = ${JSON.stringify(url)};
-      let redirected = false;
+      const preview = document.getElementById("link-preview");
+      const fallback = document.getElementById("link-fallback");
+      const frame = document.getElementById("link-preview-frame");
+      let frameLoaded = false;
 
       function showStatus(message) {
         if (!status) return;
@@ -936,20 +990,45 @@ function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, ca
         status.classList.remove("is-visible");
       }
 
+      function showFallback() {
+        if (preview) preview.hidden = true;
+        if (fallback) fallback.classList.add("is-visible");
+      }
+
+      function showPreview() {
+        if (preview) preview.hidden = false;
+        if (fallback) fallback.classList.remove("is-visible");
+      }
+
       function syncState() {
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
         if (offline) {
           showStatus("Es besteht keine Internetverbindung.");
+          showFallback();
           return;
         }
         hideStatus();
-        if (!redirected) {
-          redirected = true;
-          window.location.replace(url);
-        }
+        showPreview();
+      }
+
+      if (frame) {
+        frame.addEventListener("load", () => {
+          frameLoaded = true;
+          if (typeof navigator !== "undefined" && navigator.onLine !== false) {
+            hideStatus();
+            showPreview();
+          }
+        });
       }
 
       syncState();
+      window.setTimeout(() => {
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        if (!offline && !frameLoaded) {
+          showStatus("Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame. Nutze \"Direkt oeffnen\".");
+          showFallback();
+        }
+      }, 4000);
       window.addEventListener("online", syncState);
       window.addEventListener("offline", syncState);
     })();
