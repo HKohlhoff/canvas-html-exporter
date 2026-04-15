@@ -165,3 +165,55 @@ test("renders empty generic file nodes with fallback text", () => {
   const html = convertCanvasToHtml(data, baseOptions);
   assert.match(html, /Leerer Datei-Knoten/);
 });
+
+test("injects custom canvas color variables into the document", () => {
+  const data: CanvasData = {
+    name: "Farben",
+    nodes: [
+      {
+        id: "color1",
+        type: "text",
+        x: 0,
+        y: 0,
+        width: 220,
+        height: 100,
+        text: "Farbtest",
+        color: "4",
+      },
+    ],
+    edges: [],
+  };
+
+  const html = convertCanvasToHtml(data, {
+    ...baseOptions,
+    canvasColors: { "4": "rgb(12, 34, 56)" },
+  });
+
+  assert.match(html, /--canvas-color-4: rgb\(12, 34, 56\);/);
+  assert.match(html, /--canvas-color-4-bg: rgba\(12, 34, 56, 0\.18\);/);
+  assert.match(html, /var\(--canvas-color-4-bg, /);
+});
+
+test("renders default canvas bounds for empty canvases", () => {
+  const html = convertCanvasToHtml({ name: "Leer", nodes: [], edges: [] }, baseOptions);
+  assert.match(html, /id="canvas"/);
+  assert.match(html, /width: 1200px;/);
+  assert.match(html, /height: 800px;/);
+});
+
+test("renders page header counts for nodes and edges", () => {
+  const data: CanvasData = {
+    name: "Header",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+      { id: "b", type: "text", x: 260, y: 0, width: 200, height: 100, text: "B" },
+    ],
+    edges: [
+      { fromNode: "a", toNode: "b", label: "verbindet" },
+    ],
+  };
+
+  const html = convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /<h1>Test Canvas<\/h1>/);
+  assert.match(html, /2 Knoten · 1 Verbindungen/);
+});
