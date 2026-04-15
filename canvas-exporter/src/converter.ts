@@ -48,6 +48,9 @@ export interface ExportOptions {
   canvasColors?: Record<string, string>;
 }
 
+export const EXPORTER_VERSION = "0.2.0";
+export const EXPORTER_SIGNATURE = `canvas-exporter v${EXPORTER_VERSION}`;
+
 type NodePalette = {
   background: string;
   border: string;
@@ -175,8 +178,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="${EXPORTER_SIGNATURE}">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">
   <base href="./">
   <title>${escapeHtml(options.title)}</title>
+  <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>
     :root { ${canvasColorVars} }
     * { box-sizing: border-box; }
@@ -827,7 +833,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
 export function buildMarkdownDocumentHtml(title: string, bodyHtml: string, darkMode: boolean, canvasColors?: Record<string, string>): string {
   const theme = getTheme(darkMode);
-  return `<!DOCTYPE html>\n<html lang="de">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <title>${escapeHtml(title)}</title>\n  <style>\n    :root { ${buildCanvasColorVariables(canvasColors)} }\n    html, body { margin: 0; padding: 0; }
+  return `<!DOCTYPE html>\n<html lang="de">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="generator" content="${EXPORTER_SIGNATURE}">\n  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">\n  <title>${escapeHtml(title)}</title>\n  <!-- Exported by ${EXPORTER_SIGNATURE} -->\n  <style>\n    :root { ${buildCanvasColorVariables(canvasColors)} }\n    html, body { margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: ${theme.bodyBackground};

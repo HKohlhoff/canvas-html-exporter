@@ -542,6 +542,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.match(markdownPage?.text || "", /style="color:#[0-9A-Fa-f]{6}/);
     assert.match(markdownPage?.text || "", /&#x3C;/);
     assert.match(markdownPage?.text || "", />\?</);
+    assert.match(markdownPage?.text || "", /meta name="canvas-exporter-build" content="0\.2\.0-shiki"/);
   });
 
   await test("keeps embedded markdown images relative to exported subpages", async () => {

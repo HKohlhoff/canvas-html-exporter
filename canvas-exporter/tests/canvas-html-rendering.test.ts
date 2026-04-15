@@ -122,6 +122,7 @@ await test("renders highlighted code blocks on the canvas page", async () => {
   assert.match(html, /style="color:#[0-9A-Fa-f]{6}/);
   assert.match(html, /&#x3C;/);
   assert.match(html, />\?</);
+  assert.match(html, /meta name="canvas-exporter-build" content="0\.2\.0-shiki"/);
 });
 
 await test("renders standalone markdown documents with wrapper and title", () => {

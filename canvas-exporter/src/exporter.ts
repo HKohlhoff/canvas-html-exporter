@@ -1,5 +1,5 @@
 import type { App, TAbstractFile, TFile } from "obsidian";
-import { buildBlockAnchorId, buildCanvasColorVariables, buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markdownToHtml } from "./converter";
+import { buildBlockAnchorId, buildCanvasColorVariables, buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, EXPORTER_SIGNATURE, EXPORTER_VERSION, markdownToHtml } from "./converter";
 import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePath } from "./export-file-helpers";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-helpers";
 import { embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTargetSuffix } from "./link-helpers";
@@ -218,7 +218,10 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="${EXPORTER_SIGNATURE}">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">
   <title>${escapeHtmlAttr(file.basename)}</title>
+  <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>html,body{margin:0;padding:0;height:100%;}iframe{display:block;width:100%;height:100vh;border:none;}</style>
 </head>
 <body><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
@@ -837,7 +840,10 @@ function buildLinkDocumentHtml(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="${EXPORTER_SIGNATURE}">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">
   <title>${safeTitle}</title>
+  <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>
     :root { ${canvasColorVars} }
     * { box-sizing: border-box; }

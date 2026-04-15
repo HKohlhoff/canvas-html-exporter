@@ -14327,6 +14327,8 @@ var katex = {
 };
 
 // src/converter.ts
+var EXPORTER_VERSION = "0.2.0";
+var EXPORTER_SIGNATURE = `canvas-exporter v${EXPORTER_VERSION}`;
 var OBSIDIAN_COLORS = {
   "1": { background: "#e6324222", border: "#e63242" },
   // red
@@ -14431,8 +14433,11 @@ async function convertCanvasToHtml(data, options) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="${EXPORTER_SIGNATURE}">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">
   <base href="./">
   <title>${escapeHtml(options.title)}</title>
+  <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>
     :root { ${canvasColorVars} }
     * { box-sizing: border-box; }
@@ -15087,7 +15092,10 @@ function buildMarkdownDocumentHtml(title, bodyHtml, darkMode, canvasColors) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="${EXPORTER_SIGNATURE}">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">
   <title>${escapeHtml(title)}</title>
+  <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>
     :root { ${buildCanvasColorVariables(canvasColors)} }
     html, body { margin: 0; padding: 0; }
@@ -16306,7 +16314,10 @@ async function prepareNode(ctx, node) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="${EXPORTER_SIGNATURE}">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">
   <title>${escapeHtmlAttr(file.basename)}</title>
+  <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>html,body{margin:0;padding:0;height:100%;}iframe{display:block;width:100%;height:100vh;border:none;}</style>
 </head>
 <body><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
@@ -16783,7 +16794,10 @@ function buildLinkDocumentHtml(title, url, darkMode, canvasColors) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="${EXPORTER_SIGNATURE}">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-shiki">
   <title>${safeTitle}</title>
+  <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>
     :root { ${canvasColorVars} }
     * { box-sizing: border-box; }
