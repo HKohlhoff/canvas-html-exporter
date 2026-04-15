@@ -16115,6 +16115,16 @@ async function rewriteMarkdownHtmlAssets(ctx, sourceFile, html, mode, linkBase) 
   for (const match of linkMatches) {
     const original = match[0];
     const target = match[1] || "";
+    if (target.trim().startsWith("#")) {
+      const normalizedAnchor = buildMarkdownAnchorSuffix(target.trim().slice(1));
+      if (normalizedAnchor) {
+        const label = match[3] || "";
+        const attrs = match[2] || "";
+        const replacement = `<a href="${escapeHtmlAttr(normalizedAnchor)}"${attrs}>${label}</a>`;
+        result = result.replace(original, replacement);
+      }
+      continue;
+    }
     const { path: targetPath } = splitTargetSuffix(target);
     if (!shouldRewriteInternalTarget(targetPath))
       continue;

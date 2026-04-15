@@ -256,6 +256,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         text: [
           "# Start",
           "Sprung im Dokument zu [[#Start|oben]].",
+          "Markdown-Link zu [unten](#Abschnitt).",
           "Link zu [[second#Abschnitt|Kapitel]].",
           "",
           "Embed:",
@@ -302,6 +303,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const mainHtml = mainExport?.text || "";
     assert.match(mainHtml, /href="#start"/);
     assert.match(mainHtml, />oben<\/a>/);
+    assert.match(mainHtml, /href="#abschnitt"/);
+    assert.match(mainHtml, />unten<\/a>/);
     assert.match(mainHtml, />Kapitel<\/a>/);
     assert.match(mainHtml, /href="[^"]+#abschnitt"/);
     assert.match(mainHtml, /Nur dieser Teil soll im Embed erscheinen\./);
@@ -336,6 +339,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         text: [
           "# Start",
           "Sprung im Dokument zu [[#^kern-aussage|hier]].",
+          "Markdown-Link zu [Block](#^kern-aussage).",
           "Direkter Sprung zu [[blocks#^kern-aussage|Kernaussage]].",
           "",
           "Embed:",
@@ -368,6 +372,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const mainHtml = mainExport?.text || "";
     assert.match(mainHtml, /href="#block-kern-aussage"/);
     assert.match(mainHtml, />hier<\/a>/);
+    assert.match(mainHtml, />Block<\/a>/);
     assert.match(mainHtml, /href="[^"]+#block-kern-aussage"/);
     assert.match(mainHtml, /<div class="md-embed-block"><p id="block-kern-aussage">Wichtiger Absatz<\/p><\/div>/);
 
