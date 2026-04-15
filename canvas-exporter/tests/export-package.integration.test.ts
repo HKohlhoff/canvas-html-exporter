@@ -509,7 +509,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.match(linkHtml, /Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame\. Nutze den Link oben\./);
     assert.match(linkHtml, /Nutze den Link oben, wenn die Website das Einbetten blockiert oder du die Seite in einem eigenen Browser-Tab sehen willst\./);
     assert.match(linkHtml, /<a class="link-page-title" href="https:\/\/openai\.com\/index\/"/);
-    assert.match(linkHtml, /<a class="link-page-back" href="\.\.\/\.\.\/index\.html">Zurueck zum Canvas<\/a>/);
+    assert.doesNotMatch(linkHtml, /link-page-back/);
     assert.doesNotMatch(linkHtml, /class="link-page-action"/);
     assert.match(linkHtml, /<iframe id="link-preview-frame" src="https:\/\/openai\.com\/index\/" title="https:\/\/openai\.com\/index\/" loading="lazy"><\/iframe>/);
     assert.match(linkHtml, /window\.setTimeout\(\(\) => \{/);

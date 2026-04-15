@@ -16266,7 +16266,7 @@ async function exportLinkNodePage(ctx, node) {
   const outputName = uniqueOutputName(ctx, title || "Link", "html");
   const outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
   const rel2 = normalizeExportHref2(toExportRelativePath(outputPath, ctx.outputRoot));
-  const html = buildLinkDocumentHtml(title, url, "../../index.html", ctx.darkMode, ctx.canvasColors);
+  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors);
   await writeTextFile(ctx.app, outputPath, html);
   return rel2;
 }
@@ -16697,11 +16697,10 @@ function buildMarkdownAnchorSuffix(section) {
   const headingId = normalizeHeadingRef(section);
   return headingId ? `#${headingId}` : "";
 }
-function buildLinkDocumentHtml(title, url, canvasHref, darkMode, canvasColors) {
+function buildLinkDocumentHtml(title, url, darkMode, canvasColors) {
   const theme = getLinkPageTheme(darkMode);
   const safeTitle = escapeHtmlAttr(url || title || "Link");
   const safeUrl = escapeHtmlAttr(url);
-  const safeCanvasHref = escapeHtmlAttr(canvasHref);
   const canvasColorVars = buildCanvasColorVariables(canvasColors);
   return `<!DOCTYPE html>
 <html lang="de">
@@ -16745,18 +16744,6 @@ function buildLinkDocumentHtml(title, url, canvasHref, darkMode, canvasColors) {
     }
     .link-page-title:hover {
       text-decoration: underline;
-    }
-    .link-page-back {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.5em 0.85em;
-      border-radius: 999px;
-      border: 1px solid ${theme.rule};
-      background: ${theme.nodeBackground};
-      color: ${theme.text};
-      text-decoration: none;
-      font-weight: 600;
-      white-space: nowrap;
     }
     .link-page-status {
       display: none;
@@ -16825,7 +16812,6 @@ function buildLinkDocumentHtml(title, url, canvasHref, darkMode, canvasColors) {
 <body>
   <div class="link-page-toolbar">
     <div class="link-page-nav">
-      <a class="link-page-back" href="${safeCanvasHref}">Zurueck zum Canvas</a>
       <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
     </div>
   </div>
