@@ -125,12 +125,11 @@ test("renders link nodes with preview iframe and direct-open action", () => {
   const html = convertCanvasToHtml(data, baseOptions);
   assert.match(html, /class="node link"/);
   assert.match(html, /class="link-preview-title" href="assets\/files\/openai\.html"/);
-  assert.match(html, /class="file-chip link-preview-action" href="assets\/files\/openai\.html"/);
+  assert.doesNotMatch(html, /link-preview-action/);
   assert.match(html, /<iframe src="https:\/\/openai\.com\/\?a=1&amp;b=2"/);
   assert.match(html, />https:\/\/openai\.com\/\?a=1&amp;b=2<\/a>/);
-  assert.match(html, />Direkt oeffnen<\/a>/);
   assert.match(html, /Es besteht keine Internetverbindung\./);
-  assert.match(html, /Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame\. Nutze "Direkt oeffnen"\./);
+  assert.match(html, /Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame\. Nutze die Ueberschrift oben\./);
   assert.match(html, /function syncLinkOfflineState\(\)/);
   assert.match(html, /window\.setTimeout\(\(\) => \{/);
   assert.doesNotMatch(html, /class="link-meta"/);

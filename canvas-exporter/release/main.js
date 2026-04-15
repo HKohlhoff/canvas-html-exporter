@@ -14599,10 +14599,6 @@ function convertCanvasToHtml(data, options) {
     .link-preview-title:hover {
       text-decoration: underline;
     }
-    .link-preview-action {
-      flex: 0 0 auto;
-      margin-top: 0;
-    }
     .link-offline-note {
       color: ${theme.mutedText};
       font-size: 0.86em;
@@ -15195,10 +15191,9 @@ function renderNodeContent(node) {
     return `<div class="link-preview">
       <div class="link-preview-header">
         <a class="link-preview-title" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a>
-        <a class="file-chip link-preview-action" href="${href}" target="_blank" rel="noopener noreferrer">Direkt oeffnen</a>
       </div>
       <div class="link-offline-note" data-link-offline hidden>Es besteht keine Internetverbindung.</div>
-      <div class="link-offline-note" data-link-blocked hidden>Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame. Nutze "Direkt oeffnen".</div>
+      <div class="link-offline-note" data-link-blocked hidden>Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame. Nutze die Ueberschrift oben.</div>
       <div class="link-preview-frame"><iframe src="${iframeSrc}" title="${escapeAttribute(node.displayName || url)}" loading="lazy"></iframe></div>
     </div>`;
   }
