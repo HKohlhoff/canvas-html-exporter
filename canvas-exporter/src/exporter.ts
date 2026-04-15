@@ -870,8 +870,7 @@ function buildLinkDocumentHtml(
     .link-page-title:hover {
       text-decoration: underline;
     }
-    .link-page-back,
-    .link-page-action {
+    .link-page-back {
       display: inline-flex;
       align-items: center;
       padding: 0.5em 0.85em;
@@ -882,9 +881,6 @@ function buildLinkDocumentHtml(
       text-decoration: none;
       font-weight: 600;
       white-space: nowrap;
-    }
-    .link-page-back {
-      flex: 0 0 auto;
     }
     .link-page-status {
       display: none;
@@ -956,7 +952,6 @@ function buildLinkDocumentHtml(
       <a class="link-page-back" href="${safeCanvasHref}">Zurueck zum Canvas</a>
       <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
     </div>
-    <a class="link-page-action" href="${safeUrl}" target="_blank" rel="noopener noreferrer">Direkt oeffnen</a>
   </div>
   <div id="link-status" class="link-page-status"></div>
   <div class="link-page-body">
@@ -965,8 +960,8 @@ function buildLinkDocumentHtml(
     </div>
     <div id="link-fallback" class="link-page-fallback">
       <div class="link-page-card">
-        <p>Nutze "Direkt oeffnen", wenn die Website das Einbetten blockiert oder du die Seite in einem eigenen Browser-Tab sehen willst.</p>
-        <p>Wenn keine Internetverbindung besteht, bleibt nur der Direktaufruf sichtbar.</p>
+        <p>Nutze den Link oben, wenn die Website das Einbetten blockiert oder du die Seite in einem eigenen Browser-Tab sehen willst.</p>
+        <p>Wenn keine Internetverbindung besteht, bleibt nur dieser Direktaufruf verfuegbar.</p>
       </div>
     </div>
   </div>
@@ -1025,7 +1020,7 @@ function buildLinkDocumentHtml(
       window.setTimeout(() => {
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
         if (!offline && !frameLoaded) {
-          showStatus("Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame. Nutze \"Direkt oeffnen\".");
+          showStatus("Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame. Nutze den Link oben.");
           showFallback();
         }
       }, 4000);

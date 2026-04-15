@@ -506,11 +506,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.ok(exportedLinkPage);
     const linkHtml = exportedLinkPage?.text || "";
     assert.match(linkHtml, /Es besteht keine Internetverbindung\./);
-    assert.match(linkHtml, /Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame\. Nutze "Direkt oeffnen"\./);
-    assert.match(linkHtml, /Nutze "Direkt oeffnen", wenn die Website das Einbetten blockiert oder du die Seite in einem eigenen Browser-Tab sehen willst\./);
+    assert.match(linkHtml, /Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame\. Nutze den Link oben\./);
+    assert.match(linkHtml, /Nutze den Link oben, wenn die Website das Einbetten blockiert oder du die Seite in einem eigenen Browser-Tab sehen willst\./);
     assert.match(linkHtml, /<a class="link-page-title" href="https:\/\/openai\.com\/index\/"/);
     assert.match(linkHtml, /<a class="link-page-back" href="\.\.\/\.\.\/index\.html">Zurueck zum Canvas<\/a>/);
-    assert.match(linkHtml, /<a class="link-page-action" href="https:\/\/openai\.com\/index\/"/);
+    assert.doesNotMatch(linkHtml, /class="link-page-action"/);
     assert.match(linkHtml, /<iframe id="link-preview-frame" src="https:\/\/openai\.com\/index\/" title="https:\/\/openai\.com\/index\/" loading="lazy"><\/iframe>/);
     assert.match(linkHtml, /window\.setTimeout\(\(\) => \{/);
   });
