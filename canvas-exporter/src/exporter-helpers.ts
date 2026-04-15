@@ -89,21 +89,38 @@ function normalizeCanvasEdge(input: Record<string, unknown>): CanvasData["edges"
   const id = typeof input.id === "string" ? input.id : undefined;
   const fromSide = typeof input.fromSide === "string" ? input.fromSide : undefined;
   const toSide = typeof input.toSide === "string" ? input.toSide : undefined;
+  const fromEnd = firstString(input.fromEnd, input.fromArrow, input.startArrow, input.startMarker);
+  const toEnd = firstString(input.toEnd, input.toArrow, input.endArrow, input.endMarker);
   const label = typeof input.label === "string" ? input.label : undefined;
+  const lineStyle = firstString(input.lineStyle, input.style, input.strokeStyle, input.pathStyle);
   const color =
     typeof input.color === "string" || typeof input.color === "number"
       ? String(input.color).trim()
       : undefined;
+  const width = toFiniteNumberOrUndefined(input.width ?? input.strokeWidth ?? input.lineWidth);
 
   return {
     id,
     fromNode,
     fromSide,
+    fromEnd: fromEnd || undefined,
     toNode,
     toSide,
+    toEnd: toEnd || undefined,
     label,
     color: color || undefined,
+    lineStyle: lineStyle || undefined,
+    width,
   };
+}
+
+function firstString(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return undefined;
 }
 
 function toFiniteNumber(value: unknown): number {
@@ -117,4 +134,17 @@ function toFiniteNumber(value: unknown): number {
     }
   }
   return 0;
+}
+
+function toFiniteNumberOrUndefined(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
 }

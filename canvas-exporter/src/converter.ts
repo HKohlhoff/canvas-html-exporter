@@ -25,10 +25,14 @@ export interface CanvasEdge {
   id?: string;
   fromNode: string;
   fromSide?: string;
+  fromEnd?: string;
   toNode: string;
   toSide?: string;
+  toEnd?: string;
   label?: string;
   color?: string;
+  lineStyle?: string;
+  width?: number;
 }
 
 export interface CanvasData {
@@ -76,6 +80,10 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
     toId: edge.toNode,
     fromSide: normalizeSide(edge.fromSide),
     toSide: normalizeSide(edge.toSide),
+    fromEnd: normalizeEdgeEnd(edge.fromEnd, "none"),
+    toEnd: normalizeEdgeEnd(edge.toEnd, "arrow"),
+    lineStyle: normalizeEdgeLineStyle(edge.lineStyle),
+    width: normalizeEdgeWidth(edge.width),
     label: edge.label ?? "",
     color: edge.color ?? "",
   }));
@@ -289,6 +297,16 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       text-decoration: none;
       margin-top: 6px;
     }
+    .link-card {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .link-meta {
+      color: ${theme.mutedText};
+      font-size: 0.86em;
+      word-break: break-all;
+    }
     .toolbar {
       position: sticky;
       top: 0;
@@ -466,32 +484,70 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
         }
       }
 
-      function createMarker(defs, id, fill) {
+      function createMarker(defs, id, type, color) {
         const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
         marker.setAttribute("id", id);
-        marker.setAttribute("viewBox", "0 0 8 8");
-        marker.setAttribute("markerWidth", "15");
-        marker.setAttribute("markerHeight", "13");
-        marker.setAttribute("refX", "8");
-        marker.setAttribute("refY", "4");
+        marker.setAttribute("viewBox", "0 0 12 12");
+        marker.setAttribute("markerWidth", "12");
+        marker.setAttribute("markerHeight", "12");
+        marker.setAttribute("refX", type === "bar" ? "6" : "10");
+        marker.setAttribute("refY", "6");
         marker.setAttribute("orient", "auto");
         marker.setAttribute("markerUnits", "userSpaceOnUse");
-        const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-        polygon.setAttribute("points", "0 0, 8 4, 0 8");
-        polygon.setAttribute("fill", fill);
-        marker.appendChild(polygon);
+        if (type === "circle") {
+          const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          circle.setAttribute("cx", "6");
+          circle.setAttribute("cy", "6");
+          circle.setAttribute("r", "3.25");
+          circle.setAttribute("fill", color);
+          marker.appendChild(circle);
+        } else if (type === "diamond") {
+          const diamond = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+          diamond.setAttribute("points", "1 6, 6 1, 11 6, 6 11");
+          diamond.setAttribute("fill", color);
+          marker.appendChild(diamond);
+        } else if (type === "square") {
+          const square = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          square.setAttribute("x", "2");
+          square.setAttribute("y", "2");
+          square.setAttribute("width", "8");
+          square.setAttribute("height", "8");
+          square.setAttribute("fill", color);
+          marker.appendChild(square);
+        } else if (type === "bar") {
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          line.setAttribute("d", "M 6 1 L 6 11");
+          line.setAttribute("stroke", color);
+          line.setAttribute("stroke-width", "2");
+          line.setAttribute("fill", "none");
+          marker.appendChild(line);
+        } else {
+          const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+          polygon.setAttribute("points", "2 1, 11 6, 2 11");
+          polygon.setAttribute("fill", color);
+          marker.appendChild(polygon);
+        }
         defs.appendChild(marker);
       }
 
-      function markerIdForColor(color) {
-        return "marker-" + color.replace(/[^a-zA-Z0-9]/g, "_");
+      function markerIdFor(color, type) {
+        return "marker-" + type + "-" + color.replace(/[^a-zA-Z0-9]/g, "_");
+      }
+
+      function dashArrayFor(style, width) {
+        const stroke = Math.max(1, Number(width) || 2);
+        if (style === "dotted") return stroke + " " + (stroke * 3);
+        if (style === "short-dash") return (stroke * 3) + " " + (stroke * 3);
+        if (style === "dashed") return (stroke * 6) + " " + (stroke * 4);
+        if (style === "dash-dot") return (stroke * 6) + " " + (stroke * 3) + " " + stroke + " " + (stroke * 3);
+        return "";
       }
 
       function drawEdges() {
         edgeLayer.innerHTML = "";
         const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         edgeLayer.appendChild(defs);
-        const seenColors = new Set();
+        const seenMarkers = new Set();
 
         for (const edge of edges) {
           const fromEl = document.getElementById("node-" + edge.fromId);
@@ -517,18 +573,39 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
           if (edge.toSide === "bottom") c2y += dy;
 
           const color = resolveEdgeColor(edge.color);
-          const markerId = markerIdForColor(color);
-          if (!seenColors.has(markerId)) {
-            createMarker(defs, markerId, color);
-            seenColors.add(markerId);
+          const strokeWidth = Math.max(1, Number(edge.width) || 2);
+          const dashArray = dashArrayFor(edge.lineStyle, strokeWidth);
+
+          if (edge.fromEnd && edge.fromEnd !== "none") {
+            const startMarkerId = markerIdFor(color, edge.fromEnd);
+            if (!seenMarkers.has(startMarkerId)) {
+              createMarker(defs, startMarkerId, edge.fromEnd, color);
+              seenMarkers.add(startMarkerId);
+            }
+          }
+
+          if (edge.toEnd && edge.toEnd !== "none") {
+            const endMarkerId = markerIdFor(color, edge.toEnd);
+            if (!seenMarkers.has(endMarkerId)) {
+              createMarker(defs, endMarkerId, edge.toEnd, color);
+              seenMarkers.add(endMarkerId);
+            }
           }
 
           const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
           path.setAttribute("d", "M " + start.x + " " + start.y + " C " + c1x + " " + c1y + ", " + c2x + " " + c2y + ", " + end.x + " " + end.y);
           path.setAttribute("fill", "none");
           path.setAttribute("stroke", color);
-          path.setAttribute("stroke-width", "2");
-          path.setAttribute("marker-end", "url(#" + markerId + ")");
+          path.setAttribute("stroke-width", String(strokeWidth));
+          if (dashArray) {
+            path.setAttribute("stroke-dasharray", dashArray);
+          }
+          if (edge.fromEnd && edge.fromEnd !== "none") {
+            path.setAttribute("marker-start", "url(#" + markerIdFor(color, edge.fromEnd) + ")");
+          }
+          if (edge.toEnd && edge.toEnd !== "none") {
+            path.setAttribute("marker-end", "url(#" + markerIdFor(color, edge.toEnd) + ")");
+          }
           edgeLayer.appendChild(path);
 
           if (edge.label) {
@@ -771,7 +848,9 @@ function renderNodeContent(node: CanvasNode): string {
     const url = typeof node.url === "string" ? node.url.trim() : "";
     if (!url) return "<p>Leerer Link-Knoten</p>";
     const label = escapeHtml(node.label || url);
-    return `<p><a class="link-chip" href="${escapeAttribute(url)}" target="_blank" rel="noopener noreferrer">${label}</a></p>`;
+    const href = escapeAttribute(url);
+    const subtitle = node.label && node.label !== url ? `<div class="link-meta">${escapeHtml(url)}</div>` : "";
+    return `<div class="link-card"><a class="link-chip" href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>${subtitle}</div>`;
   }
 
   if (type === "file") {
@@ -1128,6 +1207,10 @@ function renderInline(text: string): string {
   );
 
   let html = escapeHtml(withMathPlaceholders);
+  html = html.replace(
+    /(^|[\s(>])((?:https?:\/\/|mailto:|file:)[^\s<]*[^\s<.,:;"')\]\}])/g,
+    '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>',
+  );
   html = html.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "[[$1|$2]]");
   html = html.replace(/\[\[([^\]]+)\]\]/g, "[[$1]]");
   html = html.replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>');
@@ -1419,6 +1502,34 @@ function normalizeSide(side: string | undefined): "top" | "bottom" | "left" | "r
     return side;
   }
   return "right";
+}
+
+function normalizeEdgeEnd(end: string | undefined, fallback: "none" | "arrow"): "none" | "arrow" | "triangle" | "circle" | "diamond" | "square" | "bar" {
+  const value = String(end || "").trim().toLowerCase();
+  if (!value) return fallback;
+  if (value === "none") return "none";
+  if (value.includes("diamond")) return "diamond";
+  if (value.includes("square")) return "square";
+  if (value.includes("circle") || value.includes("dot")) return "circle";
+  if (value.includes("bar") || value.includes("line")) return "bar";
+  if (value.includes("triangle")) return "triangle";
+  if (value.includes("arrow")) return "arrow";
+  return fallback;
+}
+
+function normalizeEdgeLineStyle(style: string | undefined): "solid" | "dashed" | "dotted" | "short-dash" | "dash-dot" {
+  const value = String(style || "").trim().toLowerCase();
+  if (!value) return "solid";
+  if (value.includes("dash") && value.includes("dot")) return "dash-dot";
+  if (value.includes("short")) return "short-dash";
+  if (value.includes("dot")) return "dotted";
+  if (value.includes("dash")) return "dashed";
+  return "solid";
+}
+
+function normalizeEdgeWidth(width: number | undefined): number {
+  const value = Number(width);
+  return Number.isFinite(value) ? Math.max(1, value) : 2;
 }
 
 function normalizeNumber(value: number | undefined): number {

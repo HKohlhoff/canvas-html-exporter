@@ -90,3 +90,30 @@ test("drops invalid node and edge entries during normalization", () => {
   assert.equal(data.edges[0]?.fromNode, "a");
   assert.equal(data.edges[0]?.toNode, "b");
 });
+
+test("preserves edge marker and line style aliases during normalization", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [
+        { id: "a", type: "text" },
+        { id: "b", type: "text" },
+      ],
+      edges: [
+        {
+          fromNode: "a",
+          toNode: "b",
+          fromArrow: "circle",
+          endMarker: "diamond",
+          strokeStyle: "short-dash",
+          strokeWidth: "4",
+        },
+      ],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.edges[0]?.fromEnd, "circle");
+  assert.equal(data.edges[0]?.toEnd, "diamond");
+  assert.equal(data.edges[0]?.lineStyle, "short-dash");
+  assert.equal(data.edges[0]?.width, 4);
+});

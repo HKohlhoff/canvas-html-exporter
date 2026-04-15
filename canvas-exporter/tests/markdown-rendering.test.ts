@@ -38,6 +38,11 @@ test("renders markdown links as anchors", () => {
   assert.match(html, /target="_blank"/);
 });
 
+test("auto-links bare urls", () => {
+  const html = markdownToHtml("Mehr Infos unter https://example.com/docs.");
+  assert.match(html, /<a href="https:\/\/example\.com\/docs" target="_blank" rel="noopener noreferrer">https:\/\/example\.com\/docs<\/a>\./);
+});
+
 test("adds normalized ids to headings", () => {
   const html = markdownToHtml("## Über Café");
   assert.match(html, /<h2 id="uber-cafe">Über Café<\/h2>/);

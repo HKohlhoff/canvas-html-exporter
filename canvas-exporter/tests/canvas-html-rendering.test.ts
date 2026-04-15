@@ -124,6 +124,7 @@ test("renders link nodes as external link chips", () => {
   assert.match(html, /class="link-chip"/);
   assert.match(html, /href="https:\/\/openai\.com\/\?a=1&amp;b=2"/);
   assert.match(html, />OpenAI<\/a>/);
+  assert.match(html, /class="link-meta">https:\/\/openai\.com\/\?a=1&amp;b=2<\/div>/);
 });
 
 test("renders empty link nodes with fallback text", () => {
@@ -216,4 +217,37 @@ test("renders page header counts for nodes and edges", () => {
   const html = convertCanvasToHtml(data, baseOptions);
   assert.match(html, /<h1>Test Canvas<\/h1>/);
   assert.match(html, /2 Knoten · 1 Verbindungen/);
+});
+
+test("renders edge marker and line style metadata into canvas script", () => {
+  const data: CanvasData = {
+    name: "Edges",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+      { id: "b", type: "text", x: 260, y: 0, width: 200, height: 100, text: "B" },
+    ],
+    edges: [
+      {
+        fromNode: "a",
+        fromSide: "right",
+        fromEnd: "circle",
+        toNode: "b",
+        toSide: "left",
+        toEnd: "diamond",
+        color: "4",
+        lineStyle: "dashed",
+        width: 3,
+        label: "styled",
+      },
+    ],
+  };
+
+  const html = convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /"fromEnd":"circle"/);
+  assert.match(html, /"toEnd":"diamond"/);
+  assert.match(html, /"lineStyle":"dashed"/);
+  assert.match(html, /"width":3/);
+  assert.match(html, /function dashArrayFor\(style, width\)/);
+  assert.match(html, /marker-start/);
+  assert.match(html, /marker-end/);
 });
