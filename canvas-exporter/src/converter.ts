@@ -1,5 +1,8 @@
 import katex from "katex";
+import { getSingletonHighlighter } from "shiki/bundle/web";
 import type { BundledTheme, Highlighter } from "shiki/bundle/web";
+import latexLanguage from "shiki/langs/latex.mjs";
+import texLanguage from "shiki/langs/tex.mjs";
 
 export interface CanvasNode {
   id: string;
@@ -60,9 +63,6 @@ type MarkdownRenderOptions = {
   darkMode?: boolean;
 };
 
-type ShikiModule = typeof import("shiki/bundle/web");
-type ShikiLanguageModule = { default: unknown };
-
 // Fallback-Farben, falls keine CSS-Variablen aus Obsidian ausgelesen werden konnten.
 // Reihenfolge entspricht dem korrekten Obsidian-Mapping:
 // 1=rot, 2=orange, 3=gelb, 4=grün, 5=cyan, 6=lila
@@ -78,18 +78,16 @@ const OBSIDIAN_COLORS: Record<string, NodePalette> = {
 const SHIKI_DARK_THEME: BundledTheme = "one-dark-pro";
 const SHIKI_LIGHT_THEME: BundledTheme = "one-light";
 const SHIKI_FALLBACK_LANGUAGE = "text";
-const shikiImport = new Function("return import('shiki/bundle/web')") as () => Promise<ShikiModule>;
-const shikiLanguageImports: Record<string, () => Promise<ShikiLanguageModule>> = {
-  latex: new Function("return import('shiki/langs/latex.mjs')") as () => Promise<ShikiLanguageModule>,
-  tex: new Function("return import('shiki/langs/tex.mjs')") as () => Promise<ShikiLanguageModule>,
+const shikiLanguageModules: Record<string, unknown> = {
+  latex: latexLanguage,
+  tex: texLanguage,
 };
 let shikiHighlighterPromise: Promise<Highlighter> | null = null;
 
 async function getShikiHighlighter(): Promise<Highlighter> {
   if (!shikiHighlighterPromise) {
     shikiHighlighterPromise = (async () => {
-      const shiki = await shikiImport();
-      return shiki.getSingletonHighlighter({
+      return getSingletonHighlighter({
         themes: [SHIKI_DARK_THEME, SHIKI_LIGHT_THEME],
       });
     })();
@@ -128,10 +126,9 @@ async function renderCodeBlock(code: string, lang: string, darkMode: boolean): P
     const highlighter = await getShikiHighlighter();
     const loaded = new Set(highlighter.getLoadedLanguages());
     if (!loaded.has(normalizedLang)) {
-      const languageModule = shikiLanguageImports[normalizedLang];
+      const languageModule = shikiLanguageModules[normalizedLang];
       if (languageModule) {
-        const loadedModule = await languageModule();
-        await highlighter.loadLanguage(loadedModule.default as never);
+        await highlighter.loadLanguage(languageModule as never);
       } else {
         await highlighter.loadLanguage(normalizedLang as never);
       }
