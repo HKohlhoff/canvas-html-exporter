@@ -61,7 +61,6 @@ export async function exportCanvasPackage(
   canvasFile: TFile,
   settings: ExportSettings,
 ): Promise<{ folderPath: string; data: PreparedCanvasData; options: ExportOptions }> {
-  console.log("[canvas-exporter] Lese Canvas-Datei", { path: canvasFile.path });
   const rawContent = await app.vault.read(canvasFile);
   let parsed: unknown;
 
@@ -72,7 +71,6 @@ export async function exportCanvasPackage(
   }
 
   const baseFolder = normalizeFolder(settings.outputDir);
-  console.log("[canvas-exporter] Stelle Ausgabeordner sicher", { baseFolder });
   await ensureFolderExists(app, baseFolder);
 
   const exportFolder = normalizePath(`${baseFolder}/${safeSegment(canvasFile.basename)}`);
@@ -80,12 +78,10 @@ export async function exportCanvasPackage(
   const imagesDir = normalizePath(`${assetsDir}/images`);
   const filesDir = normalizePath(`${assetsDir}/files`);
 
-  console.log("[canvas-exporter] Stelle Exportstruktur sicher", { exportFolder, assetsDir, imagesDir, filesDir });
   await ensureFolderExists(app, exportFolder);
   await ensureFolderExists(app, assetsDir);
   await ensureFolderExists(app, imagesDir);
   await ensureFolderExists(app, filesDir);
-  console.log("[canvas-exporter] Exportstruktur vorhanden");
 
   const normalized = normalizeCanvasData(parsed, canvasFile.basename);
   const nodes = normalized.nodes;
@@ -278,7 +274,7 @@ async function exportMarkdownSectionInline(
   const content = stripFrontmatter(await ctx.app.vault.read(file));
   const section = extractMarkdownSection(content, heading);
   if (!section) return "";
-  let htmlBody = markdownToHtml(section);
+  let htmlBody = await markdownToHtml(section, { darkMode: ctx.darkMode });
   htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", linkBase);
   return htmlBody;
 }
@@ -416,7 +412,7 @@ async function renderMarkdownFileToHtml(
     }
 
     const content = stripFrontmatter(await ctx.app.vault.read(file));
-    let htmlBody = markdownToHtml(content);
+    let htmlBody = await markdownToHtml(content, { darkMode: ctx.darkMode });
     htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, mode, linkBase);
 
     if (mode === "inline") {
@@ -695,12 +691,12 @@ async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<
   const previewSource = raw.slice(0, 2000);
   const text = buildPreviewText(raw);
 
-  let html = markdownToHtml(previewSource);
+  let html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode });
   try {
     html = await rewriteMarkdownHtmlAssets(ctx, file, html, "inline", "canvas");
   } catch (error) {
     console.error(`[canvas-exporter] Vorschau-Render fehlgeschlagen für ${file.path}`, error);
-    html = markdownToHtml(previewSource);
+    html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode });
   }
 
   return { text, html };

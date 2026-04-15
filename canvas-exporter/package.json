@@ -23,12 +23,13 @@
   "author": "Holger Kohlhoff",
   "license": "MIT",
   "dependencies": {
-    "katex": "^0.16.0"
+    "katex": "^0.16.0",
+    "shiki": "^4.0.2"
   },
   "devDependencies": {
-    "esbuild": "^0.20.0",
-    "typescript": "^5.0.0",
+    "@types/katex": "^0.16.0",
     "@types/node": "^20.0.0",
-    "@types/katex": "^0.16.0"
+    "esbuild": "^0.20.0",
+    "typescript": "^5.0.0"
   }
 }

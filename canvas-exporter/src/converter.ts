@@ -1,4 +1,5 @@
 import katex from "katex";
+import type { BundledTheme, Highlighter } from "shiki/bundle/web";
 
 export interface CanvasNode {
   id: string;
@@ -52,6 +53,12 @@ type NodePalette = {
   border: string;
 };
 
+type MarkdownRenderOptions = {
+  darkMode?: boolean;
+};
+
+type ShikiModule = typeof import("shiki/bundle/web");
+
 // Fallback-Farben, falls keine CSS-Variablen aus Obsidian ausgelesen werden konnten.
 // Reihenfolge entspricht dem korrekten Obsidian-Mapping:
 // 1=rot, 2=orange, 3=gelb, 4=grün, 5=cyan, 6=lila
@@ -64,16 +71,77 @@ const OBSIDIAN_COLORS: Record<string, NodePalette> = {
   "6": { background: "#9c6bae22", border: "#9c6bae" }, // purple
 };
 
-export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): string {
+const SHIKI_DARK_THEME: BundledTheme = "github-dark-default";
+const SHIKI_LIGHT_THEME: BundledTheme = "github-light-default";
+const SHIKI_FALLBACK_LANGUAGE = "text";
+const shikiImport = new Function("return import('shiki/bundle/web')") as () => Promise<ShikiModule>;
+let shikiHighlighterPromise: Promise<Highlighter> | null = null;
+
+async function getShikiHighlighter(): Promise<Highlighter> {
+  if (!shikiHighlighterPromise) {
+    shikiHighlighterPromise = (async () => {
+      const shiki = await shikiImport();
+      return shiki.getSingletonHighlighter({
+        themes: [SHIKI_DARK_THEME, SHIKI_LIGHT_THEME],
+      });
+    })();
+  }
+
+  return shikiHighlighterPromise;
+}
+
+function normalizeCodeLanguage(lang: string): string {
+  const normalized = String(lang || "").trim().toLowerCase();
+  const aliases: Record<string, string> = {
+    "": SHIKI_FALLBACK_LANGUAGE,
+    js: "javascript",
+    ts: "typescript",
+    "c#": "csharp",
+    csharp: "csharp",
+    cs: "csharp",
+    sh: "bash",
+    shell: "bash",
+    zsh: "bash",
+    ps1: "powershell",
+    yml: "yaml",
+    md: "markdown",
+    tex: "latex",
+    txt: "text",
+    plaintext: "text",
+  };
+
+  return aliases[normalized] ?? normalized;
+}
+
+async function renderCodeBlock(code: string, lang: string, darkMode: boolean): Promise<string> {
+  const normalizedLang = normalizeCodeLanguage(lang);
+
+  try {
+    const highlighter = await getShikiHighlighter();
+    const loaded = new Set(highlighter.getLoadedLanguages());
+    if (!loaded.has(normalizedLang)) {
+      await highlighter.loadLanguage(normalizedLang as never);
+    }
+    return highlighter.codeToHtml(code, {
+      lang: normalizedLang as never,
+      theme: darkMode ? SHIKI_DARK_THEME : SHIKI_LIGHT_THEME,
+    });
+  } catch {
+    const className = lang ? ` class="language-${escapeAttribute(lang)}"` : "";
+    return `<pre><code${className}>${escapeHtml(code)}</code></pre>`;
+  }
+}
+
+export async function convertCanvasToHtml(data: CanvasData, options: ExportOptions): Promise<string> {
   const nodes = Array.isArray(data.nodes) ? data.nodes : [];
   const edges = Array.isArray(data.edges) ? data.edges : [];
 
   const bounds = getBounds(nodes);
   const theme = getTheme(options.darkMode);
 
-  const nodeHtml = nodes
-    .map((node) => renderNode(node, bounds.offsetX, bounds.offsetY, theme, options.canvasColors))
-    .join("\n");
+  const nodeHtml = (await Promise.all(
+    nodes.map((node) => renderNode(node, bounds.offsetX, bounds.offsetY, theme, options.darkMode, options.canvasColors)),
+  )).join("\n");
 
   const edgesData = edges.map((edge) => ({
     fromId: edge.fromNode,
@@ -235,14 +303,16 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 0.92em;
     }
-    .node-content pre {
+    .node-content pre,
+    .node-content .shiki {
       margin: 0.7em 0;
       padding: 10px 12px;
       border-radius: 8px;
       background: ${theme.codeBlockBackground};
       overflow-x: auto;
     }
-    .node-content pre code {
+    .node-content pre code,
+    .node-content .shiki code {
       padding: 0;
       background: transparent;
     }
@@ -773,14 +843,14 @@ export function buildMarkdownDocumentHtml(title: string, bodyHtml: string, darkM
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 0.92em;
     }
-    pre {
+    pre, .shiki {
       margin: 0.9em 0;
       padding: 10px 12px;
       border-radius: 8px;
       background: ${theme.codeBlockBackground};
       overflow-x: auto;
     }
-    pre code { padding: 0; background: transparent; }
+    pre code, .shiki code { padding: 0; background: transparent; }
     blockquote {
       margin: 0.9em 0;
       padding-left: 12px;
@@ -861,13 +931,14 @@ export function buildMarkdownDocumentHtml(title: string, bodyHtml: string, darkM
 </html>`;
 }
 
-function renderNode(
+async function renderNode(
   node: CanvasNode,
   offsetX: number,
   offsetY: number,
   theme: ReturnType<typeof getTheme>,
+  darkMode: boolean,
   canvasColors?: Record<string, string>,
-): string {
+): Promise<string> {
   const left = normalizeNumber(node.x) + offsetX;
   const top = normalizeNumber(node.y) + offsetY;
   const width = Math.max(120, normalizeNumber(node.width));
@@ -876,8 +947,8 @@ function renderNode(
   const isPdf = node.fileKind === "pdf";
   const classes = ["node", type, type === "group" ? "group" : "", isPdf ? "pdf" : ""].filter(Boolean).join(" ");
 
-  const title = type !== "link" && node.label ? `<div class="node-title">${markdownToHtml(node.label)}</div>` : "";
-  const content = renderNodeContent(node);
+  const title = type !== "link" && node.label ? `<div class="node-title">${await markdownToHtml(node.label, { darkMode })}</div>` : "";
+  const content = await renderNodeContent(node, darkMode);
 
   const colorKey = String(node.color || "").trim();
   const isNumericColor = /^\d+$/.test(colorKey);
@@ -917,11 +988,11 @@ function renderNode(
   >${title}<div class="node-content">${content}</div></div>`;
 }
 
-function renderNodeContent(node: CanvasNode): string {
+async function renderNodeContent(node: CanvasNode, darkMode: boolean): Promise<string> {
   const type = (node.type || "text").toLowerCase();
 
   if (type === "group") {
-    return node.text ? markdownToHtml(node.text) : "";
+    return node.text ? markdownToHtml(node.text, { darkMode }) : "";
   }
 
   if (type === "link") {
@@ -975,16 +1046,17 @@ function renderNodeContent(node: CanvasNode): string {
 
   const text = typeof node.text === "string" ? node.text : "";
   if (!text.trim()) return "";
-  return markdownToHtml(text);
+  return markdownToHtml(text, { darkMode });
 }
 
-export function markdownToHtml(markdown: string): string {
+export async function markdownToHtml(markdown: string, options: MarkdownRenderOptions = {}): Promise<string> {
   if (!markdown) return "";
 
   const normalized = markdown.replace(/\r\n?/g, "\n");
   const lines = normalized.split("\n");
   const out: string[] = [];
   const headingIds = new Map<string, number>();
+  const darkMode = options.darkMode ?? true;
   let i = 0;
 
   while (i < lines.length) {
@@ -1040,8 +1112,7 @@ export function markdownToHtml(markdown: string): string {
         i += 1;
       }
       if (i < lines.length) i += 1;
-      const className = lang ? ` class="language-${escapeAttribute(lang)}"` : "";
-      let html = `<pre><code${className}>${escapeHtml(codeLines.join("\n"))}</code></pre>`;
+      let html = await renderCodeBlock(codeLines.join("\n"), lang, darkMode);
       const blockAnchor = consumeFollowingBlockAnchor(lines, i);
       html = applyBlockAnchor(html, blockAnchor.anchorId);
       i = blockAnchor.nextIndex;
@@ -1105,7 +1176,7 @@ export function markdownToHtml(markdown: string): string {
         const title = calloutMatch[3]?.trim() || (type.charAt(0).toUpperCase() + type.slice(1));
         const icon = calloutIcons[type] ?? "◆";
         const contentLines = quoteLines.slice(1);
-        const inner = markdownToHtml(contentLines.join("\n"));
+        const inner = await markdownToHtml(contentLines.join("\n"), { darkMode });
         if (indicator === "+" || indicator === "-") {
           const openAttr = indicator === "+" ? " open" : "";
           let html = `<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</summary><div class="callout-content">${inner}</div></details>`;
@@ -1121,7 +1192,7 @@ export function markdownToHtml(markdown: string): string {
           out.push(html);
         }
       } else {
-        const inner = markdownToHtml(quoteLines.join("\n"));
+        const inner = await markdownToHtml(quoteLines.join("\n"), { darkMode });
         let html = `<blockquote>${inner}</blockquote>`;
         const blockAnchor = consumeFollowingBlockAnchor(lines, i);
         html = applyBlockAnchor(html, blockAnchor.anchorId);

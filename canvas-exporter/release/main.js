@@ -14341,12 +14341,68 @@ var OBSIDIAN_COLORS = {
   "6": { background: "#9c6bae22", border: "#9c6bae" }
   // purple
 };
-function convertCanvasToHtml(data, options) {
+var SHIKI_DARK_THEME = "github-dark-default";
+var SHIKI_LIGHT_THEME = "github-light-default";
+var SHIKI_FALLBACK_LANGUAGE = "text";
+var shikiImport = new Function("return import('shiki/bundle/web')");
+var shikiHighlighterPromise = null;
+async function getShikiHighlighter() {
+  if (!shikiHighlighterPromise) {
+    shikiHighlighterPromise = (async () => {
+      const shiki = await shikiImport();
+      return shiki.getSingletonHighlighter({
+        themes: [SHIKI_DARK_THEME, SHIKI_LIGHT_THEME]
+      });
+    })();
+  }
+  return shikiHighlighterPromise;
+}
+function normalizeCodeLanguage(lang) {
+  const normalized = String(lang || "").trim().toLowerCase();
+  const aliases = {
+    "": SHIKI_FALLBACK_LANGUAGE,
+    js: "javascript",
+    ts: "typescript",
+    "c#": "csharp",
+    csharp: "csharp",
+    cs: "csharp",
+    sh: "bash",
+    shell: "bash",
+    zsh: "bash",
+    ps1: "powershell",
+    yml: "yaml",
+    md: "markdown",
+    tex: "latex",
+    txt: "text",
+    plaintext: "text"
+  };
+  return aliases[normalized] ?? normalized;
+}
+async function renderCodeBlock(code, lang, darkMode) {
+  const normalizedLang = normalizeCodeLanguage(lang);
+  try {
+    const highlighter = await getShikiHighlighter();
+    const loaded = new Set(highlighter.getLoadedLanguages());
+    if (!loaded.has(normalizedLang)) {
+      await highlighter.loadLanguage(normalizedLang);
+    }
+    return highlighter.codeToHtml(code, {
+      lang: normalizedLang,
+      theme: darkMode ? SHIKI_DARK_THEME : SHIKI_LIGHT_THEME
+    });
+  } catch {
+    const className = lang ? ` class="language-${escapeAttribute(lang)}"` : "";
+    return `<pre><code${className}>${escapeHtml(code)}</code></pre>`;
+  }
+}
+async function convertCanvasToHtml(data, options) {
   const nodes = Array.isArray(data.nodes) ? data.nodes : [];
   const edges = Array.isArray(data.edges) ? data.edges : [];
   const bounds = getBounds(nodes);
   const theme = getTheme(options.darkMode);
-  const nodeHtml = nodes.map((node) => renderNode(node, bounds.offsetX, bounds.offsetY, theme, options.canvasColors)).join("\n");
+  const nodeHtml = (await Promise.all(
+    nodes.map((node) => renderNode(node, bounds.offsetX, bounds.offsetY, theme, options.darkMode, options.canvasColors))
+  )).join("\n");
   const edgesData = edges.map((edge) => ({
     fromId: edge.fromNode,
     toId: edge.toNode,
@@ -14504,14 +14560,16 @@ function convertCanvasToHtml(data, options) {
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 0.92em;
     }
-    .node-content pre {
+    .node-content pre,
+    .node-content .shiki {
       margin: 0.7em 0;
       padding: 10px 12px;
       border-radius: 8px;
       background: ${theme.codeBlockBackground};
       overflow-x: auto;
     }
-    .node-content pre code {
+    .node-content pre code,
+    .node-content .shiki code {
       padding: 0;
       background: transparent;
     }
@@ -15049,14 +15107,14 @@ function buildMarkdownDocumentHtml(title, bodyHtml, darkMode, canvasColors) {
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 0.92em;
     }
-    pre {
+    pre, .shiki {
       margin: 0.9em 0;
       padding: 10px 12px;
       border-radius: 8px;
       background: ${theme.codeBlockBackground};
       overflow-x: auto;
     }
-    pre code { padding: 0; background: transparent; }
+    pre code, .shiki code { padding: 0; background: transparent; }
     blockquote {
       margin: 0.9em 0;
       padding-left: 12px;
@@ -15136,7 +15194,7 @@ function buildMarkdownDocumentHtml(title, bodyHtml, darkMode, canvasColors) {
 </body>
 </html>`;
 }
-function renderNode(node, offsetX, offsetY, theme, canvasColors) {
+async function renderNode(node, offsetX, offsetY, theme, darkMode, canvasColors) {
   const left = normalizeNumber(node.x) + offsetX;
   const top = normalizeNumber(node.y) + offsetY;
   const width = Math.max(120, normalizeNumber(node.width));
@@ -15144,8 +15202,8 @@ function renderNode(node, offsetX, offsetY, theme, canvasColors) {
   const type = (node.type || "text").toLowerCase();
   const isPdf = node.fileKind === "pdf";
   const classes = ["node", type, type === "group" ? "group" : "", isPdf ? "pdf" : ""].filter(Boolean).join(" ");
-  const title = type !== "link" && node.label ? `<div class="node-title">${markdownToHtml(node.label)}</div>` : "";
-  const content = renderNodeContent(node);
+  const title = type !== "link" && node.label ? `<div class="node-title">${await markdownToHtml(node.label, { darkMode })}</div>` : "";
+  const content = await renderNodeContent(node, darkMode);
   const colorKey = String(node.color || "").trim();
   const isNumericColor = /^\d+$/.test(colorKey);
   let background;
@@ -15176,10 +15234,10 @@ function renderNode(node, offsetX, offsetY, theme, canvasColors) {
     style="left:${left}px;top:${top}px;width:${width}px;height:${height}px;background:${background};border-color:${border};"
   >${title}<div class="node-content">${content}</div></div>`;
 }
-function renderNodeContent(node) {
+async function renderNodeContent(node, darkMode) {
   const type = (node.type || "text").toLowerCase();
   if (type === "group") {
-    return node.text ? markdownToHtml(node.text) : "";
+    return node.text ? markdownToHtml(node.text, { darkMode }) : "";
   }
   if (type === "link") {
     const url = typeof node.url === "string" ? node.url.trim() : "";
@@ -15225,15 +15283,16 @@ function renderNodeContent(node) {
   const text2 = typeof node.text === "string" ? node.text : "";
   if (!text2.trim())
     return "";
-  return markdownToHtml(text2);
+  return markdownToHtml(text2, { darkMode });
 }
-function markdownToHtml(markdown) {
+async function markdownToHtml(markdown, options = {}) {
   if (!markdown)
     return "";
   const normalized = markdown.replace(/\r\n?/g, "\n");
   const lines = normalized.split("\n");
   const out = [];
   const headingIds = /* @__PURE__ */ new Map();
+  const darkMode = options.darkMode ?? true;
   let i = 0;
   while (i < lines.length) {
     const line = lines[i] ?? "";
@@ -15283,8 +15342,7 @@ function markdownToHtml(markdown) {
       }
       if (i < lines.length)
         i += 1;
-      const className = lang ? ` class="language-${escapeAttribute(lang)}"` : "";
-      let html2 = `<pre><code${className}>${escapeHtml(codeLines.join("\n"))}</code></pre>`;
+      let html2 = await renderCodeBlock(codeLines.join("\n"), lang, darkMode);
       const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
       html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
       i = blockAnchor2.nextIndex;
@@ -15364,7 +15422,7 @@ function markdownToHtml(markdown) {
         const title = calloutMatch[3]?.trim() || type.charAt(0).toUpperCase() + type.slice(1);
         const icon = calloutIcons[type] ?? "\u25C6";
         const contentLines = quoteLines.slice(1);
-        const inner2 = markdownToHtml(contentLines.join("\n"));
+        const inner2 = await markdownToHtml(contentLines.join("\n"), { darkMode });
         if (indicator === "+" || indicator === "-") {
           const openAttr = indicator === "+" ? " open" : "";
           let html2 = `<details class="callout callout-${escapeAttribute(type)}"${openAttr}><summary class="callout-title"><span class="callout-icon">${icon}</span>${escapeHtml(title)}</summary><div class="callout-content">${inner2}</div></details>`;
@@ -15380,7 +15438,7 @@ function markdownToHtml(markdown) {
           out.push(html2);
         }
       } else {
-        const inner2 = markdownToHtml(quoteLines.join("\n"));
+        const inner2 = await markdownToHtml(quoteLines.join("\n"), { darkMode });
         let html2 = `<blockquote>${inner2}</blockquote>`;
         const blockAnchor2 = consumeFollowingBlockAnchor(lines, i);
         html2 = applyBlockAnchor(html2, blockAnchor2.anchorId);
@@ -16104,7 +16162,6 @@ function normalizeExportHref2(href) {
   return normalizePath(href).replace(/^\/+/, "");
 }
 async function exportCanvasPackage(app, canvasFile, settings) {
-  console.log("[canvas-exporter] Lese Canvas-Datei", { path: canvasFile.path });
   const rawContent = await app.vault.read(canvasFile);
   let parsed;
   try {
@@ -16113,18 +16170,15 @@ async function exportCanvasPackage(app, canvasFile, settings) {
     throw new Error(`Ung\xFCltiges Canvas-JSON in ${canvasFile.path}`);
   }
   const baseFolder = normalizeFolder(settings.outputDir);
-  console.log("[canvas-exporter] Stelle Ausgabeordner sicher", { baseFolder });
   await ensureFolderExists(app, baseFolder);
   const exportFolder = normalizePath(`${baseFolder}/${safeSegment(canvasFile.basename)}`);
   const assetsDir = normalizePath(`${exportFolder}/assets`);
   const imagesDir = normalizePath(`${assetsDir}/images`);
   const filesDir = normalizePath(`${assetsDir}/files`);
-  console.log("[canvas-exporter] Stelle Exportstruktur sicher", { exportFolder, assetsDir, imagesDir, filesDir });
   await ensureFolderExists(app, exportFolder);
   await ensureFolderExists(app, assetsDir);
   await ensureFolderExists(app, imagesDir);
   await ensureFolderExists(app, filesDir);
-  console.log("[canvas-exporter] Exportstruktur vorhanden");
   const normalized = normalizeCanvasData(parsed, canvasFile.basename);
   const nodes = normalized.nodes;
   const edges = normalized.edges;
@@ -16285,7 +16339,7 @@ async function exportMarkdownSectionInline(ctx, file, heading, linkBase) {
   const section = extractMarkdownSection(content, heading);
   if (!section)
     return "";
-  let htmlBody = markdownToHtml(section);
+  let htmlBody = await markdownToHtml(section, { darkMode: ctx.darkMode });
   htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, "inline", linkBase);
   return htmlBody;
 }
@@ -16390,7 +16444,7 @@ async function renderMarkdownFileToHtml(ctx, file, mode, linkBase) {
       ctx.htmlMap.set(file.path, rel2);
     }
     const content = stripFrontmatter(await ctx.app.vault.read(file));
-    let htmlBody = markdownToHtml(content);
+    let htmlBody = await markdownToHtml(content, { darkMode: ctx.darkMode });
     htmlBody = await rewriteMarkdownHtmlAssets(ctx, file, htmlBody, mode, linkBase);
     if (mode === "inline") {
       return htmlBody;
@@ -16603,12 +16657,12 @@ async function buildMarkdownPreview(ctx, file) {
   const raw = stripFrontmatter(await ctx.app.vault.read(file));
   const previewSource = raw.slice(0, 2e3);
   const text2 = buildPreviewText(raw);
-  let html = markdownToHtml(previewSource);
+  let html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode });
   try {
     html = await rewriteMarkdownHtmlAssets(ctx, file, html, "inline", "canvas");
   } catch (error) {
     console.error(`[canvas-exporter] Vorschau-Render fehlgeschlagen f\xFCr ${file.path}`, error);
-    html = markdownToHtml(previewSource);
+    html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode });
   }
   return { text: text2, html };
 }
@@ -16960,13 +17014,10 @@ var CanvasExporterPlugin = class extends import_obsidian.Plugin {
       return;
     }
     try {
-      console.log("[canvas-exporter] Starte Export", { canvas: file.path, outputDir: this.settings.outputDir });
       const canvasColors = this.readCanvasPaletteColors();
       const result = await exportCanvasPackage(this.app, file, { ...this.settings, canvasColors });
-      console.log("[canvas-exporter] Paket vorbereitet", { folderPath: result.folderPath, nodes: result.data.nodes.length, edges: result.data.edges.length });
-      const html = convertCanvasToHtml(result.data, result.options);
+      const html = await convertCanvasToHtml(result.data, result.options);
       await this.writeIndexFile(result.folderPath, html);
-      console.log("[canvas-exporter] index.html geschrieben", { folderPath: result.folderPath });
       new import_obsidian.Notice(`Canvas-Paket exportiert: ${result.folderPath}`, 6e3);
     } catch (error) {
       console.error("[canvas-exporter] Export fehlgeschlagen", error);

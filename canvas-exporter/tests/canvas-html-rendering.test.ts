@@ -1,9 +1,18 @@
 import assert from "node:assert/strict";
 import { buildMarkdownDocumentHtml, CanvasData, convertCanvasToHtml } from "../src/converter";
 
-function test(name: string, fn: () => void): void {
+function test(name: string, fn: () => Promise<void> | void): Promise<void> | void {
   try {
-    fn();
+    const result = fn();
+    if (result && typeof (result as Promise<void>).then === "function") {
+      return (result as Promise<void>).then(
+        () => console.log(`PASS ${name}`),
+        (error) => {
+          console.error(`FAIL ${name}`);
+          throw error;
+        },
+      );
+    }
     console.log(`PASS ${name}`);
   } catch (error) {
     console.error(`FAIL ${name}`);
@@ -16,7 +25,8 @@ const baseOptions = {
   title: "Test Canvas",
 };
 
-test("renders markdown file nodes with title link and preview", () => {
+(async () => {
+await test("renders markdown file nodes with title link and preview", async () => {
   const data: CanvasData = {
     name: "Test",
     nodes: [
@@ -36,13 +46,13 @@ test("renders markdown file nodes with title link and preview", () => {
     edges: [],
   };
 
-  const html = convertCanvasToHtml(data, baseOptions);
+  const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /class="md-card"/);
   assert.match(html, /href="assets\/files\/notiz\.html"/);
   assert.match(html, /class="md-card-preview"><p>Vorschau<\/p>/);
 });
 
-test("renders pdf nodes with viewer link and iframe", () => {
+await test("renders pdf nodes with viewer link and iframe", async () => {
   const data: CanvasData = {
     name: "Test",
     nodes: [
@@ -62,13 +72,13 @@ test("renders pdf nodes with viewer link and iframe", () => {
     edges: [],
   };
 
-  const html = convertCanvasToHtml(data, baseOptions);
+  const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /class="node file pdf"/);
   assert.match(html, /class="pdf-title-link" href="assets\/files\/dokument-viewer\.html"/);
   assert.match(html, /<iframe src="assets\/files\/dokument\.pdf"/);
 });
 
-test("renders canvas text nodes with markdown content", () => {
+await test("renders canvas text nodes with markdown content", async () => {
   const data: CanvasData = {
     name: "Test",
     nodes: [
@@ -85,24 +95,24 @@ test("renders canvas text nodes with markdown content", () => {
     edges: [],
   };
 
-  const html = convertCanvasToHtml(data, baseOptions);
+  const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /<strong>starker<\/strong>/);
   assert.match(html, /class="node text"/);
 });
 
-test("renders standalone markdown documents with wrapper and title", () => {
+await test("renders standalone markdown documents with wrapper and title", () => {
   const html = buildMarkdownDocumentHtml("Dokument", "<p>Inhalt</p>", true);
   assert.match(html, /<title>Dokument<\/title>/);
   assert.match(html, /<main class="md-page">/);
   assert.match(html, /<p>Inhalt<\/p>/);
 });
 
-test("escapes markdown document titles", () => {
+await test("escapes markdown document titles", () => {
   const html = buildMarkdownDocumentHtml('A & B <Test>', "<p>X</p>", false);
   assert.match(html, /<title>A &amp; B &lt;Test&gt;<\/title>/);
 });
 
-test("renders link nodes with preview iframe and direct-open action", () => {
+await test("renders link nodes with preview iframe and direct-open action", async () => {
   const data: CanvasData = {
     name: "Test",
     nodes: [
@@ -122,7 +132,7 @@ test("renders link nodes with preview iframe and direct-open action", () => {
     edges: [],
   };
 
-  const html = convertCanvasToHtml(data, baseOptions);
+  const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /class="node link"/);
   assert.match(html, /class="link-preview-title" href="assets\/files\/openai\.html"/);
   assert.doesNotMatch(html, /link-preview-action/);
@@ -135,7 +145,7 @@ test("renders link nodes with preview iframe and direct-open action", () => {
   assert.doesNotMatch(html, /class="link-meta"/);
 });
 
-test("renders empty link nodes with fallback text", () => {
+await test("renders empty link nodes with fallback text", async () => {
   const data: CanvasData = {
     name: "Test",
     nodes: [
@@ -151,11 +161,11 @@ test("renders empty link nodes with fallback text", () => {
     edges: [],
   };
 
-  const html = convertCanvasToHtml(data, baseOptions);
+  const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /Leerer Link-Knoten/);
 });
 
-test("renders empty generic file nodes with fallback text", () => {
+await test("renders empty generic file nodes with fallback text", async () => {
   const data: CanvasData = {
     name: "Test",
     nodes: [
@@ -171,11 +181,11 @@ test("renders empty generic file nodes with fallback text", () => {
     edges: [],
   };
 
-  const html = convertCanvasToHtml(data, baseOptions);
+  const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /Leerer Datei-Knoten/);
 });
 
-test("injects custom canvas color variables into the document", () => {
+await test("injects custom canvas color variables into the document", async () => {
   const data: CanvasData = {
     name: "Farben",
     nodes: [
@@ -193,7 +203,7 @@ test("injects custom canvas color variables into the document", () => {
     edges: [],
   };
 
-  const html = convertCanvasToHtml(data, {
+  const html = await convertCanvasToHtml(data, {
     ...baseOptions,
     canvasColors: { "4": "rgb(12, 34, 56)" },
   });
@@ -203,14 +213,14 @@ test("injects custom canvas color variables into the document", () => {
   assert.match(html, /var\(--canvas-color-4-bg, /);
 });
 
-test("renders default canvas bounds for empty canvases", () => {
-  const html = convertCanvasToHtml({ name: "Leer", nodes: [], edges: [] }, baseOptions);
+await test("renders default canvas bounds for empty canvases", async () => {
+  const html = await convertCanvasToHtml({ name: "Leer", nodes: [], edges: [] }, baseOptions);
   assert.match(html, /id="canvas"/);
   assert.match(html, /width: 1200px;/);
   assert.match(html, /height: 800px;/);
 });
 
-test("renders page header counts for nodes and edges", () => {
+await test("renders page header counts for nodes and edges", async () => {
   const data: CanvasData = {
     name: "Header",
     nodes: [
@@ -222,12 +232,12 @@ test("renders page header counts for nodes and edges", () => {
     ],
   };
 
-  const html = convertCanvasToHtml(data, baseOptions);
+  const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /<h1>Test Canvas<\/h1>/);
   assert.match(html, /2 Knoten · 1 Verbindungen/);
 });
 
-test("renders edge marker and line style metadata into canvas script", () => {
+await test("renders edge marker and line style metadata into canvas script", async () => {
   const data: CanvasData = {
     name: "Edges",
     nodes: [
@@ -250,7 +260,7 @@ test("renders edge marker and line style metadata into canvas script", () => {
     ],
   };
 
-  const html = convertCanvasToHtml(data, baseOptions);
+  const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /"fromEnd":"circle"/);
   assert.match(html, /"toEnd":"diamond"/);
   assert.match(html, /"lineStyle":"dashed"/);
@@ -259,3 +269,4 @@ test("renders edge marker and line style metadata into canvas script", () => {
   assert.match(html, /marker-start/);
   assert.match(html, /marker-end/);
 });
+})();
