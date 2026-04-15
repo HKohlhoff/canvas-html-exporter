@@ -1,5 +1,6 @@
 import { App, normalizePath, TAbstractFile, TFile } from "obsidian";
 import { buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markdownToHtml } from "./converter";
+import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-helpers";
 
 export type ExportSettings = {
   darkMode: boolean;
@@ -662,104 +663,6 @@ function resolveLinkedVaultFile(app: App, sourceFile: TFile, target: string): TA
 
 function isExternalLink(value: string): boolean {
   return /^(https?:|mailto:|file:)/i.test(value);
-}
-
-function shouldRewriteInternalTarget(target: string): boolean {
-  const cleaned = target.trim();
-  if (!cleaned) return false;
-  if (isExternalLink(cleaned)) return false;
-  if (cleaned.startsWith("#")) return false;
-
-  const normalized = normalizeExportHref(cleaned);
-  if (normalized.startsWith("assets/files/") || normalized.startsWith("assets/images/")) {
-    return false;
-  }
-
-  return true;
-}
-
-function normalizeCanvasData(input: unknown, fallbackName: string): CanvasData {
-  const raw = (input && typeof input === "object") ? input as Record<string, unknown> : {};
-
-  const nodes = Array.isArray(raw.nodes)
-    ? raw.nodes
-        .filter((item) => item && typeof item === "object")
-        .map((item) => normalizeCanvasNode(item as Record<string, unknown>))
-        .filter((node): node is CanvasNode => node !== null)
-    : [];
-
-  const edges = Array.isArray(raw.edges)
-    ? raw.edges
-        .filter((item) => item && typeof item === "object")
-        .map((item) => normalizeCanvasEdge(item as Record<string, unknown>))
-        .filter((edge): edge is CanvasData["edges"][number] => edge !== null)
-    : [];
-
-  const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : fallbackName;
-
-  return { nodes, edges, name };
-}
-
-function normalizeCanvasNode(input: Record<string, unknown>): CanvasNode | null {
-  const id = typeof input.id === "string" && input.id.trim() ? input.id.trim() : "";
-  if (!id) return null;
-
-  const type = typeof input.type === "string" ? input.type : "text";
-  const x = toFiniteNumber(input.x);
-  const y = toFiniteNumber(input.y);
-  const width = toFiniteNumber(input.width);
-  const height = toFiniteNumber(input.height);
-  const text = typeof input.text === "string" ? input.text : undefined;
-  const label = typeof input.label === "string" ? input.label : undefined;
-  const file = typeof input.file === "string" ? input.file : undefined;
-  const url = typeof input.url === "string" ? input.url : undefined;
-  const color =
-    typeof input.color === "string" || typeof input.color === "number"
-      ? String(input.color).trim()
-      : undefined;
-
-  return {
-    id,
-    type,
-    x,
-    y,
-    width,
-    height,
-    text,
-    label,
-    file,
-    url,
-    color: color || undefined,
-  };
-}
-
-function normalizeCanvasEdge(input: Record<string, unknown>): CanvasData["edges"][number] | null {
-  const fromNode = typeof input.fromNode === "string" && input.fromNode.trim() ? input.fromNode.trim() : "";
-  const toNode = typeof input.toNode === "string" && input.toNode.trim() ? input.toNode.trim() : "";
-  if (!fromNode || !toNode) return null;
-
-  const id = typeof input.id === "string" ? input.id : undefined;
-  const fromSide = typeof input.fromSide === "string" ? input.fromSide : undefined;
-  const toSide = typeof input.toSide === "string" ? input.toSide : undefined;
-  const label = typeof input.label === "string" ? input.label : undefined;
-  const color =
-    typeof input.color === "string" || typeof input.color === "number"
-      ? String(input.color).trim()
-      : undefined;
-
-  return {
-    id,
-    fromNode,
-    fromSide,
-    toNode,
-    toSide,
-    label,
-    color: color || undefined,
-  };
-}
-
-function toFiniteNumber(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 function parsedTargetSection(target: string): string | null {

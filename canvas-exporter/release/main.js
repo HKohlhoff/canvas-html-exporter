@@ -15452,6 +15452,100 @@ function escapeAttribute(text2) {
 
 // src/exporter.ts
 var import_obsidian = require("obsidian");
+
+// src/exporter-helpers.ts
+function normalizeSimplePath(value) {
+  return value.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\.\//, "");
+}
+function normalizeExportHref(href) {
+  return normalizeSimplePath(href).replace(/^\/+/, "");
+}
+function isExternalLink(value) {
+  return /^(https?:|mailto:|file:)/i.test(value);
+}
+function shouldRewriteInternalTarget(target) {
+  const cleaned = target.trim();
+  if (!cleaned)
+    return false;
+  if (isExternalLink(cleaned))
+    return false;
+  if (cleaned.startsWith("#"))
+    return false;
+  const normalized = normalizeExportHref(cleaned);
+  if (normalized.startsWith("assets/files/") || normalized.startsWith("assets/images/")) {
+    return false;
+  }
+  return true;
+}
+function normalizeCanvasData(input, fallbackName) {
+  const raw = input && typeof input === "object" ? input : {};
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.filter((item) => item && typeof item === "object").map((item) => normalizeCanvasNode(item)).filter((node) => node !== null) : [];
+  const edges = Array.isArray(raw.edges) ? raw.edges.filter((item) => item && typeof item === "object").map((item) => normalizeCanvasEdge(item)).filter((edge) => edge !== null) : [];
+  const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : fallbackName;
+  return { nodes, edges, name };
+}
+function normalizeCanvasNode(input) {
+  const id = typeof input.id === "string" && input.id.trim() ? input.id.trim() : "";
+  if (!id)
+    return null;
+  const type = typeof input.type === "string" ? input.type : "text";
+  const x = toFiniteNumber(input.x);
+  const y = toFiniteNumber(input.y);
+  const width = toFiniteNumber(input.width);
+  const height = toFiniteNumber(input.height);
+  const text2 = typeof input.text === "string" ? input.text : void 0;
+  const label = typeof input.label === "string" ? input.label : void 0;
+  const file = typeof input.file === "string" ? input.file : void 0;
+  const url = typeof input.url === "string" ? input.url : void 0;
+  const color = typeof input.color === "string" || typeof input.color === "number" ? String(input.color).trim() : void 0;
+  return {
+    id,
+    type,
+    x,
+    y,
+    width,
+    height,
+    text: text2,
+    label,
+    file,
+    url,
+    color: color || void 0
+  };
+}
+function normalizeCanvasEdge(input) {
+  const fromNode = typeof input.fromNode === "string" && input.fromNode.trim() ? input.fromNode.trim() : "";
+  const toNode3 = typeof input.toNode === "string" && input.toNode.trim() ? input.toNode.trim() : "";
+  if (!fromNode || !toNode3)
+    return null;
+  const id = typeof input.id === "string" ? input.id : void 0;
+  const fromSide = typeof input.fromSide === "string" ? input.fromSide : void 0;
+  const toSide = typeof input.toSide === "string" ? input.toSide : void 0;
+  const label = typeof input.label === "string" ? input.label : void 0;
+  const color = typeof input.color === "string" || typeof input.color === "number" ? String(input.color).trim() : void 0;
+  return {
+    id,
+    fromNode,
+    fromSide,
+    toNode: toNode3,
+    toSide,
+    label,
+    color: color || void 0
+  };
+}
+function toFiniteNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return 0;
+}
+
+// src/exporter.ts
 function stripFrontmatter(markdown) {
   const normalized = markdown.replace(/\r\n/g, "\n");
   if (!normalized.startsWith("---\n")) {
@@ -15463,7 +15557,7 @@ function stripFrontmatter(markdown) {
   }
   return normalized.slice(end + 5).replace(/^\n+/, "");
 }
-function normalizeExportHref(href) {
+function normalizeExportHref2(href) {
   return (0, import_obsidian.normalizePath)(href).replace(/^\/+/, "");
 }
 async function exportCanvasPackage(app, canvasFile, settings) {
@@ -15543,7 +15637,7 @@ async function prepareNode(ctx, node) {
       exportHtmlPath = await exportMarkdownNote(ctx, file);
       if (exportHtmlPath) {
         const outputName = exportHtmlPath.split("/").pop() || exportHtmlPath;
-        canvasHref = normalizeExportHref(`assets/files/${outputName}`);
+        canvasHref = normalizeExportHref2(`assets/files/${outputName}`);
       }
     } catch (error) {
       console.error(`[canvas-exporter] Markdown-Seitenexport fehlgeschlagen f\xFCr ${file.path}`, error);
@@ -15592,7 +15686,7 @@ async function prepareNode(ctx, node) {
 <body><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
 </html>`;
     await writeTextFile(ctx.app, viewerPath, viewerHtml);
-    const canvasHref = normalizeExportHref(`assets/files/${viewerName}`);
+    const canvasHref = normalizeExportHref2(`assets/files/${viewerName}`);
     return {
       ...node,
       displayName: file.name,
@@ -15665,7 +15759,7 @@ async function renderMarkdownFileToHtml(ctx, file, mode, linkBase) {
   if (mode === "page" && cached)
     return cached;
   if (activeStack.has(file.path)) {
-    return mode === "page" ? normalizeExportHref(ctx.htmlMap.get(file.path) || toExportRelativePath(`${ctx.assetsFilesDir}/${uniqueOutputName(ctx, file.basename, "html")}`, ctx.outputRoot)) : "";
+    return mode === "page" ? normalizeExportHref2(ctx.htmlMap.get(file.path) || toExportRelativePath(`${ctx.assetsFilesDir}/${uniqueOutputName(ctx, file.basename, "html")}`, ctx.outputRoot)) : "";
   }
   activeStack.add(file.path);
   try {
@@ -15674,7 +15768,7 @@ async function renderMarkdownFileToHtml(ctx, file, mode, linkBase) {
     if (mode === "page") {
       const outputName = uniqueOutputName(ctx, file.basename, "html");
       outputPath = (0, import_obsidian.normalizePath)(`${ctx.assetsFilesDir}/${outputName}`);
-      rel2 = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
+      rel2 = normalizeExportHref2(toExportRelativePath(outputPath, ctx.outputRoot));
       ctx.htmlMap.set(file.path, rel2);
     }
     const content = stripFrontmatter(await ctx.app.vault.read(file));
@@ -15803,7 +15897,7 @@ async function resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, al
     return null;
   if (!shouldRewriteInternalTarget(target))
     return null;
-  if (isExternalLink(target))
+  if (isExternalLink2(target))
     return { href: target, found: true, kind: "external" };
   if (target.startsWith("#"))
     return { href: target, found: true, kind: "anchor" };
@@ -15835,11 +15929,11 @@ async function resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, al
   };
 }
 function getHrefForMarkdownPage(currentHtmlPath, targetHtmlPath) {
-  const current = normalizeExportHref(currentHtmlPath || "");
-  const target = normalizeExportHref(targetHtmlPath);
+  const current = normalizeExportHref2(currentHtmlPath || "");
+  const target = normalizeExportHref2(targetHtmlPath);
   const currentDir = current.split("/").slice(0, -1).join("/");
   const relative = currentDir ? pathRelative(currentDir, target) : target;
-  return normalizeExportHref(relative);
+  return normalizeExportHref2(relative);
 }
 function pathRelative(fromDir, toPath) {
   const fromParts = (0, import_obsidian.normalizePath)(fromDir).split("/").filter(Boolean);
@@ -15943,80 +16037,8 @@ function resolveLinkedVaultFile(app, sourceFile, target) {
   const byName = app.metadataCache.getFirstLinkpathDest(normalizedTarget, sourceFile.path) ?? app.metadataCache.getFirstLinkpathDest(basename, sourceFile.path);
   return byName ?? null;
 }
-function isExternalLink(value) {
+function isExternalLink2(value) {
   return /^(https?:|mailto:|file:)/i.test(value);
-}
-function shouldRewriteInternalTarget(target) {
-  const cleaned = target.trim();
-  if (!cleaned)
-    return false;
-  if (isExternalLink(cleaned))
-    return false;
-  if (cleaned.startsWith("#"))
-    return false;
-  const normalized = normalizeExportHref(cleaned);
-  if (normalized.startsWith("assets/files/") || normalized.startsWith("assets/images/")) {
-    return false;
-  }
-  return true;
-}
-function normalizeCanvasData(input, fallbackName) {
-  const raw = input && typeof input === "object" ? input : {};
-  const nodes = Array.isArray(raw.nodes) ? raw.nodes.filter((item) => item && typeof item === "object").map((item) => normalizeCanvasNode(item)).filter((node) => node !== null) : [];
-  const edges = Array.isArray(raw.edges) ? raw.edges.filter((item) => item && typeof item === "object").map((item) => normalizeCanvasEdge(item)).filter((edge) => edge !== null) : [];
-  const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : fallbackName;
-  return { nodes, edges, name };
-}
-function normalizeCanvasNode(input) {
-  const id = typeof input.id === "string" && input.id.trim() ? input.id.trim() : "";
-  if (!id)
-    return null;
-  const type = typeof input.type === "string" ? input.type : "text";
-  const x = toFiniteNumber(input.x);
-  const y = toFiniteNumber(input.y);
-  const width = toFiniteNumber(input.width);
-  const height = toFiniteNumber(input.height);
-  const text2 = typeof input.text === "string" ? input.text : void 0;
-  const label = typeof input.label === "string" ? input.label : void 0;
-  const file = typeof input.file === "string" ? input.file : void 0;
-  const url = typeof input.url === "string" ? input.url : void 0;
-  const color = typeof input.color === "string" || typeof input.color === "number" ? String(input.color).trim() : void 0;
-  return {
-    id,
-    type,
-    x,
-    y,
-    width,
-    height,
-    text: text2,
-    label,
-    file,
-    url,
-    color: color || void 0
-  };
-}
-function normalizeCanvasEdge(input) {
-  const fromNode = typeof input.fromNode === "string" && input.fromNode.trim() ? input.fromNode.trim() : "";
-  const toNode3 = typeof input.toNode === "string" && input.toNode.trim() ? input.toNode.trim() : "";
-  if (!fromNode || !toNode3)
-    return null;
-  const id = typeof input.id === "string" ? input.id : void 0;
-  const fromSide = typeof input.fromSide === "string" ? input.fromSide : void 0;
-  const toSide = typeof input.toSide === "string" ? input.toSide : void 0;
-  const label = typeof input.label === "string" ? input.label : void 0;
-  const color = typeof input.color === "string" || typeof input.color === "number" ? String(input.color).trim() : void 0;
-  return {
-    id,
-    fromNode,
-    fromSide,
-    toNode: toNode3,
-    toSide,
-    label,
-    color: color || void 0
-  };
-}
-function toFiniteNumber(value) {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 function parsedTargetSection(target) {
   const hashIndex = target.indexOf("#");

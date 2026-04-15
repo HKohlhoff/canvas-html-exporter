@@ -10,5 +10,5 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "include": ["src/converter.ts", "tests/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
 }

@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "build": "node build.mjs",
-    "test": "npm run test:math && npm run test:markdown",
+    "test": "npm run test:math && npm run test:markdown && npm run test:export",
+    "test:export": "tsc -p tsconfig.tests.json && node .test-build/tests/exporter-helpers.test.js",
     "test:math": "tsc -p tsconfig.tests.json && node .test-build/tests/math-rendering.test.js",
     "test:markdown": "tsc -p tsconfig.tests.json && node .test-build/tests/markdown-rendering.test.js",
     "dev": "node build.mjs --watch",
