@@ -48,3 +48,27 @@ test("renders fenced code blocks without inline markdown parsing", () => {
   assert.match(html, /<pre><code class="language-js">\*\*bold\*\*<\/code><\/pre>/);
   assert.doesNotMatch(html, /<strong>/);
 });
+
+test("renders unordered lists", () => {
+  const html = markdownToHtml("- Eins\n- Zwei");
+  assert.match(html, /<ul><li>Eins<\/li><li>Zwei<\/li><\/ul>/);
+});
+
+test("renders ordered lists", () => {
+  const html = markdownToHtml("1. Alpha\n2. Beta");
+  assert.match(html, /<ol><li>Alpha<\/li><li>Beta<\/li><\/ol>/);
+});
+
+test("renders markdown tables", () => {
+  const html = markdownToHtml("| A | B |\n| --- | ---: |\n| x | y |");
+  assert.match(html, /<table>/);
+  assert.match(html, /<th>A<\/th>/);
+  assert.match(html, /<th style="text-align:right">B<\/th>/);
+  assert.match(html, /<td>x<\/td>/);
+  assert.match(html, /<td style="text-align:right">y<\/td>/);
+});
+
+test("renders plain blockquotes when no callout syntax is present", () => {
+  const html = markdownToHtml("> Zitat");
+  assert.match(html, /<blockquote><p>Zitat<\/p><\/blockquote>/);
+});
