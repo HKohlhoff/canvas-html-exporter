@@ -5,7 +5,9 @@
   "main": "main.js",
   "scripts": {
     "build": "node build.mjs",
+    "test": "npm run test:math && npm run test:markdown",
     "test:math": "tsc -p tsconfig.tests.json && node .test-build/tests/math-rendering.test.js",
+    "test:markdown": "tsc -p tsconfig.tests.json && node .test-build/tests/markdown-rendering.test.js",
     "dev": "node build.mjs --watch",
     "build:prod": "node build.mjs --production",
     "dev:prod": "node build.mjs --watch --production"

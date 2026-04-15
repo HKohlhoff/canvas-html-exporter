@@ -56,6 +56,7 @@ Pro Canvas wird ein portables Export-Paket erzeugt. Je nach Inhalt enthält es:
 ```bash
 npm install
 npm run build
+npm test
 ```
 
 Für die Entwicklung mit Watch-Modus:
