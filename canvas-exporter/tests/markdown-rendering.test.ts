@@ -124,6 +124,16 @@ await test("highlights tex and latex fences with shiki", async () => {
   assert.match(latexHtml, /section\{Intro\}/);
 });
 
+await test("supports alternate highlighting themes", async () => {
+  const vscodeHtml = await markdownToHtml("```sql\nselect 1;\n```", { darkMode: false, highlightingTheme: "vscode" });
+  const catppuccinHtml = await markdownToHtml("```sql\nselect 1;\n```", { darkMode: false, highlightingTheme: "catppuccin" });
+  const materialHtml = await markdownToHtml("```sql\nselect 1;\n```", { darkMode: false, highlightingTheme: "material" });
+
+  assert.match(vscodeHtml, /class="shiki light-plus"/);
+  assert.match(catppuccinHtml, /class="shiki catppuccin-latte"/);
+  assert.match(materialHtml, /class="shiki material-theme-lighter"/);
+});
+
 await test("renders unordered lists", async () => {
   const html = await markdownToHtml("- Eins\n- Zwei");
   assert.match(html, /<ul><li>Eins<\/li><li>Zwei<\/li><\/ul>/);

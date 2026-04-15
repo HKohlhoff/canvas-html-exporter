@@ -233,7 +233,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="${EXPORTER_SIGNATURE}">
-  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-${ctx.highlightingTheme === "github" ? "github" : "shiki"}">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-${ctx.highlightingTheme || "shiki"}">
   <title>${escapeHtmlAttr(file.basename)}</title>
   <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>html,body{margin:0;padding:0;height:100%;}iframe{display:block;width:100%;height:100vh;border:none;}</style>
@@ -856,7 +856,7 @@ function buildLinkDocumentHtml(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="${EXPORTER_SIGNATURE}">
-  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-${highlightingTheme === "github" ? "github" : "shiki"}">
+  <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-${highlightingTheme || "shiki"}">
   <title>${safeTitle}</title>
   <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>

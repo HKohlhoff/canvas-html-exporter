@@ -58,8 +58,7 @@ export const EXPORTER_SIGNATURE = `canvas-exporter v${EXPORTER_VERSION}`;
 export type HighlightingThemeChoice = "shiki" | "github" | "vscode" | "catppuccin" | "material";
 
 function buildExporterBuildMeta(highlightingTheme: HighlightingThemeChoice | undefined): string {
-  const theme = highlightingTheme === "github" ? "github" : "shiki";
-  return `${EXPORTER_VERSION}-${theme}`;
+  return `${EXPORTER_VERSION}-${highlightingTheme || "shiki"}`;
 }
 
 type NodePalette = {
@@ -118,12 +117,11 @@ async function getShikiHighlighter(): Promise<Highlighter> {
   if (!shikiHighlighterPromise) {
     shikiHighlighterPromise = (async () => {
       return getSingletonHighlighter({
-        themes: [
-          SHIKI_THEMES.shiki.dark,
-          SHIKI_THEMES.shiki.light,
-          SHIKI_THEMES.github.dark,
-          SHIKI_THEMES.github.light,
-        ],
+        themes: Array.from(
+          new Set(
+            Object.values(SHIKI_THEMES).flatMap((pair) => [pair.dark, pair.light]),
+          ),
+        ),
       });
     })();
   }
