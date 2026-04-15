@@ -26,6 +26,12 @@ test("renders collapsible callouts as details blocks", () => {
   assert.match(html, /Versteckter Inhalt/);
 });
 
+test("renders open collapsible callouts with open attribute", () => {
+  const html = markdownToHtml("> [!info]+ Offen\n> Sichtbarer Inhalt");
+  assert.match(html, /<details class="callout callout-info" open>/);
+  assert.match(html, /Sichtbarer Inhalt/);
+});
+
 test("renders markdown links as anchors", () => {
   const html = markdownToHtml("[OpenAI](https://openai.com)");
   assert.match(html, /<a href="https:\/\/openai\.com"/);
@@ -71,6 +77,16 @@ test("renders markdown tables", () => {
 test("renders plain blockquotes when no callout syntax is present", () => {
   const html = markdownToHtml("> Zitat");
   assert.match(html, /<blockquote><p>Zitat<\/p><\/blockquote>/);
+});
+
+test("renders horizontal rules", () => {
+  const html = markdownToHtml("Vorher\n\n---\n\nNachher");
+  assert.match(html, /<hr>/);
+});
+
+test("renders line breaks inside paragraphs", () => {
+  const html = markdownToHtml("Erste Zeile\nZweite Zeile");
+  assert.match(html, /<p>Erste Zeile<br>\nZweite Zeile<\/p>/);
 });
 
 test("escapes special characters in markdown image attributes", () => {

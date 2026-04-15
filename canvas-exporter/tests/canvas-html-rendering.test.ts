@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { CanvasData, convertCanvasToHtml } from "../src/converter";
+import { buildMarkdownDocumentHtml, CanvasData, convertCanvasToHtml } from "../src/converter";
 
 function test(name: string, fn: () => void): void {
   try {
@@ -88,4 +88,80 @@ test("renders canvas text nodes with markdown content", () => {
   const html = convertCanvasToHtml(data, baseOptions);
   assert.match(html, /<strong>starker<\/strong>/);
   assert.match(html, /class="node"/);
+});
+
+test("renders standalone markdown documents with wrapper and title", () => {
+  const html = buildMarkdownDocumentHtml("Dokument", "<p>Inhalt</p>", true);
+  assert.match(html, /<title>Dokument<\/title>/);
+  assert.match(html, /<main class="md-page">/);
+  assert.match(html, /<p>Inhalt<\/p>/);
+});
+
+test("escapes markdown document titles", () => {
+  const html = buildMarkdownDocumentHtml('A & B <Test>', "<p>X</p>", false);
+  assert.match(html, /<title>A &amp; B &lt;Test&gt;<\/title>/);
+});
+
+test("renders link nodes as external link chips", () => {
+  const data: CanvasData = {
+    name: "Test",
+    nodes: [
+      {
+        id: "link1",
+        type: "link",
+        x: 0,
+        y: 0,
+        width: 220,
+        height: 80,
+        label: "OpenAI",
+        url: "https://openai.com/?a=1&b=2",
+      },
+    ],
+    edges: [],
+  };
+
+  const html = convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /class="link-chip"/);
+  assert.match(html, /href="https:\/\/openai\.com\/\?a=1&amp;b=2"/);
+  assert.match(html, />OpenAI<\/a>/);
+});
+
+test("renders empty link nodes with fallback text", () => {
+  const data: CanvasData = {
+    name: "Test",
+    nodes: [
+      {
+        id: "link-empty",
+        type: "link",
+        x: 0,
+        y: 0,
+        width: 200,
+        height: 80,
+      },
+    ],
+    edges: [],
+  };
+
+  const html = convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /Leerer Link-Knoten/);
+});
+
+test("renders empty generic file nodes with fallback text", () => {
+  const data: CanvasData = {
+    name: "Test",
+    nodes: [
+      {
+        id: "file-empty",
+        type: "file",
+        x: 0,
+        y: 0,
+        width: 220,
+        height: 90,
+      },
+    ],
+    edges: [],
+  };
+
+  const html = convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /Leerer Datei-Knoten/);
 });

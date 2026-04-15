@@ -15244,8 +15244,10 @@ function renderInline(text2) {
     escapedDollarStore.push("$");
     return `@@EDOLLAR_${escapedDollarStore.length - 1}@@`;
   });
+  const mediaStore = [];
+  const withMediaPlaceholders = replaceMarkdownMedia(withEscapedDollarPlaceholders, mediaStore);
   const mathStore = [];
-  const withMathPlaceholders = withEscapedDollarPlaceholders.replace(
+  const withMathPlaceholders = withMediaPlaceholders.replace(
     /(?<!\$)\$(?!\$)([^$\n]+?)(?<!\$)\$(?!\$)/g,
     (_match, content) => {
       mathStore.push(renderMath(content.trim(), false));
@@ -15253,12 +15255,6 @@ function renderInline(text2) {
     }
   );
   let html = escapeHtml(withMathPlaceholders);
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt, src) => {
-    return `<img src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}">`;
-  });
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => {
-    return `<a href="${escapeAttribute(href)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-  });
   html = html.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "[[$1|$2]]");
   html = html.replace(/\[\[([^\]]+)\]\]/g, "[[$1]]");
   html = html.replace(/\*\*\*([^*\n]+)\*\*\*/g, "<strong><em>$1</em></strong>");
@@ -15271,6 +15267,9 @@ function renderInline(text2) {
   if (codeStore.length > 0) {
     html = html.replace(/@@CODE_(\d+)@@/g, (_m, idx) => codeStore[parseInt(idx, 10)] ?? "");
   }
+  if (mediaStore.length > 0) {
+    html = html.replace(/@@MEDIA_(\d+)@@/g, (_m, idx) => mediaStore[parseInt(idx, 10)] ?? "");
+  }
   if (escapedDollarStore.length > 0) {
     html = html.replace(/@@EDOLLAR_(\d+)@@/g, (_m, idx) => escapedDollarStore[parseInt(idx, 10)] ?? "$");
   }
@@ -15278,6 +15277,63 @@ function renderInline(text2) {
     html = html.replace(/@@MATH_(\d+)@@/g, (_m, idx) => mathStore[parseInt(idx, 10)] ?? "");
   }
   return html;
+}
+function replaceMarkdownMedia(text2, mediaStore) {
+  let out = "";
+  let i = 0;
+  while (i < text2.length) {
+    const imageMatch = tryParseMarkdownMedia(text2, i, true);
+    if (imageMatch) {
+      mediaStore.push(`<img src="${escapeAttribute(imageMatch.target)}" alt="${escapeAttribute(imageMatch.label)}">`);
+      out += `@@MEDIA_${mediaStore.length - 1}@@`;
+      i = imageMatch.end;
+      continue;
+    }
+    const linkMatch = tryParseMarkdownMedia(text2, i, false);
+    if (linkMatch) {
+      mediaStore.push(
+        `<a href="${escapeAttribute(linkMatch.target)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkMatch.label)}</a>`
+      );
+      out += `@@MEDIA_${mediaStore.length - 1}@@`;
+      i = linkMatch.end;
+      continue;
+    }
+    out += text2[i];
+    i += 1;
+  }
+  return out;
+}
+function tryParseMarkdownMedia(text2, start, isImage) {
+  const prefix = isImage ? "![" : "[";
+  if (!text2.startsWith(prefix, start))
+    return null;
+  const labelStart = start + prefix.length;
+  const labelEnd = text2.indexOf("]", labelStart);
+  if (labelEnd < 0 || text2[labelEnd + 1] !== "(")
+    return null;
+  let depth = 1;
+  let pos = labelEnd + 2;
+  while (pos < text2.length) {
+    const ch = text2[pos];
+    if (ch === "\\") {
+      pos += 2;
+      continue;
+    }
+    if (ch === "(")
+      depth += 1;
+    if (ch === ")") {
+      depth -= 1;
+      if (depth === 0) {
+        return {
+          label: text2.slice(labelStart, labelEnd),
+          target: text2.slice(labelEnd + 2, pos),
+          end: pos + 1
+        };
+      }
+    }
+    pos += 1;
+  }
+  return null;
 }
 function getBounds(nodes) {
   if (nodes.length === 0) {
