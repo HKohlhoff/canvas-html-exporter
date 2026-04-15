@@ -461,6 +461,7 @@ async function rewriteWikiLinks(
     const parsed = parseWikiReference(raw);
     const target = parsed.core;
     if (!target) continue;
+    const embedLabel = getEmbedLabel(parsed.display, parsed.size, targetFileName(target));
 
     const targetFile = resolveLinkedFileForEmbed(ctx, sourceFile, target);
     let replacement = original;
@@ -487,12 +488,12 @@ async function rewriteWikiLinks(
     } else if (isImageExt(targetFile.extension.toLowerCase())) {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, false, mode, linkBase);
       if (resolved) {
-        replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(parsed.display || targetFile.basename || target)}"${embedSizeAttributes(parsed.size)}>`;
+        replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(embedLabel || targetFile.basename || target)}"${embedSizeAttributes(parsed.size)}>`;
       }
     } else {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false, mode, linkBase);
       if (resolved) {
-        replacement = `<a href="${escapeHtmlAttr(resolved.href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlAttr(target)}</a>`;
+        replacement = renderFileEmbed(resolved.href, targetFile, embedLabel || target, parsed.size);
       }
     }
 
@@ -524,8 +525,51 @@ async function rewriteWikiLinks(
 
 function cleanupMarkdownEmbedBlocks(html: string): string {
   return html
-    .replace(/<p>\s*(<div class="md-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "$1")
-    .replace(/<p>([\s\S]*?)<br>\s*(<div class="md-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "<p>$1</p>\n$2");
+    .replace(/<p>\s*(<div class="(?:md|pdf|file)-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "$1")
+    .replace(/<p>([\s\S]*?)<br>\s*(<div class="(?:md|pdf|file)-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "<p>$1</p>\n$2");
+}
+
+function renderFileEmbed(
+  href: string,
+  file: TFile,
+  label: string,
+  size: { width?: number; height?: number } | null,
+): string {
+  const safeHref = escapeHtmlAttr(href);
+  const safeLabel = escapeHtmlAttr(label || file.basename || file.name);
+
+  if (file.extension.toLowerCase() === "pdf") {
+    const sizeAttrs = embedSizeAttributes(size);
+    return `<div class="pdf-embed-block"><a class="pdf-title-link" href="${safeHref}" target="_blank" rel="noopener noreferrer"><div class="pdf-title">${safeLabel}</div></a><iframe src="${safeHref}" title="${safeLabel}" loading="lazy"${sizeAttrs}></iframe></div>`;
+  }
+
+  return `<div class="file-embed-block"><a class="file-chip" href="${safeHref}" target="_blank" rel="noopener noreferrer">${safeLabel}</a></div>`;
+}
+
+function getEmbedLabel(
+  display: string | null,
+  size: { width?: number; height?: number } | null,
+  fallback: string,
+): string {
+  const raw = String(display || "").trim();
+  if (!raw) return fallback;
+  if (size && raw.replace(/\s+/g, "") === formatEmbedSize(size)) {
+    return fallback;
+  }
+  return raw;
+}
+
+function formatEmbedSize(size: { width?: number; height?: number } | null): string {
+  if (!size) return "";
+  if (size.width && size.height) return `${size.width}x${size.height}`;
+  if (size.width) return `${size.width}`;
+  return "";
+}
+
+function targetFileName(target: string): string {
+  const cleaned = splitTargetSuffix(normalizeWikiTarget(target)).path;
+  const last = cleaned.split("/").pop() || cleaned;
+  return last || target;
 }
 
 function resolveLinkedFileForEmbed(ctx: MarkdownContext, sourceFile: TFile, target: string): TFile | null {

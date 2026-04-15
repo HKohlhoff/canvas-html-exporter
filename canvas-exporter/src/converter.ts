@@ -385,6 +385,20 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
     .md-embed-block {
       margin: 0.8em 0;
     }
+    .pdf-embed-block {
+      margin: 0.8em 0;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 10px;
+      overflow: hidden;
+      background: ${theme.nodeBackground};
+    }
+    .pdf-embed-block iframe {
+      display: block;
+      width: 100%;
+      min-height: 420px;
+      border: none;
+      background: ${theme.canvasBackground};
+    }
     .md-page {
       max-width: 960px;
       margin: 32px auto;
@@ -643,6 +657,38 @@ export function buildMarkdownDocumentHtml(title: string, bodyHtml: string, darkM
     th, td { border: 1px solid ${theme.canvasBorder}; padding: 8px 10px; text-align: left; }
     .md-embed-block {
       margin: 0.8em 0;
+    }
+    .pdf-embed-block {
+      margin: 0.8em 0;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 10px;
+      overflow: hidden;
+      background: ${theme.nodeBackground};
+    }
+    .pdf-embed-block iframe {
+      display: block;
+      width: 100%;
+      min-height: 420px;
+      border: none;
+      background: ${theme.canvasBackground};
+    }
+    .file-embed-block {
+      margin: 0.8em 0;
+    }
+    .file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+      padding: 0.4em 0.7em;
+      border-radius: 999px;
+      border: 1px solid ${theme.canvasBorder};
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .file-chip:hover {
+      text-decoration: underline;
     }
     .unresolved-link {
       color: #d64545;

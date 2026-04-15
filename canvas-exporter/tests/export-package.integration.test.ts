@@ -384,6 +384,52 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const exportedBlockPage = files.get(exportedBlockPagePath || "");
     assert.match(exportedBlockPage?.text || "", /<p id="block-kern-aussage">Wichtiger Absatz<\/p>/);
   });
+
+  await test("renders pdf and file embeds in exported markdown pages", async () => {
+    const pdf = new Uint8Array([37, 80, 68, 70]).buffer;
+    const zip = new Uint8Array([80, 75, 3, 4]).buffer;
+    const canvasJson = JSON.stringify({
+      name: "Media Export",
+      nodes: [
+        { id: "main", type: "file", x: 0, y: 0, width: 360, height: 220, file: "notes/media.md" },
+      ],
+      edges: [],
+    });
+
+    const { app, files } = createMockApp([
+      { path: "canvases/media.canvas", text: canvasJson },
+      {
+        path: "notes/media.md",
+        text: [
+          "# Medien",
+          "![[manual.pdf|480x320]]",
+          "",
+          "![[archive.zip|Download-Paket]]",
+        ].join("\n"),
+      },
+      { path: "files/manual.pdf", binary: pdf },
+      { path: "files/archive.zip", binary: zip },
+    ]);
+
+    const canvasFile = files.get("canvases/media.canvas") as MockFile;
+    const result = await exportCanvasPackage(app as never, canvasFile as never, {
+      darkMode: true,
+      outputDir: "Canvas-Exports",
+    });
+
+    const mainNode = result.data.nodes.find((node) => node.id === "main");
+    const mainExport = files.get(`Canvas-Exports/media/${mainNode?.exportHtmlPath || ""}`);
+    assert.ok(mainExport);
+
+    const mainHtml = mainExport?.text || "";
+    assert.match(mainHtml, /class="pdf-embed-block"/);
+    assert.match(mainHtml, /<iframe src="\d+_manual\.pdf" title="manual\.pdf" loading="lazy" width="480" height="320"><\/iframe>/);
+    assert.match(mainHtml, /class="file-embed-block"/);
+    assert.match(mainHtml, /class="file-chip" href="\d+_archive\.zip"/);
+    assert.match(mainHtml, />Download-Paket<\/a>/);
+    assert.doesNotMatch(mainHtml, /<p>\s*<div class="pdf-embed-block">/);
+    assert.doesNotMatch(mainHtml, /<p>\s*<div class="file-embed-block">/);
+  });
 })().catch((error) => {
   console.error(error);
   process.exit(1);

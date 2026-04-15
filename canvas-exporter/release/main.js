@@ -14658,6 +14658,20 @@ function convertCanvasToHtml(data, options) {
     .md-embed-block {
       margin: 0.8em 0;
     }
+    .pdf-embed-block {
+      margin: 0.8em 0;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 10px;
+      overflow: hidden;
+      background: ${theme.nodeBackground};
+    }
+    .pdf-embed-block iframe {
+      display: block;
+      width: 100%;
+      min-height: 420px;
+      border: none;
+      background: ${theme.canvasBackground};
+    }
     .md-page {
       max-width: 960px;
       margin: 32px auto;
@@ -14923,6 +14937,38 @@ function buildMarkdownDocumentHtml(title, bodyHtml, darkMode, canvasColors) {
     th, td { border: 1px solid ${theme.canvasBorder}; padding: 8px 10px; text-align: left; }
     .md-embed-block {
       margin: 0.8em 0;
+    }
+    .pdf-embed-block {
+      margin: 0.8em 0;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 10px;
+      overflow: hidden;
+      background: ${theme.nodeBackground};
+    }
+    .pdf-embed-block iframe {
+      display: block;
+      width: 100%;
+      min-height: 420px;
+      border: none;
+      background: ${theme.canvasBackground};
+    }
+    .file-embed-block {
+      margin: 0.8em 0;
+    }
+    .file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+      padding: 0.4em 0.7em;
+      border-radius: 999px;
+      border: 1px solid ${theme.canvasBorder};
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .file-chip:hover {
+      text-decoration: underline;
     }
     .unresolved-link {
       color: #d64545;
@@ -16149,6 +16195,7 @@ async function rewriteWikiLinks(ctx, sourceFile, html, mode, linkBase) {
     const target = parsed.core;
     if (!target)
       continue;
+    const embedLabel = getEmbedLabel(parsed.display, parsed.size, targetFileName(target));
     const targetFile = resolveLinkedFileForEmbed(ctx, sourceFile, target);
     let replacement = original;
     if (!targetFile) {
@@ -16171,12 +16218,12 @@ async function rewriteWikiLinks(ctx, sourceFile, html, mode, linkBase) {
     } else if (isImageExt(targetFile.extension.toLowerCase())) {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, false, mode, linkBase);
       if (resolved) {
-        replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(parsed.display || targetFile.basename || target)}"${embedSizeAttributes(parsed.size)}>`;
+        replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(embedLabel || targetFile.basename || target)}"${embedSizeAttributes(parsed.size)}>`;
       }
     } else {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false, mode, linkBase);
       if (resolved) {
-        replacement = `<a href="${escapeHtmlAttr(resolved.href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlAttr(target)}</a>`;
+        replacement = renderFileEmbed(resolved.href, targetFile, embedLabel || target, parsed.size);
       }
     }
     result = result.replace(original, replacement);
@@ -16201,7 +16248,39 @@ async function rewriteWikiLinks(ctx, sourceFile, html, mode, linkBase) {
   return result;
 }
 function cleanupMarkdownEmbedBlocks(html) {
-  return html.replace(/<p>\s*(<div class="md-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "$1").replace(/<p>([\s\S]*?)<br>\s*(<div class="md-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "<p>$1</p>\n$2");
+  return html.replace(/<p>\s*(<div class="(?:md|pdf|file)-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "$1").replace(/<p>([\s\S]*?)<br>\s*(<div class="(?:md|pdf|file)-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "<p>$1</p>\n$2");
+}
+function renderFileEmbed(href, file, label, size) {
+  const safeHref = escapeHtmlAttr(href);
+  const safeLabel = escapeHtmlAttr(label || file.basename || file.name);
+  if (file.extension.toLowerCase() === "pdf") {
+    const sizeAttrs = embedSizeAttributes(size);
+    return `<div class="pdf-embed-block"><a class="pdf-title-link" href="${safeHref}" target="_blank" rel="noopener noreferrer"><div class="pdf-title">${safeLabel}</div></a><iframe src="${safeHref}" title="${safeLabel}" loading="lazy"${sizeAttrs}></iframe></div>`;
+  }
+  return `<div class="file-embed-block"><a class="file-chip" href="${safeHref}" target="_blank" rel="noopener noreferrer">${safeLabel}</a></div>`;
+}
+function getEmbedLabel(display, size, fallback) {
+  const raw = String(display || "").trim();
+  if (!raw)
+    return fallback;
+  if (size && raw.replace(/\s+/g, "") === formatEmbedSize(size)) {
+    return fallback;
+  }
+  return raw;
+}
+function formatEmbedSize(size) {
+  if (!size)
+    return "";
+  if (size.width && size.height)
+    return `${size.width}x${size.height}`;
+  if (size.width)
+    return `${size.width}`;
+  return "";
+}
+function targetFileName(target) {
+  const cleaned = splitTargetSuffix(normalizeWikiTarget(target)).path;
+  const last = cleaned.split("/").pop() || cleaned;
+  return last || target;
 }
 function resolveLinkedFileForEmbed(ctx, sourceFile, target) {
   const cleaned = splitTargetSuffix(normalizeWikiTarget(target)).path;
