@@ -382,6 +382,9 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       padding: 4px 6px;
       text-align: left;
     }
+    .md-embed-block {
+      margin: 0.8em 0;
+    }
     .md-page {
       max-width: 960px;
       margin: 32px auto;
@@ -638,6 +641,9 @@ export function buildMarkdownDocumentHtml(title: string, bodyHtml: string, darkM
     img { display: block; max-width: 100%; border-radius: 8px; margin: 0.8em 0; }
     table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
     th, td { border: 1px solid ${theme.canvasBorder}; padding: 8px 10px; text-align: left; }
+    .md-embed-block {
+      margin: 0.8em 0;
+    }
     .unresolved-link {
       color: #d64545;
       font-style: italic;
@@ -766,6 +772,7 @@ export function markdownToHtml(markdown: string): string {
   const normalized = markdown.replace(/\r\n?/g, "\n");
   const lines = normalized.split("\n");
   const out: string[] = [];
+  const headingIds = new Map<string, number>();
   let i = 0;
 
   while (i < lines.length) {
@@ -822,7 +829,10 @@ export function markdownToHtml(markdown: string): string {
     const heading = line.match(/^(#{1,6})\s+(.+)$/);
     if (heading) {
       const level = heading[1].length;
-      out.push(`<h${level}>${renderInline(heading[2].trim())}</h${level}>`);
+      const headingText = heading[2].trim();
+      const headingId = buildHeadingId(headingText, headingIds);
+      const idAttr = headingId ? ` id="${escapeAttribute(headingId)}"` : "";
+      out.push(`<h${level}${idAttr}>${renderInline(headingText)}</h${level}>`);
       i += 1;
       continue;
     }
@@ -1117,6 +1127,26 @@ function getBounds(nodes: CanvasNode[]): { width: number; height: number; offset
     offsetX,
     offsetY,
   };
+}
+
+function buildHeadingId(text: string, seen: Map<string, number>): string {
+  const base = normalizeHeadingId(text);
+  if (!base) return "";
+  const current = seen.get(base) ?? 0;
+  seen.set(base, current + 1);
+  return current === 0 ? base : `${base}-${current}`;
+}
+
+function normalizeHeadingId(value: string): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-]+|[-]+$/g, "");
 }
 
 function getNodePalette(color: string | undefined, darkMode: boolean): NodePalette {

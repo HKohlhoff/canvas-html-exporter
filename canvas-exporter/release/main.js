@@ -14655,6 +14655,9 @@ function convertCanvasToHtml(data, options) {
       padding: 4px 6px;
       text-align: left;
     }
+    .md-embed-block {
+      margin: 0.8em 0;
+    }
     .md-page {
       max-width: 960px;
       margin: 32px auto;
@@ -14918,6 +14921,9 @@ function buildMarkdownDocumentHtml(title, bodyHtml, darkMode, canvasColors) {
     img { display: block; max-width: 100%; border-radius: 8px; margin: 0.8em 0; }
     table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
     th, td { border: 1px solid ${theme.canvasBorder}; padding: 8px 10px; text-align: left; }
+    .md-embed-block {
+      margin: 0.8em 0;
+    }
     .unresolved-link {
       color: #d64545;
       font-style: italic;
@@ -15019,6 +15025,7 @@ function markdownToHtml(markdown) {
   const normalized = markdown.replace(/\r\n?/g, "\n");
   const lines = normalized.split("\n");
   const out = [];
+  const headingIds = /* @__PURE__ */ new Map();
   let i = 0;
   while (i < lines.length) {
     const line = lines[i] ?? "";
@@ -15068,7 +15075,10 @@ function markdownToHtml(markdown) {
     const heading = line.match(/^(#{1,6})\s+(.+)$/);
     if (heading) {
       const level = heading[1].length;
-      out.push(`<h${level}>${renderInline(heading[2].trim())}</h${level}>`);
+      const headingText = heading[2].trim();
+      const headingId = buildHeadingId(headingText, headingIds);
+      const idAttr = headingId ? ` id="${escapeAttribute(headingId)}"` : "";
+      out.push(`<h${level}${idAttr}>${renderInline(headingText)}</h${level}>`);
       i += 1;
       continue;
     }
@@ -15362,6 +15372,17 @@ function getBounds(nodes) {
     offsetX,
     offsetY
   };
+}
+function buildHeadingId(text2, seen) {
+  const base = normalizeHeadingId(text2);
+  if (!base)
+    return "";
+  const current = seen.get(base) ?? 0;
+  seen.set(base, current + 1);
+  return current === 0 ? base : `${base}-${current}`;
+}
+function normalizeHeadingId(value) {
+  return String(value || "").trim().toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^[-]+|[-]+$/g, "");
 }
 function buildCanvasColorVariables(canvasColors) {
   const parts = [];
@@ -16002,6 +16023,8 @@ async function rewriteWikiLinks(ctx, sourceFile, html, mode, linkBase) {
         replacement = parsedTargetSection(parsed.core) ? await exportMarkdownSectionInline(ctx, targetFile, parsedTargetSection(parsed.core)) : await exportMarkdownContentInline(ctx, targetFile);
         if (!replacement) {
           replacement = `<span class="unresolved-link">Nicht aufl\xF6sbarer Embed: ${escapeHtmlAttr(target)}</span>`;
+        } else {
+          replacement = `<div class="md-embed-block">${replacement}</div>`;
         }
       } catch (error) {
         console.error(`[canvas-exporter] Markdown-Embed-Export fehlgeschlagen f\xFCr ${targetFile.path}`, error);
@@ -16020,6 +16043,7 @@ async function rewriteWikiLinks(ctx, sourceFile, html, mode, linkBase) {
     }
     result = result.replace(original, replacement);
   }
+  result = cleanupMarkdownEmbedBlocks(result);
   const wikiMatches = [...result.matchAll(/\[\[([^\]]+)\]\]/g)];
   for (const match of wikiMatches) {
     const original = match[0];
@@ -16037,6 +16061,9 @@ async function rewriteWikiLinks(ctx, sourceFile, html, mode, linkBase) {
     result = result.replace(original, replacement);
   }
   return result;
+}
+function cleanupMarkdownEmbedBlocks(html) {
+  return html.replace(/<p>\s*(<div class="md-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "$1").replace(/<p>([\s\S]*?)<br>\s*(<div class="md-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "<p>$1</p>\n$2");
 }
 function resolveLinkedFileForEmbed(ctx, sourceFile, target) {
   const cleaned = splitTargetSuffix(normalizeWikiTarget(target)).path;
@@ -16057,12 +16084,12 @@ async function resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, al
   const target = parsedTarget.core;
   if (!target)
     return null;
-  if (!shouldRewriteInternalTarget(target))
-    return null;
   if (isExternalLink2(target))
     return { href: target, found: true, kind: "external" };
   if (target.startsWith("#"))
     return { href: target, found: true, kind: "anchor" };
+  if (!shouldRewriteInternalTarget(target))
+    return null;
   const { path: cleaned, suffix } = splitTargetSuffix(target);
   if (!shouldRewriteInternalTarget(cleaned))
     return null;
@@ -16078,8 +16105,10 @@ async function resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, al
   if (resolved.extension.toLowerCase() === "md") {
     const cached = ctx.htmlMap.get(resolved.path);
     const exported = cached || await exportMarkdownNote(ctx, resolved);
+    const headingSuffix = parsedTargetSection(target);
+    const normalizedSuffix = headingSuffix ? `#${normalizeHeadingRef(headingSuffix)}` : suffix;
     const href2 = linkBase === "page" ? getHrefForMarkdownPage(ctx.htmlMap.get(sourceFile.path) || "", exported) : `${exported}`;
-    return { href: `${href2}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
+    return { href: `${href2}${normalizedSuffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
   const rel2 = await copyVaultFile(ctx, resolved, expectImage || isImageExt(resolved.extension.toLowerCase()) ? "image" : "file");
   const href = linkBase === "page" ? getHrefForMarkdownPage(ctx.htmlMap.get(sourceFile.path) || "", rel2) : rel2;

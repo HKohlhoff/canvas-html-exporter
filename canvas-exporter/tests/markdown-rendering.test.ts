@@ -38,6 +38,11 @@ test("renders markdown links as anchors", () => {
   assert.match(html, /target="_blank"/);
 });
 
+test("adds normalized ids to headings", () => {
+  const html = markdownToHtml("## Über Café");
+  assert.match(html, /<h2 id="uber-cafe">Über Café<\/h2>/);
+});
+
 test("renders markdown images", () => {
   const html = markdownToHtml("![Alt](bild.png)");
   assert.match(html, /<img src="bild\.png" alt="Alt">/);

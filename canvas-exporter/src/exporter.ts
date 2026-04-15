@@ -411,6 +411,8 @@ async function rewriteWikiLinks(
           : await exportMarkdownContentInline(ctx, targetFile);
         if (!replacement) {
           replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
+        } else {
+          replacement = `<div class="md-embed-block">${replacement}</div>`;
         }
       } catch (error) {
         console.error(`[canvas-exporter] Markdown-Embed-Export fehlgeschlagen für ${targetFile.path}`, error);
@@ -431,6 +433,8 @@ async function rewriteWikiLinks(
     result = result.replace(original, replacement);
   }
 
+  result = cleanupMarkdownEmbedBlocks(result);
+
   const wikiMatches = [...result.matchAll(/\[\[([^\]]+)\]\]/g)];
   for (const match of wikiMatches) {
     const original = match[0];
@@ -450,6 +454,12 @@ async function rewriteWikiLinks(
   }
 
   return result;
+}
+
+function cleanupMarkdownEmbedBlocks(html: string): string {
+  return html
+    .replace(/<p>\s*(<div class="md-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "$1")
+    .replace(/<p>([\s\S]*?)<br>\s*(<div class="md-embed-block">[\s\S]*?<\/div>)\s*<\/p>/g, "<p>$1</p>\n$2");
 }
 
 function resolveLinkedFileForEmbed(ctx: MarkdownContext, sourceFile: TFile, target: string): TFile | null {
@@ -485,9 +495,9 @@ async function resolveObsidianTarget(
   const parsedTarget = parseWikiReference(rawTarget.trim());
   const target = parsedTarget.core;
   if (!target) return null;
-  if (!shouldRewriteInternalTarget(target)) return null;
   if (isExternalLink(target)) return { href: target, found: true, kind: "external" };
   if (target.startsWith("#")) return { href: target, found: true, kind: "anchor" };
+  if (!shouldRewriteInternalTarget(target)) return null;
 
   const { path: cleaned, suffix } = splitTargetSuffix(target);
   if (!shouldRewriteInternalTarget(cleaned)) return null;
@@ -505,10 +515,12 @@ async function resolveObsidianTarget(
   if (resolved.extension.toLowerCase() === "md") {
     const cached = ctx.htmlMap.get(resolved.path);
     const exported = cached || await exportMarkdownNote(ctx, resolved);
+    const headingSuffix = parsedTargetSection(target);
+    const normalizedSuffix = headingSuffix ? `#${normalizeHeadingRef(headingSuffix)}` : suffix;
     const href = linkBase === "page"
       ? getHrefForMarkdownPage(ctx.htmlMap.get(sourceFile.path) || "", exported)
       : `${exported}`;
-    return { href: `${href}${suffix}`, found: true, kind: "markdown", displayText: resolved.basename };
+    return { href: `${href}${normalizedSuffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
 
   const rel = await copyVaultFile(ctx, resolved, expectImage || isImageExt(resolved.extension.toLowerCase()) ? "image" : "file");

@@ -300,9 +300,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
 
     const mainHtml = mainExport?.text || "";
     assert.match(mainHtml, />Kapitel<\/a>/);
-    assert.match(mainHtml, /href="[^"]+#Abschnitt"/);
+    assert.match(mainHtml, /href="[^"]+#abschnitt"/);
     assert.match(mainHtml, /Nur dieser Teil soll im Embed erscheinen\./);
-    assert.match(mainHtml, /<h2>Abschnitt<\/h2>/);
+    assert.match(mainHtml, /<div class="md-embed-block">/);
+    assert.match(mainHtml, /<h2 id="abschnitt">Abschnitt<\/h2>/);
+    assert.doesNotMatch(mainHtml, /<p>Embed:<br>\s*<h2/);
     assert.doesNotMatch(mainHtml, /Nicht mehr Teil des Embeds/);
     assert.match(mainHtml, />Dritte Seite<\/a>/);
 
