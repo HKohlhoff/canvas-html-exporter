@@ -301,11 +301,48 @@ export function convertCanvasToHtml(data: CanvasData, options: ExportOptions): s
       display: flex;
       flex-direction: column;
       gap: 6px;
+      height: 100%;
     }
     .link-meta {
       color: ${theme.mutedText};
       font-size: 0.86em;
       word-break: break-all;
+    }
+    .link-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+      flex: 1 1 auto;
+    }
+    .link-preview-title {
+      font-weight: 700;
+      color: inherit;
+      text-decoration: none;
+    }
+    .link-preview-title:hover {
+      text-decoration: underline;
+    }
+    .link-preview-note {
+      color: ${theme.mutedText};
+      font-size: 0.86em;
+      line-height: 1.4;
+    }
+    .link-preview-frame {
+      flex: 1 1 auto;
+      min-height: 180px;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 10px;
+      overflow: hidden;
+      background: ${theme.canvasBackground};
+    }
+    .link-preview-frame iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 180px;
+      border: none;
+      background: ${theme.canvasBackground};
     }
     .toolbar {
       position: sticky;
@@ -847,10 +884,15 @@ function renderNodeContent(node: CanvasNode): string {
   if (type === "link") {
     const url = typeof node.url === "string" ? node.url.trim() : "";
     if (!url) return "<p>Leerer Link-Knoten</p>";
-    const label = escapeHtml(node.label || url);
-    const href = escapeAttribute(url);
-    const subtitle = node.label && node.label !== url ? `<div class="link-meta">${escapeHtml(url)}</div>` : "";
-    return `<div class="link-card"><a class="link-chip" href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>${subtitle}</div>`;
+    const displayName = escapeHtml(node.displayName || node.label || url);
+    const iframeSrc = escapeAttribute(url);
+    const href = escapeAttribute(node.canvasHref || node.exportHtmlPath || url);
+    return `<div class="link-preview">
+      <a class="link-preview-title" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a>
+      <div class="link-meta">${escapeHtml(url)}</div>
+      <div class="link-preview-note">Wenn keine Internet-Verbindung besteht oder die Website das Einbetten blockiert, oeffne den Link direkt.</div>
+      <div class="link-preview-frame"><iframe src="${iframeSrc}" title="${escapeAttribute(node.displayName || node.label || url)}" loading="lazy"></iframe></div>
+    </div>`;
   }
 
   if (type === "file") {

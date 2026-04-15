@@ -118,7 +118,25 @@ export async function exportCanvasPackage(
 }
 
 async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<CanvasNode> {
-  if ((node.type || "").toLowerCase() !== "file") {
+  const nodeType = (node.type || "").toLowerCase();
+
+  if (nodeType === "link") {
+    const url = typeof node.url === "string" ? node.url.trim() : "";
+    if (!url) return { ...node };
+
+    const exportHtmlPath = await exportLinkNodePage(ctx, node);
+    const outputName = exportHtmlPath.split("/").pop() || exportHtmlPath;
+    const canvasHref = normalizeExportHref(`assets/files/${outputName}`);
+
+    return {
+      ...node,
+      displayName: typeof node.label === "string" && node.label.trim() ? node.label.trim() : url,
+      exportHtmlPath,
+      canvasHref,
+    };
+  }
+
+  if (nodeType !== "file") {
     return { ...node };
   }
 
@@ -222,6 +240,17 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
     fileKind: "file" as const,
     exportPath,
   };
+}
+
+async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promise<string> {
+  const url = typeof node.url === "string" ? node.url.trim() : "";
+  const title = typeof node.label === "string" && node.label.trim() ? node.label.trim() : url || "Link";
+  const outputName = uniqueOutputName(ctx, title || "Link", "html");
+  const outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
+  const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
+  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors);
+  await writeTextFile(ctx.app, outputPath, html);
+  return rel;
 }
 
 async function exportMarkdownNote(ctx: MarkdownContext, file: TFile): Promise<string> {
@@ -783,6 +812,32 @@ function buildMarkdownAnchorSuffix(section: string): string {
   }
   const headingId = normalizeHeadingRef(section);
   return headingId ? `#${headingId}` : "";
+}
+
+function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, canvasColors?: Record<string, string>): string {
+  const safeTitle = escapeHtmlAttr(title || url || "Link");
+  const safeUrl = escapeHtmlAttr(url);
+  const page = buildMarkdownDocumentHtml(
+    title || url || "Link",
+    `<section class="link-page-card">
+      <p class="link-page-note">Wenn keine Internet-Verbindung besteht oder die Website das Einbetten blockiert, nutze den direkten Link:</p>
+      <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
+      <div class="pdf-embed-block link-page-preview">
+        <iframe src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
+      </div>
+    </section>`,
+    darkMode,
+    canvasColors,
+  );
+
+  return page.replace(
+    "</style>",
+    `
+    .link-page-card { display: flex; flex-direction: column; gap: 0.8em; }
+    .link-page-note { margin: 0; }
+    .link-page-preview iframe { min-height: 70vh; }
+  </style>`,
+  );
 }
 
 function isImageExt(ext: string): boolean {

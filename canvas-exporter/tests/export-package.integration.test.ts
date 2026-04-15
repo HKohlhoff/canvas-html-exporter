@@ -467,6 +467,49 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.match(mainHtml, /<img src="\.\.\/images\/\d+_picture\.png" alt="Skizze">/);
   });
 
+  await test("exports link nodes with local wrapper page and preview target", async () => {
+    const canvasJson = JSON.stringify({
+      name: "Link Export",
+      nodes: [
+        {
+          id: "link",
+          type: "link",
+          x: 0,
+          y: 0,
+          width: 360,
+          height: 220,
+          label: "OpenAI Docs",
+          url: "https://openai.com/index/",
+        },
+      ],
+      edges: [],
+    });
+
+    const { app, files } = createMockApp([
+      { path: "canvases/link.canvas", text: canvasJson },
+    ]);
+
+    const canvasFile = files.get("canvases/link.canvas") as MockFile;
+    const result = await exportCanvasPackage(app as never, canvasFile as never, {
+      darkMode: true,
+      outputDir: "Canvas-Exports",
+    });
+
+    const linkNode = result.data.nodes.find((node) => node.id === "link");
+    assert.ok(linkNode);
+    assert.equal(linkNode?.displayName, "OpenAI Docs");
+    assert.ok(linkNode?.exportHtmlPath?.startsWith("assets/files/"));
+    assert.ok(linkNode?.canvasHref?.startsWith("assets/files/"));
+    assert.equal(linkNode?.url, "https://openai.com/index/");
+
+    const exportedLinkPage = files.get(`Canvas-Exports/link/${linkNode?.exportHtmlPath || ""}`);
+    assert.ok(exportedLinkPage);
+    const linkHtml = exportedLinkPage?.text || "";
+    assert.match(linkHtml, /Wenn keine Internet-Verbindung besteht oder die Website das Einbetten blockiert/);
+    assert.match(linkHtml, /<a class="file-chip" href="https:\/\/openai\.com\/index\/"/);
+    assert.match(linkHtml, /<iframe src="https:\/\/openai\.com\/index\/" title="OpenAI Docs" loading="lazy"><\/iframe>/);
+  });
+
   await test("keeps embedded markdown images relative to exported subpages", async () => {
     const png = new Uint8Array([137, 80, 78, 71]).buffer;
     const canvasJson = JSON.stringify({

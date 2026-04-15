@@ -14570,11 +14570,48 @@ function convertCanvasToHtml(data, options) {
       display: flex;
       flex-direction: column;
       gap: 6px;
+      height: 100%;
     }
     .link-meta {
       color: ${theme.mutedText};
       font-size: 0.86em;
       word-break: break-all;
+    }
+    .link-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+      flex: 1 1 auto;
+    }
+    .link-preview-title {
+      font-weight: 700;
+      color: inherit;
+      text-decoration: none;
+    }
+    .link-preview-title:hover {
+      text-decoration: underline;
+    }
+    .link-preview-note {
+      color: ${theme.mutedText};
+      font-size: 0.86em;
+      line-height: 1.4;
+    }
+    .link-preview-frame {
+      flex: 1 1 auto;
+      min-height: 180px;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 10px;
+      overflow: hidden;
+      background: ${theme.canvasBackground};
+    }
+    .link-preview-frame iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 180px;
+      border: none;
+      background: ${theme.canvasBackground};
     }
     .toolbar {
       position: sticky;
@@ -15105,10 +15142,15 @@ function renderNodeContent(node) {
     const url = typeof node.url === "string" ? node.url.trim() : "";
     if (!url)
       return "<p>Leerer Link-Knoten</p>";
-    const label = escapeHtml(node.label || url);
-    const href = escapeAttribute(url);
-    const subtitle = node.label && node.label !== url ? `<div class="link-meta">${escapeHtml(url)}</div>` : "";
-    return `<div class="link-card"><a class="link-chip" href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>${subtitle}</div>`;
+    const displayName = escapeHtml(node.displayName || node.label || url);
+    const iframeSrc = escapeAttribute(url);
+    const href = escapeAttribute(node.canvasHref || node.exportHtmlPath || url);
+    return `<div class="link-preview">
+      <a class="link-preview-title" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a>
+      <div class="link-meta">${escapeHtml(url)}</div>
+      <div class="link-preview-note">Wenn keine Internet-Verbindung besteht oder die Website das Einbetten blockiert, oeffne den Link direkt.</div>
+      <div class="link-preview-frame"><iframe src="${iframeSrc}" title="${escapeAttribute(node.displayName || node.label || url)}" loading="lazy"></iframe></div>
+    </div>`;
   }
   if (type === "file") {
     const displayName = escapeHtml(node.displayName || node.file || "Datei");
@@ -16064,7 +16106,22 @@ async function exportCanvasPackage(app, canvasFile, settings) {
   };
 }
 async function prepareNode(ctx, node) {
-  if ((node.type || "").toLowerCase() !== "file") {
+  const nodeType = (node.type || "").toLowerCase();
+  if (nodeType === "link") {
+    const url = typeof node.url === "string" ? node.url.trim() : "";
+    if (!url)
+      return { ...node };
+    const exportHtmlPath = await exportLinkNodePage(ctx, node);
+    const outputName = exportHtmlPath.split("/").pop() || exportHtmlPath;
+    const canvasHref = normalizeExportHref2(`assets/files/${outputName}`);
+    return {
+      ...node,
+      displayName: typeof node.label === "string" && node.label.trim() ? node.label.trim() : url,
+      exportHtmlPath,
+      canvasHref
+    };
+  }
+  if (nodeType !== "file") {
     return { ...node };
   }
   const sourcePath = typeof node.file === "string" ? node.file.trim() : "";
@@ -16157,6 +16214,16 @@ async function prepareNode(ctx, node) {
     fileKind: "file",
     exportPath
   };
+}
+async function exportLinkNodePage(ctx, node) {
+  const url = typeof node.url === "string" ? node.url.trim() : "";
+  const title = typeof node.label === "string" && node.label.trim() ? node.label.trim() : url || "Link";
+  const outputName = uniqueOutputName(ctx, title || "Link", "html");
+  const outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
+  const rel2 = normalizeExportHref2(toExportRelativePath(outputPath, ctx.outputRoot));
+  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors);
+  await writeTextFile(ctx.app, outputPath, html);
+  return rel2;
 }
 async function exportMarkdownNote(ctx, file) {
   return renderMarkdownFileToHtml(ctx, file, "page", "page");
@@ -16584,6 +16651,30 @@ function buildMarkdownAnchorSuffix(section) {
   }
   const headingId = normalizeHeadingRef(section);
   return headingId ? `#${headingId}` : "";
+}
+function buildLinkDocumentHtml(title, url, darkMode, canvasColors) {
+  const safeTitle = escapeHtmlAttr(title || url || "Link");
+  const safeUrl = escapeHtmlAttr(url);
+  const page = buildMarkdownDocumentHtml(
+    title || url || "Link",
+    `<section class="link-page-card">
+      <p class="link-page-note">Wenn keine Internet-Verbindung besteht oder die Website das Einbetten blockiert, nutze den direkten Link:</p>
+      <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
+      <div class="pdf-embed-block link-page-preview">
+        <iframe src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
+      </div>
+    </section>`,
+    darkMode,
+    canvasColors
+  );
+  return page.replace(
+    "</style>",
+    `
+    .link-page-card { display: flex; flex-direction: column; gap: 0.8em; }
+    .link-page-note { margin: 0; }
+    .link-page-preview iframe { min-height: 70vh; }
+  </style>`
+  );
 }
 function isImageExt(ext) {
   return ["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp"].includes(ext.toLowerCase());

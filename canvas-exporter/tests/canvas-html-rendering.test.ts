@@ -102,7 +102,7 @@ test("escapes markdown document titles", () => {
   assert.match(html, /<title>A &amp; B &lt;Test&gt;<\/title>/);
 });
 
-test("renders link nodes as external link chips", () => {
+test("renders link nodes with preview iframe and exported title link", () => {
   const data: CanvasData = {
     name: "Test",
     nodes: [
@@ -115,15 +115,17 @@ test("renders link nodes as external link chips", () => {
         height: 80,
         label: "OpenAI",
         url: "https://openai.com/?a=1&b=2",
+        canvasHref: "assets/files/openai.html",
+        displayName: "OpenAI",
       },
     ],
     edges: [],
   };
 
   const html = convertCanvasToHtml(data, baseOptions);
-  assert.match(html, /class="link-chip"/);
-  assert.match(html, /href="https:\/\/openai\.com\/\?a=1&amp;b=2"/);
-  assert.match(html, />OpenAI<\/a>/);
+  assert.match(html, /class="link-preview-title" href="assets\/files\/openai\.html"/);
+  assert.match(html, /<iframe src="https:\/\/openai\.com\/\?a=1&amp;b=2"/);
+  assert.match(html, /Wenn keine Internet-Verbindung besteht/);
   assert.match(html, /class="link-meta">https:\/\/openai\.com\/\?a=1&amp;b=2<\/div>/);
 });
 
