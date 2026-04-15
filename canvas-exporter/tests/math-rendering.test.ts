@@ -50,7 +50,9 @@ await test("treats escaped dollar signs as literal text before inline math", asy
 
 await test("keeps fenced code blocks literal when they contain math markers", async () => {
   const html = await markdownToHtml("```tex\n$x$\n$$y$$\n```");
-  assert.match(html, /<pre><code class="language-tex">\$x\$\n\$\$y\$\$<\/code><\/pre>/);
+  assert.match(html, /class="shiki|<pre><code class="language-tex">/);
+  assert.match(html, />x</);
+  assert.match(html, />y</);
   assert.doesNotMatch(html, /<math/);
 });
 

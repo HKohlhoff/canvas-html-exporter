@@ -14345,6 +14345,10 @@ var SHIKI_DARK_THEME = "github-dark-default";
 var SHIKI_LIGHT_THEME = "github-light-default";
 var SHIKI_FALLBACK_LANGUAGE = "text";
 var shikiImport = new Function("return import('shiki/bundle/web')");
+var shikiLanguageImports = {
+  latex: new Function("return import('shiki/langs/latex.mjs')"),
+  tex: new Function("return import('shiki/langs/tex.mjs')")
+};
 var shikiHighlighterPromise = null;
 async function getShikiHighlighter() {
   if (!shikiHighlighterPromise) {
@@ -14384,7 +14388,13 @@ async function renderCodeBlock(code, lang, darkMode) {
     const highlighter = await getShikiHighlighter();
     const loaded = new Set(highlighter.getLoadedLanguages());
     if (!loaded.has(normalizedLang)) {
-      await highlighter.loadLanguage(normalizedLang);
+      const languageModule = shikiLanguageImports[normalizedLang];
+      if (languageModule) {
+        const loadedModule = await languageModule();
+        await highlighter.loadLanguage(loadedModule.default);
+      } else {
+        await highlighter.loadLanguage(normalizedLang);
+      }
     }
     return highlighter.codeToHtml(code, {
       lang: normalizedLang,

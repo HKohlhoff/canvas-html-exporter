@@ -105,6 +105,16 @@ await test("highlights sql and php fences with shiki", async () => {
   assert.match(phpHtml, />php<\/span>/);
 });
 
+await test("highlights tex and latex fences with shiki", async () => {
+  const texHtml = await markdownToHtml("```tex\n\\\\frac{a}{b}\n```");
+  const latexHtml = await markdownToHtml("```latex\n\\\\section{Intro}\n```");
+
+  assert.match(texHtml, /class="shiki/);
+  assert.match(texHtml, /frac\{a\}\{b\}/);
+  assert.match(latexHtml, /class="shiki/);
+  assert.match(latexHtml, /section\{Intro\}/);
+});
+
 await test("renders unordered lists", async () => {
   const html = await markdownToHtml("- Eins\n- Zwei");
   assert.match(html, /<ul><li>Eins<\/li><li>Zwei<\/li><\/ul>/);

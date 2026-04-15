@@ -58,6 +58,7 @@ type MarkdownRenderOptions = {
 };
 
 type ShikiModule = typeof import("shiki/bundle/web");
+type ShikiLanguageModule = { default: unknown };
 
 // Fallback-Farben, falls keine CSS-Variablen aus Obsidian ausgelesen werden konnten.
 // Reihenfolge entspricht dem korrekten Obsidian-Mapping:
@@ -75,6 +76,10 @@ const SHIKI_DARK_THEME: BundledTheme = "github-dark-default";
 const SHIKI_LIGHT_THEME: BundledTheme = "github-light-default";
 const SHIKI_FALLBACK_LANGUAGE = "text";
 const shikiImport = new Function("return import('shiki/bundle/web')") as () => Promise<ShikiModule>;
+const shikiLanguageImports: Record<string, () => Promise<ShikiLanguageModule>> = {
+  latex: new Function("return import('shiki/langs/latex.mjs')") as () => Promise<ShikiLanguageModule>,
+  tex: new Function("return import('shiki/langs/tex.mjs')") as () => Promise<ShikiLanguageModule>,
+};
 let shikiHighlighterPromise: Promise<Highlighter> | null = null;
 
 async function getShikiHighlighter(): Promise<Highlighter> {
@@ -120,7 +125,13 @@ async function renderCodeBlock(code: string, lang: string, darkMode: boolean): P
     const highlighter = await getShikiHighlighter();
     const loaded = new Set(highlighter.getLoadedLanguages());
     if (!loaded.has(normalizedLang)) {
-      await highlighter.loadLanguage(normalizedLang as never);
+      const languageModule = shikiLanguageImports[normalizedLang];
+      if (languageModule) {
+        const loadedModule = await languageModule();
+        await highlighter.loadLanguage(loadedModule.default as never);
+      } else {
+        await highlighter.loadLanguage(normalizedLang as never);
+      }
     }
     return highlighter.codeToHtml(code, {
       lang: normalizedLang as never,
