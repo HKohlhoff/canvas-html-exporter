@@ -1,5 +1,6 @@
 import { App, normalizePath, TAbstractFile, TFile } from "obsidian";
 import { buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markdownToHtml } from "./converter";
+import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePath } from "./export-file-helpers";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-helpers";
 import { embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTargetSuffix } from "./link-helpers";
 import { getHrefForMarkdownPage } from "./path-helpers";
@@ -555,31 +556,7 @@ async function copyVaultFile(ctx: MarkdownContext, file: TFile, kind: "image" | 
 
 function uniqueOutputName(ctx: MarkdownContext, basename: string, extension: string): string {
   ctx.counter += 1;
-  const safeBase = safeSegment(basename);
-  const ext = extension.startsWith(".") ? extension.slice(1) : extension;
-  return `${String(ctx.counter).padStart(3, "0")}_${safeBase}.${ext}`;
-}
-
-function safeSegment(value: string): string {
-  const normalized = value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9._-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^[-.]+|[-.]+$/g, "");
-  return normalized || "item";
-}
-
-function normalizeFolder(dir: string): string {
-  const cleaned = dir.trim().replace(/^\/+|\/+$/g, "");
-  return cleaned || "Canvas-Exports";
-}
-
-function toExportRelativePath(targetPath: string, rootPath: string): string {
-  const targetParts = normalizePath(targetPath).split("/").filter(Boolean);
-  const rootParts = normalizePath(rootPath).split("/").filter(Boolean);
-  if (targetParts.length <= rootParts.length) return targetParts.join("/");
-  return targetParts.slice(rootParts.length).join("/");
+  return buildUniqueOutputName(ctx.counter, basename, extension);
 }
 
 async function ensureFolderExists(app: App, folderPath: string): Promise<void> {

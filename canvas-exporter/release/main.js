@@ -15453,12 +15453,37 @@ function escapeAttribute(text2) {
 // src/exporter.ts
 var import_obsidian = require("obsidian");
 
-// src/exporter-helpers.ts
+// src/export-file-helpers.ts
+function safeSegment(value) {
+  const normalized = value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").replace(/^[-.]+|[-.]+$/g, "");
+  return normalized || "item";
+}
+function normalizeFolder(dir) {
+  const cleaned = dir.trim().replace(/^\/+|\/+$/g, "");
+  return cleaned || "Canvas-Exports";
+}
+function toExportRelativePath(targetPath, rootPath) {
+  const targetParts = normalizeSimplePath(targetPath).split("/").filter(Boolean);
+  const rootParts = normalizeSimplePath(rootPath).split("/").filter(Boolean);
+  if (targetParts.length <= rootParts.length)
+    return targetParts.join("/");
+  return targetParts.slice(rootParts.length).join("/");
+}
+function buildUniqueOutputName(counter, basename, extension) {
+  const safeBase = safeSegment(basename);
+  const ext = extension.startsWith(".") ? extension.slice(1) : extension;
+  return `${String(counter).padStart(3, "0")}_${safeBase}.${ext}`;
+}
 function normalizeSimplePath(value) {
+  return value.replace(/\\/g, "/").replace(/\/+/g, "/");
+}
+
+// src/exporter-helpers.ts
+function normalizeSimplePath2(value) {
   return value.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\.\//, "");
 }
 function normalizeExportHref(href) {
-  return normalizeSimplePath(href).replace(/^\/+/, "");
+  return normalizeSimplePath2(href).replace(/^\/+/, "");
 }
 function isExternalLink(value) {
   return /^(https?:|mailto:|file:)/i.test(value);
@@ -15603,12 +15628,12 @@ function normalizeWikiTarget(value) {
 }
 
 // src/path-helpers.ts
-function normalizeSimplePath2(value) {
+function normalizeSimplePath3(value) {
   return value.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/+/, "");
 }
 function pathRelative(fromDir, toPath) {
-  const fromParts = normalizeSimplePath2(fromDir).split("/").filter(Boolean);
-  const toParts = normalizeSimplePath2(toPath).split("/").filter(Boolean);
+  const fromParts = normalizeSimplePath3(fromDir).split("/").filter(Boolean);
+  const toParts = normalizeSimplePath3(toPath).split("/").filter(Boolean);
   while (fromParts.length && toParts.length && fromParts[0] === toParts[0]) {
     fromParts.shift();
     toParts.shift();
@@ -15617,11 +15642,16 @@ function pathRelative(fromDir, toPath) {
   return `${up}${toParts.join("/")}`;
 }
 function getHrefForMarkdownPage(currentHtmlPath, targetHtmlPath) {
-  const current = normalizeSimplePath2(currentHtmlPath || "");
-  const target = normalizeSimplePath2(targetHtmlPath);
+  const current = normalizeSimplePath3(currentHtmlPath || "");
+  const target = normalizeSimplePath3(targetHtmlPath);
   const currentDir = current.split("/").slice(0, -1).join("/");
   const relative = currentDir ? pathRelative(currentDir, target) : target;
-  return normalizeSimplePath2(relative);
+  return normalizeSimplePath3(relative);
+}
+
+// src/preview-helpers.ts
+function buildPreviewText(raw) {
+  return raw.replace(/^```[\s\S]*?```/gm, " ").replace(/!\[[^\]]*\]\([^)]+\)/g, " ").replace(/!\[\[([^\]]+)\]\]/g, " $1 ").replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([^\]]+)\]\]/g, "$1").replace(/\[[^\]]+\]\([^)]+\)/g, " ").replace(/[#>*`_~-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 220);
 }
 
 // src/exporter.ts
@@ -16010,7 +16040,7 @@ async function resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, al
 async function buildMarkdownPreview(ctx, file) {
   const raw = stripFrontmatter(await ctx.app.vault.read(file));
   const previewSource = raw.slice(0, 2e3);
-  const text2 = raw.replace(/^```[\s\S]*?```/gm, " ").replace(/!\[[^\]]*\]\([^)]+\)/g, " ").replace(/!\[\[([^\]]+)\]\]/g, " $1 ").replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([^\]]+)\]\]/g, "$1").replace(/\[[^\]]+\]\([^)]+\)/g, " ").replace(/[#>*`_~-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 220);
+  const text2 = buildPreviewText(raw);
   let html = markdownToHtml(previewSource);
   try {
     html = await rewriteMarkdownHtmlAssets(ctx, file, html, "inline", "canvas");
@@ -16035,24 +16065,7 @@ async function copyVaultFile(ctx, file, kind) {
 }
 function uniqueOutputName(ctx, basename, extension) {
   ctx.counter += 1;
-  const safeBase = safeSegment(basename);
-  const ext = extension.startsWith(".") ? extension.slice(1) : extension;
-  return `${String(ctx.counter).padStart(3, "0")}_${safeBase}.${ext}`;
-}
-function safeSegment(value) {
-  const normalized = value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").replace(/^[-.]+|[-.]+$/g, "");
-  return normalized || "item";
-}
-function normalizeFolder(dir) {
-  const cleaned = dir.trim().replace(/^\/+|\/+$/g, "");
-  return cleaned || "Canvas-Exports";
-}
-function toExportRelativePath(targetPath, rootPath) {
-  const targetParts = (0, import_obsidian.normalizePath)(targetPath).split("/").filter(Boolean);
-  const rootParts = (0, import_obsidian.normalizePath)(rootPath).split("/").filter(Boolean);
-  if (targetParts.length <= rootParts.length)
-    return targetParts.join("/");
-  return targetParts.slice(rootParts.length).join("/");
+  return buildUniqueOutputName(ctx.counter, basename, extension);
 }
 async function ensureFolderExists(app, folderPath) {
   const parts = (0, import_obsidian.normalizePath)(folderPath).split("/").filter(Boolean);
