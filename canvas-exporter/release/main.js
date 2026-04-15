@@ -14566,17 +14566,6 @@ function convertCanvasToHtml(data, options) {
       text-decoration: none;
       margin-top: 6px;
     }
-    .link-card {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      height: 100%;
-    }
-    .link-meta {
-      color: ${theme.mutedText};
-      font-size: 0.86em;
-      word-break: break-all;
-    }
     .link-preview {
       display: flex;
       flex-direction: column;
@@ -14588,14 +14577,18 @@ function convertCanvasToHtml(data, options) {
       font-weight: 700;
       color: inherit;
       text-decoration: none;
+      word-break: break-all;
     }
     .link-preview-title:hover {
       text-decoration: underline;
     }
-    .link-preview-note {
+    .link-offline-note {
       color: ${theme.mutedText};
       font-size: 0.86em;
       line-height: 1.4;
+    }
+    .link-offline-note[hidden] {
+      display: none;
     }
     .link-preview-frame {
       flex: 1 1 auto;
@@ -14958,12 +14951,25 @@ function convertCanvasToHtml(data, options) {
         drawEdges();
       };
 
+      function syncLinkOfflineState() {
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        document.querySelectorAll(".link-preview").forEach((preview) => {
+          const note = preview.querySelector(".link-offline-note");
+          const frame = preview.querySelector(".link-preview-frame");
+          if (note) note.hidden = !offline;
+          if (frame) frame.hidden = offline;
+        });
+      }
+
       drawEdges();
+      syncLinkOfflineState();
       window.resetZoom();
       window.addEventListener("resize", () => {
         drawEdges();
         window.resetZoom();
       });
+      window.addEventListener("online", syncLinkOfflineState);
+      window.addEventListener("offline", syncLinkOfflineState);
     })();
   </script>
 </body>
@@ -15101,7 +15107,7 @@ function renderNode(node, offsetX, offsetY, theme, canvasColors) {
   const type = (node.type || "text").toLowerCase();
   const isPdf = node.fileKind === "pdf";
   const classes = ["node", type === "group" ? "group" : "", isPdf ? "pdf" : ""].filter(Boolean).join(" ");
-  const title = node.label ? `<div class="node-title">${markdownToHtml(node.label)}</div>` : "";
+  const title = type !== "link" && node.label ? `<div class="node-title">${markdownToHtml(node.label)}</div>` : "";
   const content = renderNodeContent(node);
   const colorKey = String(node.color || "").trim();
   const isNumericColor = /^\d+$/.test(colorKey);
@@ -15142,14 +15148,13 @@ function renderNodeContent(node) {
     const url = typeof node.url === "string" ? node.url.trim() : "";
     if (!url)
       return "<p>Leerer Link-Knoten</p>";
-    const displayName = escapeHtml(node.displayName || node.label || url);
+    const displayName = escapeHtml(node.displayName || url);
     const iframeSrc = escapeAttribute(url);
     const href = escapeAttribute(node.canvasHref || node.exportHtmlPath || url);
     return `<div class="link-preview">
       <a class="link-preview-title" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a>
-      <div class="link-meta">${escapeHtml(url)}</div>
-      <div class="link-preview-note">Wenn keine Internet-Verbindung besteht oder die Website das Einbetten blockiert, oeffne den Link direkt.</div>
-      <div class="link-preview-frame"><iframe src="${iframeSrc}" title="${escapeAttribute(node.displayName || node.label || url)}" loading="lazy"></iframe></div>
+      <div class="link-offline-note" hidden>Es besteht keine Internetverbindung.</div>
+      <div class="link-preview-frame"><iframe src="${iframeSrc}" title="${escapeAttribute(node.displayName || url)}" loading="lazy"></iframe></div>
     </div>`;
   }
   if (type === "file") {
@@ -16116,7 +16121,7 @@ async function prepareNode(ctx, node) {
     const canvasHref = normalizeExportHref2(`assets/files/${outputName}`);
     return {
       ...node,
-      displayName: typeof node.label === "string" && node.label.trim() ? node.label.trim() : url,
+      displayName: url,
       exportHtmlPath,
       canvasHref
     };
@@ -16653,14 +16658,16 @@ function buildMarkdownAnchorSuffix(section) {
   return headingId ? `#${headingId}` : "";
 }
 function buildLinkDocumentHtml(title, url, darkMode, canvasColors) {
-  const safeTitle = escapeHtmlAttr(title || url || "Link");
+  const safeTitle = escapeHtmlAttr(url || title || "Link");
   const safeUrl = escapeHtmlAttr(url);
   const page = buildMarkdownDocumentHtml(
-    title || url || "Link",
+    url || title || "Link",
     `<section class="link-page-card">
-      <p class="link-page-note">Wenn keine Internet-Verbindung besteht oder die Website das Einbetten blockiert, nutze den direkten Link:</p>
-      <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
-      <div class="pdf-embed-block link-page-preview">
+      <div id="offline-message" class="link-page-offline" hidden>
+        <p class="link-page-note">Es besteht keine Internetverbindung.</p>
+        <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
+      </div>
+      <div id="link-preview" class="pdf-embed-block link-page-preview">
         <iframe src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
       </div>
     </section>`,
@@ -16668,12 +16675,28 @@ function buildLinkDocumentHtml(title, url, darkMode, canvasColors) {
     canvasColors
   );
   return page.replace(
-    "</style>",
+    "</body>",
     `
     .link-page-card { display: flex; flex-direction: column; gap: 0.8em; }
     .link-page-note { margin: 0; }
+    .link-page-offline[hidden] { display: none; }
     .link-page-preview iframe { min-height: 70vh; }
-  </style>`
+  </style>
+  <script>
+    (() => {
+      const offlineMessage = document.getElementById("offline-message");
+      const linkPreview = document.getElementById("link-preview");
+      function syncOfflineState() {
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        if (offlineMessage) offlineMessage.hidden = !offline;
+        if (linkPreview) linkPreview.hidden = offline;
+      }
+      syncOfflineState();
+      window.addEventListener("online", syncOfflineState);
+      window.addEventListener("offline", syncOfflineState);
+    })();
+  </script>
+</body>`
   );
 }
 function isImageExt(ext) {

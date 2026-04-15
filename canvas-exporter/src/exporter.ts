@@ -130,7 +130,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
 
     return {
       ...node,
-      displayName: typeof node.label === "string" && node.label.trim() ? node.label.trim() : url,
+      displayName: url,
       exportHtmlPath,
       canvasHref,
     };
@@ -815,14 +815,16 @@ function buildMarkdownAnchorSuffix(section: string): string {
 }
 
 function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, canvasColors?: Record<string, string>): string {
-  const safeTitle = escapeHtmlAttr(title || url || "Link");
+  const safeTitle = escapeHtmlAttr(url || title || "Link");
   const safeUrl = escapeHtmlAttr(url);
   const page = buildMarkdownDocumentHtml(
-    title || url || "Link",
+    url || title || "Link",
     `<section class="link-page-card">
-      <p class="link-page-note">Wenn keine Internet-Verbindung besteht oder die Website das Einbetten blockiert, nutze den direkten Link:</p>
-      <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
-      <div class="pdf-embed-block link-page-preview">
+      <div id="offline-message" class="link-page-offline" hidden>
+        <p class="link-page-note">Es besteht keine Internetverbindung.</p>
+        <p><a class="file-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></p>
+      </div>
+      <div id="link-preview" class="pdf-embed-block link-page-preview">
         <iframe src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
       </div>
     </section>`,
@@ -831,12 +833,28 @@ function buildLinkDocumentHtml(title: string, url: string, darkMode: boolean, ca
   );
 
   return page.replace(
-    "</style>",
+    "</body>",
     `
     .link-page-card { display: flex; flex-direction: column; gap: 0.8em; }
     .link-page-note { margin: 0; }
+    .link-page-offline[hidden] { display: none; }
     .link-page-preview iframe { min-height: 70vh; }
-  </style>`,
+  </style>
+  <script>
+    (() => {
+      const offlineMessage = document.getElementById("offline-message");
+      const linkPreview = document.getElementById("link-preview");
+      function syncOfflineState() {
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        if (offlineMessage) offlineMessage.hidden = !offline;
+        if (linkPreview) linkPreview.hidden = offline;
+      }
+      syncOfflineState();
+      window.addEventListener("online", syncOfflineState);
+      window.addEventListener("offline", syncOfflineState);
+    })();
+  </script>
+</body>`,
   );
 }
 

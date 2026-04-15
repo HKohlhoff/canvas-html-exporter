@@ -116,7 +116,7 @@ test("renders link nodes with preview iframe and exported title link", () => {
         label: "OpenAI",
         url: "https://openai.com/?a=1&b=2",
         canvasHref: "assets/files/openai.html",
-        displayName: "OpenAI",
+        displayName: "https://openai.com/?a=1&b=2",
       },
     ],
     edges: [],
@@ -125,8 +125,10 @@ test("renders link nodes with preview iframe and exported title link", () => {
   const html = convertCanvasToHtml(data, baseOptions);
   assert.match(html, /class="link-preview-title" href="assets\/files\/openai\.html"/);
   assert.match(html, /<iframe src="https:\/\/openai\.com\/\?a=1&amp;b=2"/);
-  assert.match(html, /Wenn keine Internet-Verbindung besteht/);
-  assert.match(html, /class="link-meta">https:\/\/openai\.com\/\?a=1&amp;b=2<\/div>/);
+  assert.match(html, />https:\/\/openai\.com\/\?a=1&amp;b=2<\/a>/);
+  assert.match(html, /Es besteht keine Internetverbindung\./);
+  assert.match(html, /function syncLinkOfflineState\(\)/);
+  assert.doesNotMatch(html, /class="link-meta"/);
 });
 
 test("renders empty link nodes with fallback text", () => {

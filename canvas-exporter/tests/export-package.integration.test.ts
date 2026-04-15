@@ -497,7 +497,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
 
     const linkNode = result.data.nodes.find((node) => node.id === "link");
     assert.ok(linkNode);
-    assert.equal(linkNode?.displayName, "OpenAI Docs");
+    assert.equal(linkNode?.displayName, "https://openai.com/index/");
     assert.ok(linkNode?.exportHtmlPath?.startsWith("assets/files/"));
     assert.ok(linkNode?.canvasHref?.startsWith("assets/files/"));
     assert.equal(linkNode?.url, "https://openai.com/index/");
@@ -505,9 +505,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const exportedLinkPage = files.get(`Canvas-Exports/link/${linkNode?.exportHtmlPath || ""}`);
     assert.ok(exportedLinkPage);
     const linkHtml = exportedLinkPage?.text || "";
-    assert.match(linkHtml, /Wenn keine Internet-Verbindung besteht oder die Website das Einbetten blockiert/);
+    assert.match(linkHtml, /Es besteht keine Internetverbindung\./);
     assert.match(linkHtml, /<a class="file-chip" href="https:\/\/openai\.com\/index\/"/);
-    assert.match(linkHtml, /<iframe src="https:\/\/openai\.com\/index\/" title="OpenAI Docs" loading="lazy"><\/iframe>/);
+    assert.match(linkHtml, /<iframe src="https:\/\/openai\.com\/index\/" title="https:\/\/openai\.com\/index\/" loading="lazy"><\/iframe>/);
+    assert.match(linkHtml, /id="offline-message" class="link-page-offline" hidden/);
+    assert.match(linkHtml, /function syncOfflineState\(\)/);
   });
 
   await test("keeps embedded markdown images relative to exported subpages", async () => {
