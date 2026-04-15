@@ -2,6 +2,7 @@ import { App, normalizePath, TAbstractFile, TFile } from "obsidian";
 import { buildMarkdownDocumentHtml, CanvasData, CanvasNode, ExportOptions, markdownToHtml } from "./converter";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-helpers";
 import { embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTargetSuffix } from "./link-helpers";
+import { getHrefForMarkdownPage } from "./path-helpers";
 
 export type ExportSettings = {
   darkMode: boolean;
@@ -518,27 +519,6 @@ async function resolveObsidianTarget(
     kind: isImageExt(resolved.extension.toLowerCase()) ? "image" : "file",
     displayText: resolved.basename,
   };
-}
-
-function getHrefForMarkdownPage(currentHtmlPath: string, targetHtmlPath: string): string {
-  const current = normalizeExportHref(currentHtmlPath || "");
-  const target = normalizeExportHref(targetHtmlPath);
-  const currentDir = current.split("/").slice(0, -1).join("/");
-  const relative = currentDir ? pathRelative(currentDir, target) : target;
-  return normalizeExportHref(relative);
-}
-
-function pathRelative(fromDir: string, toPath: string): string {
-  const fromParts = normalizePath(fromDir).split("/").filter(Boolean);
-  const toParts = normalizePath(toPath).split("/").filter(Boolean);
-
-  while (fromParts.length && toParts.length && fromParts[0] === toParts[0]) {
-    fromParts.shift();
-    toParts.shift();
-  }
-
-  const up = "../".repeat(fromParts.length);
-  return `${up}${toParts.join("/")}`;
 }
 
 async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<{ text: string; html: string }> {

@@ -15602,6 +15602,28 @@ function normalizeWikiTarget(value) {
   return out.trim();
 }
 
+// src/path-helpers.ts
+function normalizeSimplePath2(value) {
+  return value.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/+/, "");
+}
+function pathRelative(fromDir, toPath) {
+  const fromParts = normalizeSimplePath2(fromDir).split("/").filter(Boolean);
+  const toParts = normalizeSimplePath2(toPath).split("/").filter(Boolean);
+  while (fromParts.length && toParts.length && fromParts[0] === toParts[0]) {
+    fromParts.shift();
+    toParts.shift();
+  }
+  const up = "../".repeat(fromParts.length);
+  return `${up}${toParts.join("/")}`;
+}
+function getHrefForMarkdownPage(currentHtmlPath, targetHtmlPath) {
+  const current = normalizeSimplePath2(currentHtmlPath || "");
+  const target = normalizeSimplePath2(targetHtmlPath);
+  const currentDir = current.split("/").slice(0, -1).join("/");
+  const relative = currentDir ? pathRelative(currentDir, target) : target;
+  return normalizeSimplePath2(relative);
+}
+
 // src/exporter.ts
 function stripFrontmatter(markdown) {
   const normalized = markdown.replace(/\r\n/g, "\n");
@@ -15984,23 +16006,6 @@ async function resolveObsidianTarget(ctx, sourceFile, rawTarget, expectImage, al
     kind: isImageExt(resolved.extension.toLowerCase()) ? "image" : "file",
     displayText: resolved.basename
   };
-}
-function getHrefForMarkdownPage(currentHtmlPath, targetHtmlPath) {
-  const current = normalizeExportHref2(currentHtmlPath || "");
-  const target = normalizeExportHref2(targetHtmlPath);
-  const currentDir = current.split("/").slice(0, -1).join("/");
-  const relative = currentDir ? pathRelative(currentDir, target) : target;
-  return normalizeExportHref2(relative);
-}
-function pathRelative(fromDir, toPath) {
-  const fromParts = (0, import_obsidian.normalizePath)(fromDir).split("/").filter(Boolean);
-  const toParts = (0, import_obsidian.normalizePath)(toPath).split("/").filter(Boolean);
-  while (fromParts.length && toParts.length && fromParts[0] === toParts[0]) {
-    fromParts.shift();
-    toParts.shift();
-  }
-  const up = "../".repeat(fromParts.length);
-  return `${up}${toParts.join("/")}`;
 }
 async function buildMarkdownPreview(ctx, file) {
   const raw = stripFrontmatter(await ctx.app.vault.read(file));
