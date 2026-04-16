@@ -1,4 +1,11 @@
 declare module "obsidian" {
+  type DropdownComponent = {
+    addOption(value: string, label: string): DropdownComponent;
+    setValue(value: string): {
+      onChange(fn: (value: string) => void | Promise<void>): void;
+    };
+  };
+
   export class TAbstractFile {
     path: string;
     name: string;
@@ -68,6 +75,7 @@ declare module "obsidian" {
     setName(name: string): this;
     setDesc(desc: string): this;
     addToggle(cb: (toggle: { setValue(value: boolean): { onChange(fn: (value: boolean) => void | Promise<void>): void } }) => void): this;
+    addDropdown(cb: (dropdown: DropdownComponent) => void): this;
     addText(cb: (text: { setPlaceholder(value: string): { setValue(value: string): { onChange(fn: (value: string) => void | Promise<void>): void } } }) => void): this;
   }
 

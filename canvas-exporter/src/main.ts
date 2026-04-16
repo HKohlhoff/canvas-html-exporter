@@ -1,20 +1,9 @@
-import { App, Notice, Plugin, PluginSettingTab, Setting, TFile } from "obsidian";
-import { convertCanvasToHtml, HighlightingThemeChoice } from "./converter";
+import { Notice, Plugin, TFile } from "obsidian";
+import { convertCanvasToHtml } from "./converter";
 import { exportCanvasPackage } from "./exporter";
-
-type PluginSettings = {
-  darkMode: boolean;
-  outputDir: string;
-  highlightingTheme: HighlightingThemeChoice;
-};
+import { CanvasExporterSettingTab, DEFAULT_SETTINGS, normalizePluginSettings, PluginSettings } from "./settings";
 
 type CanvasColorMap = Record<string, string>;
-
-const DEFAULT_SETTINGS: PluginSettings = {
-  darkMode: false,
-  outputDir: "Canvas-Exports",
-  highlightingTheme: "shiki",
-};
 
 export default class CanvasExporterPlugin extends Plugin {
   settings: PluginSettings = DEFAULT_SETTINGS;
@@ -149,69 +138,10 @@ export default class CanvasExporterPlugin extends Plugin {
 
   private async loadSettings(): Promise<void> {
     const saved = await this.loadData();
-    this.settings = { ...DEFAULT_SETTINGS, ...(saved ?? {}) };
+    this.settings = normalizePluginSettings(saved);
   }
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
-  }
-}
-
-class CanvasExporterSettingTab extends PluginSettingTab {
-  plugin: CanvasExporterPlugin;
-
-  constructor(app: App, plugin: CanvasExporterPlugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-
-  display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
-
-    containerEl.createEl("h2", { text: "Canvas to HTML" });
-    containerEl.createEl("p", {
-      text: "Exportiert ein portables Paket pro Canvas mit index.html sowie assets/images und assets/files. Markdown-Dateiknoten werden dabei zusätzlich als einfache HTML-Unterseiten exportiert.",
-    });
-
-    new Setting(containerEl)
-      .setName("Dunkles Standard-Theme")
-      .setDesc("Verwendet beim Export standardmäßig ein dunkles HTML-Layout.")
-      .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.darkMode).onChange(async (value) => {
-          this.plugin.settings.darkMode = value;
-          await this.plugin.saveSettings();
-        }),
-      );
-
-    (new Setting(containerEl) as any)
-      .setName("Syntax-Highlighting")
-      .setDesc("Waehlt das Farbschema fuer Codebloecke im HTML-Export.")
-      .addDropdown((dropdown: any) =>
-        dropdown
-          .addOption("shiki", "Shiki")
-          .addOption("github", "GitHub")
-          .addOption("vscode", "VS Code")
-          .addOption("catppuccin", "Catppuccin")
-          .addOption("material", "Material")
-          .setValue(this.plugin.settings.highlightingTheme)
-          .onChange(async (value: string) => {
-            this.plugin.settings.highlightingTheme = (value as HighlightingThemeChoice) || DEFAULT_SETTINGS.highlightingTheme;
-            await this.plugin.saveSettings();
-          }),
-      );
-
-    new Setting(containerEl)
-      .setName("Ausgabeordner")
-      .setDesc("Relativer Zielordner im Vault, zum Beispiel Canvas-Exports.")
-      .addText((text) =>
-        text
-          .setPlaceholder("Canvas-Exports")
-          .setValue(this.plugin.settings.outputDir)
-          .onChange(async (value) => {
-            this.plugin.settings.outputDir = value || DEFAULT_SETTINGS.outputDir;
-            await this.plugin.saveSettings();
-          }),
-      );
   }
 }

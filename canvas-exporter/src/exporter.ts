@@ -22,6 +22,7 @@ export type ExportSettings = {
   outputDir: string;
   canvasColors?: Record<string, string>;
   highlightingTheme?: HighlightingThemeChoice;
+  showMinimap?: boolean;
 };
 
 type PreparedCanvasData = CanvasData;
@@ -127,7 +128,12 @@ export async function exportCanvasPackage(
   return {
     folderPath: exportFolder,
     data: { nodes: preparedNodes, edges: preparedEdges, name: title },
-    options: { darkMode: settings.darkMode, title, highlightingTheme: settings.highlightingTheme },
+    options: {
+      darkMode: settings.darkMode,
+      title,
+      highlightingTheme: settings.highlightingTheme,
+      showMinimap: settings.showMinimap,
+    },
   };
 }
 

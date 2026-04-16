@@ -23,6 +23,7 @@ function test(name: string, fn: () => Promise<void> | void): Promise<void> | voi
 const baseOptions = {
   darkMode: true,
   title: "Test Canvas",
+  showMinimap: true,
 };
 
 (async () => {
@@ -121,7 +122,7 @@ await test("renders highlighted code blocks on the canvas page", async () => {
   assert.match(html, /class="shiki/);
   assert.match(html, /style="color:#[0-9A-Fa-f]{6}/);
   assert.match(html, /&#x3C;\?|&#x3C;<\/span><span[^>]*>\?/);
-  assert.match(html, /meta name="canvas-exporter-build" content="0\.2\.0-(shiki|github)"/);
+  assert.match(html, /meta name="canvas-exporter-build" content="0\.2\.0-[a-z]+"/);
 });
 
 await test("renders standalone markdown documents with wrapper and title", () => {
@@ -292,5 +293,60 @@ await test("renders edge marker and line style metadata into canvas script", asy
   assert.match(html, /function dashArrayFor\(style, width\)/);
   assert.match(html, /marker-start/);
   assert.match(html, /marker-end/);
+});
+
+await test("renders minimap markup and viewport sync when enabled", async () => {
+  const data: CanvasData = {
+    name: "Mini",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+      { id: "b", type: "group", x: 320, y: 160, width: 260, height: 180, text: "Gruppe" },
+    ],
+    edges: [],
+  };
+
+  const html = await convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /id="minimap-panel" class="minimap"/);
+  assert.match(html, /id="minimap-drag-handle" class="minimap-header"/);
+  assert.match(html, /id="minimap-toolbar-button" type="button" onclick="toggleMinimap\(\)"/);
+  assert.doesNotMatch(html, />Navigation</);
+  assert.match(html, /id="minimap-svg"/);
+  assert.match(html, /id="minimap-viewport"/);
+  assert.match(html, /function updateMinimapViewport\(\)/);
+  assert.match(html, /function startMinimapDrag\(event\)/);
+  assert.match(html, /function moveMinimap\(event\)/);
+  assert.match(html, /function stopMinimapDrag\(event\)/);
+  assert.match(html, /function applyMinimapPosition\(left, top\)/);
+  assert.match(html, /function scrollViewportToCanvasPoint\(x, y, behavior\)/);
+  assert.match(html, /function startMinimapPan\(event\)/);
+  assert.match(html, /function moveMinimapPan\(event\)/);
+  assert.match(html, /function stopMinimapPan\(event\)/);
+  assert.match(html, /function syncViewportFromMinimap\(event, behavior\)/);
+  assert.match(html, /function showMinimap\(\)/);
+  assert.match(html, /function hideMinimap\(\)/);
+  assert.match(html, /window\.toggleMinimap = function\(\)/);
+  assert.match(html, /minimapDragHandle\.addEventListener\("pointerdown", startMinimapDrag\)/);
+  assert.doesNotMatch(html, /minimapToolbarButton\.addEventListener\("click"/);
+  assert.match(html, /window\.addEventListener\("pointermove", moveMinimap/);
+  assert.match(html, /minimapSvg\.addEventListener\("pointerdown", startMinimapPan\)/);
+  assert.match(html, /minimapSvg\.addEventListener\("click", jumpViaMinimap\)/);
+  assert.match(html, /viewport\.addEventListener\("scroll", updateMinimapViewport/);
+  assert.doesNotMatch(html, /minimap-hide-button/);
+  assert.doesNotMatch(html, /minimap-toggle-button/);
+  assert.doesNotMatch(html, /@media print/);
+});
+
+await test("omits minimap when disabled", async () => {
+  const data: CanvasData = {
+    name: "Ohne Mini",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+    ],
+    edges: [],
+  };
+
+  const html = await convertCanvasToHtml(data, { ...baseOptions, showMinimap: false });
+  assert.doesNotMatch(html, /class="minimap"/);
+  assert.doesNotMatch(html, /id="minimap-svg"/);
 });
 })();

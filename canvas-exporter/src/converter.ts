@@ -51,6 +51,7 @@ export interface ExportOptions {
   title: string;
   canvasColors?: Record<string, string>;
   highlightingTheme?: HighlightingThemeChoice;
+  showMinimap?: boolean;
 }
 
 export const EXPORTER_VERSION = "0.2.0";
@@ -190,6 +191,7 @@ async function renderCodeBlock(
 export async function convertCanvasToHtml(data: CanvasData, options: ExportOptions): Promise<string> {
   const nodes = Array.isArray(data.nodes) ? data.nodes : [];
   const edges = Array.isArray(data.edges) ? data.edges : [];
+  const showMinimap = options.showMinimap !== false;
 
   const bounds = getBounds(nodes);
   const theme = getTheme(options.darkMode);
@@ -215,6 +217,20 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
   // CSS-Variablen für benutzerdefinierte Canvas-Farben (überschreiben die Obsidian-Defaults)
   const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
+  const minimapHtml = showMinimap
+    ? `<aside id="minimap-panel" class="minimap" aria-label="Canvas-Minimap">
+    <div id="minimap-drag-handle" class="minimap-header" title="Minimap verschieben">
+      <div class="minimap-header-copy">
+        <strong>Minimap</strong>
+      </div>
+    </div>
+    <svg id="minimap-svg" viewBox="0 0 ${bounds.width} ${bounds.height}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <rect class="minimap-background" x="0" y="0" width="${bounds.width}" height="${bounds.height}"></rect>
+      ${nodes.map((node) => renderMinimapNode(node, bounds.offsetX, bounds.offsetY, theme, options.canvasColors)).join("\n      ")}
+      <rect id="minimap-viewport" class="minimap-viewport" x="0" y="0" width="0" height="0"></rect>
+    </svg>
+  </aside>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -506,6 +522,82 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       cursor: pointer;
     }
     .toolbar button:hover { background: ${theme.chipBackground}; }
+    .minimap {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 20;
+      width: min(240px, calc(100vw - 32px));
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px solid ${theme.canvasBorder};
+      background: ${theme.canvasBackground};
+      box-shadow: 0 12px 30px rgba(0,0,0,0.16);
+      backdrop-filter: blur(10px);
+    }
+    .minimap[hidden] {
+      display: none;
+    }
+    .minimap-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: ${theme.mutedText};
+      font-size: 0.82rem;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+    }
+    .minimap.is-dragging .minimap-header {
+      cursor: grabbing;
+    }
+    .minimap-header-copy {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .minimap-header strong {
+      color: ${theme.text};
+      font-size: 0.88rem;
+    }
+    #minimap-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: ${bounds.width} / ${bounds.height};
+      border-radius: 10px;
+      border: 1px solid ${theme.canvasBorder};
+      overflow: hidden;
+      cursor: pointer;
+      background: ${theme.bodyBackground};
+    }
+    .minimap-background {
+      fill: ${theme.bodyBackground};
+    }
+    .minimap-node {
+      vector-effect: non-scaling-stroke;
+      stroke-width: 1.5;
+    }
+    .minimap-node.group {
+      stroke-dasharray: 6 4;
+      opacity: 0.75;
+    }
+    .minimap-viewport {
+      fill: rgba(25, 103, 210, 0.12);
+      stroke: ${theme.link};
+      stroke-width: 2;
+      vector-effect: non-scaling-stroke;
+      pointer-events: none;
+    }
+    @media (max-width: 720px) {
+      .minimap {
+        right: 12px;
+        bottom: 12px;
+        width: min(180px, calc(100vw - 24px));
+      }
+    }
     .edge-label {
       font-size: 12px;
       fill: ${theme.text};
@@ -617,6 +709,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     <button type="button" onclick="zoomBy(1.15)">Zoom +</button>
     <button type="button" onclick="zoomBy(1 / 1.15)">Zoom −</button>
     <button type="button" onclick="resetZoom()">Reset</button>
+    ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>
@@ -628,11 +721,17 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       ${nodeHtml}
     </div>
   </div>
+  ${minimapHtml}
   <script>
     (() => {
       const edgeLayer = document.getElementById("edge-layer");
       const canvas = document.getElementById("canvas");
       const viewport = document.querySelector(".viewport");
+      const minimapPanel = document.getElementById("minimap-panel");
+      const minimapDragHandle = document.getElementById("minimap-drag-handle");
+      const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
+      const minimapSvg = document.getElementById("minimap-svg");
+      const minimapViewport = document.getElementById("minimap-viewport");
       const edgeColor = ${JSON.stringify(theme.edge)};
       const textColor = ${JSON.stringify(theme.text)};
       const obsidianColors = ${JSON.stringify(
@@ -640,6 +739,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       )};
       const edges = ${JSON.stringify(edgesData)};
       let currentScale = 1;
+      let minimapDrag = null;
+      let minimapPan = null;
 
       function resolveEdgeColor(color) {
         const normalized = String(color || "").trim();
@@ -812,10 +913,157 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         }
       }
 
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function getVisibleCanvasRect() {
+        const canvasRect = canvas.getBoundingClientRect();
+        const viewportRect = viewport.getBoundingClientRect();
+        const left = Math.max(viewportRect.left, canvasRect.left);
+        const top = Math.max(viewportRect.top, canvasRect.top);
+        const right = Math.min(viewportRect.right, canvasRect.right);
+        const bottom = Math.min(viewportRect.bottom, canvasRect.bottom);
+        return {
+          left: Math.max(0, left - canvasRect.left) / currentScale,
+          top: Math.max(0, top - canvasRect.top) / currentScale,
+          width: Math.max(0, right - left) / currentScale,
+          height: Math.max(0, bottom - top) / currentScale,
+        };
+      }
+
+      function updateMinimapViewport() {
+        if (!minimapSvg || !minimapViewport) return;
+        const visible = getVisibleCanvasRect();
+        minimapViewport.setAttribute("x", String(clamp(visible.left, 0, ${bounds.width})));
+        minimapViewport.setAttribute("y", String(clamp(visible.top, 0, ${bounds.height})));
+        minimapViewport.setAttribute("width", String(clamp(visible.width, 0, ${bounds.width})));
+        minimapViewport.setAttribute("height", String(clamp(visible.height, 0, ${bounds.height})));
+      }
+
+      function scrollViewportToCanvasPoint(x, y, behavior) {
+        const targetLeft = canvas.offsetLeft + x * currentScale - viewport.clientWidth / 2;
+        const targetTop = canvas.offsetTop + y * currentScale - viewport.clientHeight / 2;
+        viewport.scrollTo({
+          left: Math.max(0, targetLeft),
+          top: Math.max(0, targetTop),
+          behavior: behavior || "auto",
+        });
+        window.requestAnimationFrame(updateMinimapViewport);
+      }
+
+      function mapClientPointToMinimap(event) {
+        if (!minimapSvg) return;
+        const point = minimapSvg.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        return point.matrixTransform(minimapSvg.getScreenCTM().inverse());
+      }
+
+      function syncViewportFromMinimap(event, behavior) {
+        if (!minimapSvg || minimapDrag) return;
+        const transformed = mapClientPointToMinimap(event);
+        if (!transformed) return;
+        scrollViewportToCanvasPoint(transformed.x, transformed.y, behavior || "auto");
+      }
+
+      function jumpViaMinimap(event) {
+        if (minimapPan || minimapDrag) return;
+        syncViewportFromMinimap(event, "smooth");
+      }
+
+      function startMinimapPan(event) {
+        if (!minimapSvg || minimapDrag) return;
+        minimapPan = { pointerId: event.pointerId };
+        minimapSvg.setPointerCapture(event.pointerId);
+        syncViewportFromMinimap(event, "auto");
+        event.preventDefault();
+      }
+
+      function moveMinimapPan(event) {
+        if (!minimapPan || !minimapSvg) return;
+        syncViewportFromMinimap(event, "auto");
+      }
+
+      function stopMinimapPan(event) {
+        if (!minimapPan || !minimapSvg) return;
+        const activePointerId = minimapPan.pointerId;
+        minimapPan = null;
+        if (typeof activePointerId === "number") {
+          minimapSvg.releasePointerCapture(activePointerId);
+        }
+      }
+
+      function clampMinimapPosition(left, top) {
+        if (!minimapPanel) return { left, top };
+        const panelWidth = minimapPanel.offsetWidth;
+        const panelHeight = minimapPanel.offsetHeight;
+        const maxLeft = Math.max(0, window.innerWidth - panelWidth - 8);
+        const maxTop = Math.max(0, window.innerHeight - panelHeight - 8);
+        return {
+          left: clamp(left, 8, maxLeft),
+          top: clamp(top, 8, maxTop),
+        };
+      }
+
+      function applyMinimapPosition(left, top) {
+        if (!minimapPanel) return;
+        const next = clampMinimapPosition(left, top);
+        minimapPanel.style.left = next.left + "px";
+        minimapPanel.style.top = next.top + "px";
+        minimapPanel.style.right = "auto";
+        minimapPanel.style.bottom = "auto";
+      }
+
+      function showMinimap() {
+        if (minimapPanel) minimapPanel.hidden = false;
+        updateMinimapViewport();
+      }
+
+      function hideMinimap() {
+        if (minimapPanel) minimapPanel.hidden = true;
+      }
+
+      window.toggleMinimap = function() {
+        if (!minimapPanel) return;
+        if (minimapPanel.hidden) {
+          showMinimap();
+        } else {
+          hideMinimap();
+        }
+      };
+
+      function startMinimapDrag(event) {
+        if (!minimapPanel || !minimapDragHandle) return;
+        const rect = minimapPanel.getBoundingClientRect();
+        minimapDrag = {
+          offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top,
+        };
+        minimapPanel.classList.add("is-dragging");
+        minimapDragHandle.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      }
+
+      function moveMinimap(event) {
+        if (!minimapDrag || !minimapPanel) return;
+        applyMinimapPosition(event.clientX - minimapDrag.offsetX, event.clientY - minimapDrag.offsetY);
+      }
+
+      function stopMinimapDrag(event) {
+        if (!minimapDrag || !minimapPanel || !minimapDragHandle) return;
+        minimapDrag = null;
+        minimapPanel.classList.remove("is-dragging");
+        if (typeof event.pointerId === "number") {
+          minimapDragHandle.releasePointerCapture(event.pointerId);
+        }
+      }
+
       window.zoomBy = function(factor) {
         currentScale = Math.max(0.2, Math.min(4, currentScale * factor));
         canvas.style.transform = "scale(" + currentScale + ")";
         drawEdges();
+        updateMinimapViewport();
       };
 
       window.resetZoom = function() {
@@ -830,6 +1078,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         canvas.style.transform = "scale(" + currentScale + ")";
         viewport.scrollTo({ left: 0, top: 0, behavior: "auto" });
         drawEdges();
+        updateMinimapViewport();
       };
 
       function syncLinkOfflineState() {
@@ -865,7 +1114,25 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       window.addEventListener("resize", () => {
         drawEdges();
         window.resetZoom();
+        if (minimapPanel) {
+          const rect = minimapPanel.getBoundingClientRect();
+          applyMinimapPosition(rect.left, rect.top);
+        }
       });
+      viewport.addEventListener("scroll", updateMinimapViewport, { passive: true });
+      if (minimapDragHandle) {
+        minimapDragHandle.addEventListener("pointerdown", startMinimapDrag);
+      }
+      window.addEventListener("pointermove", moveMinimap, { passive: true });
+      window.addEventListener("pointerup", stopMinimapDrag);
+      window.addEventListener("pointercancel", stopMinimapDrag);
+      if (minimapSvg) {
+        minimapSvg.addEventListener("pointerdown", startMinimapPan);
+        window.addEventListener("pointermove", moveMinimapPan, { passive: true });
+        window.addEventListener("pointerup", stopMinimapPan);
+        window.addEventListener("pointercancel", stopMinimapPan);
+        minimapSvg.addEventListener("click", jumpViaMinimap);
+      }
       window.addEventListener("online", syncLinkOfflineState);
       window.addEventListener("offline", syncLinkOfflineState);
     })();
@@ -1006,10 +1273,7 @@ async function renderNode(
   canvasColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
 ): Promise<string> {
-  const left = normalizeNumber(node.x) + offsetX;
-  const top = normalizeNumber(node.y) + offsetY;
-  const width = Math.max(120, normalizeNumber(node.width));
-  const height = Math.max(60, normalizeNumber(node.height));
+  const frame = getNodeFrame(node, offsetX, offsetY);
   const type = (node.type || "text").toLowerCase();
   const isPdf = node.fileKind === "pdf";
   const classes = ["node", type, type === "group" ? "group" : "", isPdf ? "pdf" : ""].filter(Boolean).join(" ");
@@ -1019,42 +1283,29 @@ async function renderNode(
     : "";
   const content = await renderNodeContent(node, darkMode, highlightingTheme);
 
-  const colorKey = String(node.color || "").trim();
-  const isNumericColor = /^\d+$/.test(colorKey);
-
-  let background: string;
-  let border: string;
-
-  if (type === "group") {
-    background = theme.groupBackground;
-    border = theme.groupBorder;
-  } else if (isNumericColor && canvasColors && canvasColors[colorKey]) {
-    // Benutzerdefinierte Farbe aus Obsidian CSS-Variablen vorhanden
-    const bgVar = `--canvas-color-${colorKey}-bg`;
-    const borderVar = `--canvas-color-${colorKey}`;
-    const fallbackPalette = OBSIDIAN_COLORS[colorKey] || { background: theme.nodeBackground, border: theme.nodeBorder };
-    background = `var(${bgVar}, ${fallbackPalette.background})`;
-    border = `var(${borderVar}, ${fallbackPalette.border})`;
-  } else if (isNumericColor) {
-    // Keine CSS-Variable ausgelesen – nutze Obsidian-Fallback-Farben direkt
-    const palette = OBSIDIAN_COLORS[colorKey] || { background: theme.nodeBackground, border: theme.nodeBorder };
-    background = palette.background;
-    border = palette.border;
-  } else if (colorKey.startsWith("#")) {
-    // Hex-Farbe direkt im Canvas angegeben
-    background = `${colorKey}22`;
-    border = colorKey;
-  } else {
-    // Keine Farbe – Theme-Defaults
-    background = theme.nodeBackground;
-    border = theme.nodeBorder;
-  }
+  const colors = resolveNodeColors(node, theme, canvasColors);
 
   return `<div
     id="node-${escapeAttribute(node.id)}"
     class="${classes}"
-    style="left:${left}px;top:${top}px;width:${width}px;height:${height}px;background:${background};border-color:${border};"
+    style="left:${frame.left}px;top:${frame.top}px;width:${frame.width}px;height:${frame.height}px;background:${colors.background};border-color:${colors.border};"
   >${title}<div class="node-content">${content}</div></div>`;
+}
+
+function renderMinimapNode(
+  node: CanvasNode,
+  offsetX: number,
+  offsetY: number,
+  theme: ReturnType<typeof getTheme>,
+  canvasColors?: Record<string, string>,
+): string {
+  const type = (node.type || "text").toLowerCase();
+  const frame = getNodeFrame(node, offsetX, offsetY);
+  const colors = resolveNodeColors(node, theme, canvasColors);
+  const classes = ["minimap-node", type === "group" ? "group" : ""].filter(Boolean).join(" ");
+  const radius = type === "group" ? 14 : 10;
+
+  return `<rect class="${classes}" x="${frame.left}" y="${frame.top}" width="${frame.width}" height="${frame.height}" rx="${radius}" ry="${radius}" fill="${escapeAttribute(colors.minimapFill)}" stroke="${escapeAttribute(colors.minimapStroke)}"></rect>`;
 }
 
 async function renderNodeContent(
@@ -1608,6 +1859,72 @@ function getNodePalette(color: string | undefined, darkMode: boolean): NodePalet
   return darkMode
     ? { background: "#2b2f36", border: "#4a5565" }
     : { background: "#ffffff", border: "#c8d0da" };
+}
+
+function getNodeFrame(node: CanvasNode, offsetX: number, offsetY: number): { left: number; top: number; width: number; height: number } {
+  return {
+    left: normalizeNumber(node.x) + offsetX,
+    top: normalizeNumber(node.y) + offsetY,
+    width: Math.max(120, normalizeNumber(node.width)),
+    height: Math.max(60, normalizeNumber(node.height)),
+  };
+}
+
+function resolveNodeColors(
+  node: CanvasNode,
+  theme: ReturnType<typeof getTheme>,
+  canvasColors?: Record<string, string>,
+): { background: string; border: string; minimapFill: string; minimapStroke: string } {
+  const type = (node.type || "text").toLowerCase();
+  const colorKey = String(node.color || "").trim();
+  const isNumericColor = /^\d+$/.test(colorKey);
+
+  if (type === "group") {
+    return {
+      background: theme.groupBackground,
+      border: theme.groupBorder,
+      minimapFill: theme.darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
+      minimapStroke: theme.groupBorder,
+    };
+  }
+
+  if (isNumericColor && canvasColors && canvasColors[colorKey]) {
+    const bgVar = `--canvas-color-${colorKey}-bg`;
+    const borderVar = `--canvas-color-${colorKey}`;
+    const fallbackPalette = OBSIDIAN_COLORS[colorKey] || { background: theme.nodeBackground, border: theme.nodeBorder };
+    return {
+      background: `var(${bgVar}, ${fallbackPalette.background})`,
+      border: `var(${borderVar}, ${fallbackPalette.border})`,
+      minimapFill: toSoftBackground(canvasColors[colorKey]),
+      minimapStroke: canvasColors[colorKey],
+    };
+  }
+
+  if (isNumericColor) {
+    const palette = OBSIDIAN_COLORS[colorKey] || { background: theme.nodeBackground, border: theme.nodeBorder };
+    return {
+      background: palette.background,
+      border: palette.border,
+      minimapFill: palette.background,
+      minimapStroke: palette.border,
+    };
+  }
+
+  if (colorKey.startsWith("#")) {
+    return {
+      background: `${colorKey}22`,
+      border: colorKey,
+      minimapFill: toSoftBackground(colorKey),
+      minimapStroke: colorKey,
+    };
+  }
+
+  return {
+    background: theme.nodeBackground,
+    border: theme.nodeBorder,
+    minimapFill: theme.darkMode ? "rgba(255,255,255,0.14)" : "rgba(36,48,61,0.08)",
+    minimapStroke: theme.nodeBorder,
+  };
 }
 
 export function buildCanvasColorVariables(canvasColors?: Record<string, string>): string {
