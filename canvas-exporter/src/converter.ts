@@ -2398,20 +2398,16 @@ function resolveNodeColors(
   const type = (node.type || "text").toLowerCase();
   const colorKey = String(node.color || "").trim();
   const isNumericColor = /^\d+$/.test(colorKey);
-
-  if (type === "group") {
-    return {
-      background: theme.groupBackground,
-      border: theme.groupBorder,
-      minimapFill: theme.darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
-      minimapStroke: theme.groupBorder,
-    };
-  }
+  const fallbackBackground = type === "group" ? theme.groupBackground : theme.nodeBackground;
+  const fallbackBorder = type === "group" ? theme.groupBorder : theme.nodeBorder;
+  const fallbackMinimapFill = type === "group"
+    ? (theme.darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)")
+    : (theme.darkMode ? "rgba(255,255,255,0.14)" : "rgba(36,48,61,0.08)");
 
   if (isNumericColor && canvasColors && canvasColors[colorKey]) {
     const bgVar = `--canvas-color-${colorKey}-bg`;
     const borderVar = `--canvas-color-${colorKey}`;
-    const fallbackPalette = OBSIDIAN_COLORS[colorKey] || { background: theme.nodeBackground, border: theme.nodeBorder };
+    const fallbackPalette = OBSIDIAN_COLORS[colorKey] || { background: fallbackBackground, border: fallbackBorder };
     return {
       background: `var(${bgVar}, ${fallbackPalette.background})`,
       border: `var(${borderVar}, ${fallbackPalette.border})`,
@@ -2421,7 +2417,7 @@ function resolveNodeColors(
   }
 
   if (isNumericColor) {
-    const palette = OBSIDIAN_COLORS[colorKey] || { background: theme.nodeBackground, border: theme.nodeBorder };
+    const palette = OBSIDIAN_COLORS[colorKey] || { background: fallbackBackground, border: fallbackBorder };
     return {
       background: palette.background,
       border: palette.border,
@@ -2440,10 +2436,10 @@ function resolveNodeColors(
   }
 
   return {
-    background: theme.nodeBackground,
-    border: theme.nodeBorder,
-    minimapFill: theme.darkMode ? "rgba(255,255,255,0.14)" : "rgba(36,48,61,0.08)",
-    minimapStroke: theme.nodeBorder,
+    background: fallbackBackground,
+    border: fallbackBorder,
+    minimapFill: fallbackMinimapFill,
+    minimapStroke: fallbackBorder,
   };
 }
 

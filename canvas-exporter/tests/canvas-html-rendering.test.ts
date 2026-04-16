@@ -242,6 +242,32 @@ await test("injects custom canvas color variables into the document", async () =
   assert.match(html, /var\(--canvas-color-4-bg, /);
 });
 
+await test("applies canvas colors to group nodes", async () => {
+  const data: CanvasData = {
+    name: "Colored Group",
+    nodes: [
+      {
+        id: "group-color-1",
+        type: "group",
+        x: 0,
+        y: 0,
+        width: 260,
+        height: 180,
+        text: "Group",
+        color: "4",
+      },
+    ],
+    edges: [],
+  };
+
+  const html = await convertCanvasToHtml(data, {
+    ...baseOptions,
+    canvasColors: { "4": "rgb(12, 34, 56)" },
+  });
+
+  assert.match(html, /background:var\(--canvas-color-4-bg, #56ae6c22\);border-color:var\(--canvas-color-4, #56ae6c\);/);
+});
+
 await test("renders default canvas bounds for empty canvases", async () => {
   const html = await convertCanvasToHtml({ name: "Leer", nodes: [], edges: [] }, baseOptions);
   assert.match(html, /id="canvas"/);
