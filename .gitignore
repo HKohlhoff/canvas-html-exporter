@@ -8,3 +8,4 @@ canvas_exporter/release/
 canvas-exporter/.test-build/
 Obsidian_canvas-exporter/
 .env
+Canvas2html_TestVault/*
