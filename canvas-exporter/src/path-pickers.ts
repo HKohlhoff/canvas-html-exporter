@@ -1,13 +1,20 @@
-import path from "node:path";
-import { App, FuzzySuggestModal, TFolder } from "obsidian";
+import { App, FuzzySuggestModal, Notice, TFolder } from "obsidian";
+import { isMobileRuntime, normalizeAbsoluteFolderPath, normalizeStoredOutputPathValue } from "./desktop-paths";
 
 export async function pickFolderPath(): Promise<string | null> {
+  if (isMobileRuntime()) {
+    new Notice("System folder selection is available on desktop only.", 5000);
+    return null;
+  }
+
   try {
+    const requireFn = (0, eval)("require") as (id: string) => unknown;
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const electron = require("electron");
-    const dialog =
+    const electron = requireFn("electron") as { remote?: { dialog?: { showOpenDialog?: (options: unknown) => Promise<unknown> } } };
+    const dialog = (
       electron?.remote?.dialog ||
-      (() => { try { return require("@electron/remote").dialog; } catch { return null; } })();
+      (() => { try { return (requireFn("@electron/remote") as { dialog?: unknown }).dialog; } catch { return null; } })()
+    ) as { showOpenDialog?: (options: { title: string; properties: string[] }) => Promise<{ canceled?: boolean; filePaths?: string[] }> } | null;
 
     if (dialog?.showOpenDialog) {
       const result = await dialog.showOpenDialog({
@@ -22,12 +29,12 @@ export async function pickFolderPath(): Promise<string | null> {
     // Fallback below.
   }
 
-  return await new Promise((resolve) => {
-    if (typeof document === "undefined") {
-      resolve(null);
-      return;
-    }
+  if (typeof document === "undefined") {
+    new Notice("System folder selection is available on desktop only.", 5000);
+    return null;
+  }
 
+  return await new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
     (input as HTMLInputElement & { webkitdirectory?: boolean; directory?: boolean }).webkitdirectory = true;
@@ -52,17 +59,7 @@ export async function pickFolderPath(): Promise<string | null> {
 }
 
 export function normalizeStoredOutputPath(raw: string): string {
-  const value = String(raw || "").trim();
-  if (!value) return "";
-  if (path.isAbsolute(value)) {
-    return normalizeAbsoluteFolderPath(value);
-  }
-  if (value === "/" || value === ".") return "/";
-  return value.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
-}
-
-function normalizeAbsoluteFolderPath(raw: string): string {
-  return path.normalize(raw).replace(/\\/g, "/");
+  return normalizeStoredOutputPathValue(raw);
 }
 
 function collectVaultFolders(app: App): TFolder[] {

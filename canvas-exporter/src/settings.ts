@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting, TextComponent } from "obsidian";
 import type { HighlightingThemeChoice } from "./converter";
+import { isAbsoluteFilesystemPath, isMobileRuntime } from "./desktop-paths";
 import { normalizeStoredOutputPath, openVaultFolderPicker, pickFolderPath } from "./path-pickers";
 
 export type PluginSettings = {
@@ -31,7 +32,10 @@ const VALID_HIGHLIGHTING_THEMES = new Set<HighlightingThemeChoice>(Object.keys(H
 export function normalizePluginSettings(saved: unknown): PluginSettings {
   const data = saved && typeof saved === "object" ? (saved as Record<string, unknown>) : {};
   const highlightingTheme = String(data.highlightingTheme || "").trim() as HighlightingThemeChoice;
-  const normalizedOutputDir = normalizeStoredOutputPath(typeof data.outputDir === "string" ? data.outputDir : "");
+  let normalizedOutputDir = normalizeStoredOutputPath(typeof data.outputDir === "string" ? data.outputDir : "");
+  if (isMobileRuntime() && isAbsoluteFilesystemPath(normalizedOutputDir)) {
+    normalizedOutputDir = DEFAULT_SETTINGS.outputDir;
+  }
 
   return {
     darkMode: typeof data.darkMode === "boolean" ? data.darkMode : DEFAULT_SETTINGS.darkMode,
@@ -58,6 +62,7 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
 
   display(): void {
     const { containerEl } = this;
+    const isMobile = isMobileRuntime();
     containerEl.empty();
 
     containerEl.createEl("h2", { text: "Canvas to HTML" });
@@ -114,7 +119,11 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
 
     const outputFolderSetting = new Setting(containerEl)
       .setName("Output folder")
-      .setDesc("Use either a folder inside the vault or an absolute folder on your system.")
+      .setDesc(
+        isMobile
+          ? "Choose a folder inside the vault. Absolute system folders are available on desktop only."
+          : "Use either a folder inside the vault or an absolute folder on your system.",
+      )
       .addText((text) => {
         this.outputDirText = text;
         text
@@ -136,7 +145,8 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
           });
         });
       })
-      .addButton((button) => {
+    if (!isMobile) {
+      outputFolderSetting.addButton((button) => {
         button.setButtonText("Choose folder...");
         button.onClick(async () => {
           const picked = await pickFolderPath();
@@ -147,6 +157,7 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         });
       });
+    }
 
     this.layoutOutputFolderSetting(outputFolderSetting);
   }

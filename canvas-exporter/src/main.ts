@@ -1,7 +1,6 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { Notice, Plugin, TFile } from "obsidian";
 import { convertCanvasToHtml } from "./converter";
+import { isAbsoluteFilesystemPath, requireDesktopNodeApis } from "./desktop-paths";
 import { exportCanvasPackage } from "./exporter";
 import { CanvasExporterSettingTab, DEFAULT_SETTINGS, normalizePluginSettings, PluginSettings } from "./settings";
 
@@ -49,7 +48,8 @@ export default class CanvasExporterPlugin extends Plugin {
   }
 
   private async writeIndexFile(folderPath: string, html: string): Promise<void> {
-    if (path.isAbsolute(folderPath)) {
+    if (isAbsoluteFilesystemPath(folderPath)) {
+      const { fs, path } = requireDesktopNodeApis();
       await fs.mkdir(folderPath, { recursive: true });
       await fs.writeFile(path.join(folderPath, "index.html"), html, "utf8");
       return;

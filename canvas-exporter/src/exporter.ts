@@ -1,5 +1,3 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import type { App, TAbstractFile, TFile } from "obsidian";
 import {
   buildBlockAnchorId,
@@ -13,6 +11,7 @@ import {
   HighlightingThemeChoice,
   markdownToHtml,
 } from "./converter";
+import { isAbsoluteFilesystemPath, requireDesktopNodeApis } from "./desktop-paths";
 import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePath } from "./export-file-helpers";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-helpers";
 import { embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTargetSuffix } from "./link-helpers";
@@ -88,7 +87,7 @@ export async function exportCanvasPackage(
     throw new Error(`Invalid canvas JSON in ${canvasFile.path}`);
   }
 
-  const outputMode = path.isAbsolute(settings.outputDir) ? "filesystem" : "vault";
+  const outputMode = isAbsoluteFilesystemPath(settings.outputDir) ? "filesystem" : "vault";
   const baseFolder = resolveBaseFolder(settings.outputDir, outputMode);
   const exportFolder = joinOutputPath(outputMode, baseFolder, safeSegment(canvasFile.basename));
   const assetsDir = joinOutputPath(outputMode, exportFolder, "assets");
@@ -756,6 +755,7 @@ function uniqueOutputName(ctx: MarkdownContext, basename: string, extension: str
 async function ensureFolderExists(app: App, folderPath: string, outputMode: "vault" | "filesystem"): Promise<void> {
   if (outputMode === "filesystem") {
     if (!folderPath) return;
+    const { fs } = requireDesktopNodeApis();
     await fs.mkdir(folderPath, { recursive: true });
     return;
   }
@@ -779,6 +779,7 @@ async function ensureFolderExists(app: App, folderPath: string, outputMode: "vau
 
 async function writeTextFile(app: App, filePath: string, content: string, outputMode: "vault" | "filesystem" = "vault"): Promise<void> {
   if (outputMode === "filesystem") {
+    const { fs, path } = requireDesktopNodeApis();
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, content, "utf8");
     return;
@@ -794,8 +795,9 @@ async function writeTextFile(app: App, filePath: string, content: string, output
 
 async function writeBinaryFile(app: App, filePath: string, data: ArrayBuffer, outputMode: "vault" | "filesystem" = "vault"): Promise<void> {
   if (outputMode === "filesystem") {
+    const { fs, path } = requireDesktopNodeApis();
     await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, Buffer.from(data));
+    await fs.writeFile(filePath, new Uint8Array(data));
     return;
   }
 
@@ -1137,6 +1139,7 @@ function escapeHtmlAttr(value: string): string {
 
 function resolveBaseFolder(outputDir: string, outputMode: "vault" | "filesystem"): string {
   if (outputMode === "filesystem") {
+    const { path } = requireDesktopNodeApis();
     return path.resolve(outputDir);
   }
 
@@ -1147,6 +1150,7 @@ function resolveBaseFolder(outputDir: string, outputMode: "vault" | "filesystem"
 
 function joinOutputPath(outputMode: "vault" | "filesystem", ...parts: string[]): string {
   if (outputMode === "filesystem") {
+    const { path } = requireDesktopNodeApis();
     return path.join(...parts.filter(Boolean));
   }
   return normalizePath(parts.filter(Boolean).join("/"));
