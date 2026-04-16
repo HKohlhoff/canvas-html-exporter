@@ -320,7 +320,6 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     }
     .node.group {
       background: ${theme.groupBackground};
-      border-style: dashed;
       z-index: 0;
     }
     .node.pdf,
@@ -722,7 +721,6 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       stroke-width: 1.5;
     }
     .minimap-node.group {
-      stroke-dasharray: 6 4;
       opacity: 0.75;
     }
     .minimap-viewport {
