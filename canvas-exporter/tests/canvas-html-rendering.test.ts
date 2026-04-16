@@ -321,6 +321,7 @@ await test("renders minimap markup and viewport sync when enabled", async () => 
   assert.match(html, /function moveMinimap\(event\)/);
   assert.match(html, /function stopMinimapDrag\(event\)/);
   assert.match(html, /function applyMinimapPosition\(left, top\)/);
+  assert.match(html, /function cubicPoint\(p0, p1, p2, p3, t\)/);
   assert.match(html, /function scrollViewportToCanvasPoint\(x, y, behavior\)/);
   assert.match(html, /function startMinimapPan\(event\)/);
   assert.match(html, /function moveMinimapPan\(event\)/);
@@ -331,6 +332,8 @@ await test("renders minimap markup and viewport sync when enabled", async () => 
   assert.match(html, /window\.toggleMinimap = function\(\)/);
   assert.match(html, /minimapDragHandle\.addEventListener\("pointerdown", startMinimapDrag\)/);
   assert.doesNotMatch(html, /minimapToolbarButton\.addEventListener\("click"/);
+  assert.match(html, /minimapToolbarButton\.classList\.add\("is-active"\)/);
+  assert.match(html, /searchToolbarButton\.classList\.add\("is-active"\)/);
   assert.match(html, /window\.addEventListener\("pointermove", moveMinimap/);
   assert.match(html, /minimapSvg\.addEventListener\("pointerdown", startMinimapPan\)/);
   assert.match(html, /minimapSvg\.addEventListener\("click", jumpViaMinimap\)/);
@@ -360,9 +363,16 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /function closeSearch\(\)/);
   assert.match(html, /function focusNode\(nodeId\)/);
   assert.match(html, /function appendSearchQueryToHref\(href, query\)/);
+  assert.match(html, /function updateActiveSearchResult\(\)/);
+  assert.match(html, /function moveActiveSearchResult\(direction\)/);
+  assert.match(html, /function activateCurrentSearchResult\(\)/);
+  assert.match(html, /searchInput\.addEventListener\("keydown"/);
   assert.match(html, /searchInput\.addEventListener\("input"/);
   assert.match(html, /searchResults\.addEventListener\("click"/);
+  assert.match(html, /searchResults\.addEventListener\("mousemove"/);
+  assert.match(html, /Enter springt zum aktiven Treffer/);
   assert.match(html, /window\.openSearch = openSearch/);
+  assert.match(html, /event\.key === "\/"/);
   assert.match(html, /"title":"Alpha Beta Gamma"/);
   assert.match(html, /"openHref":"assets\/files\/suche-notiz\.html"|\"openHref\":\"assets\/files\//);
   assert.match(html, /target="_blank" rel="noopener noreferrer" data-search-open="true"/);
@@ -420,7 +430,7 @@ await test("omits search ui when disabled", async () => {
   };
 
   const html = await convertCanvasToHtml(data, { ...baseOptions, showSearch: false });
-  assert.doesNotMatch(html, /search-toolbar-button/);
+  assert.doesNotMatch(html, /id="search-toolbar-button"/);
   assert.doesNotMatch(html, /id="search-overlay"/);
   assert.doesNotMatch(html, /id="search-input"/);
 });

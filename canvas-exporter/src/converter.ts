@@ -540,6 +540,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       cursor: pointer;
     }
     .toolbar button:hover { background: ${theme.chipBackground}; }
+    .toolbar button.is-active {
+      border-color: ${theme.link};
+      background: ${theme.chipBackground};
+      box-shadow: 0 0 0 3px rgba(25, 103, 210, 0.14);
+    }
     .node.search-hit {
       box-shadow: 0 0 0 4px rgba(25, 103, 210, 0.22), 0 8px 24px rgba(0,0,0,0.16);
       transition: box-shadow 0.2s ease;
@@ -628,6 +633,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       cursor: pointer;
     }
     .search-result:hover {
+      background: ${theme.chipBackground};
+    }
+    .search-result.is-active {
+      border-color: ${theme.link};
+      box-shadow: 0 0 0 3px rgba(25, 103, 210, 0.16);
       background: ${theme.chipBackground};
     }
     .search-result-title {
@@ -734,8 +744,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       pointer-events: none;
     }
     .edge-label-background {
-      fill: #ffffff;
-      stroke: none;
+      fill: ${theme.canvasBackground};
+      stroke: ${theme.canvasBorder};
+      stroke-width: 1;
       pointer-events: none;
     }
     .md-card {
@@ -862,6 +873,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const minimapPanel = document.getElementById("minimap-panel");
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
+      const searchToolbarButton = document.getElementById("search-toolbar-button");
       const minimapSvg = document.getElementById("minimap-svg");
       const minimapViewport = document.getElementById("minimap-viewport");
       const searchOverlay = document.getElementById("search-overlay");
@@ -881,6 +893,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       let minimapPan = null;
       let highlightedNodeId = null;
       let searchHighlightTimer = null;
+      let activeSearchIndex = -1;
 
       function resolveEdgeColor(color) {
         const normalized = String(color || "").trim();
@@ -1030,9 +1043,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           edgeLayer.appendChild(path);
 
           if (edge.label) {
+            const labelPoint = cubicPoint(start, { x: c1x, y: c1y }, { x: c2x, y: c2y }, end, 0.5);
             const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            label.setAttribute("x", String((start.x + end.x) / 2));
-            label.setAttribute("y", String((start.y + end.y) / 2 - 6));
+            label.setAttribute("x", String(labelPoint.x));
+            label.setAttribute("y", String(labelPoint.y - 8));
             label.setAttribute("text-anchor", "middle");
             label.setAttribute("class", "edge-label");
             label.setAttribute("fill", textColor);
@@ -1051,6 +1065,14 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             edgeLayer.insertBefore(bg, label);
           }
         }
+      }
+
+      function cubicPoint(p0, p1, p2, p3, t) {
+        const mt = 1 - t;
+        return {
+          x: mt * mt * mt * p0.x + 3 * mt * mt * t * p1.x + 3 * mt * t * t * p2.x + t * t * t * p3.x,
+          y: mt * mt * mt * p0.y + 3 * mt * mt * t * p1.y + 3 * mt * t * t * p2.y + t * t * t * p3.y,
+        };
       }
 
       function clamp(value, min, max) {
@@ -1150,13 +1172,14 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
       function renderSearchResults(matches, query) {
         if (!searchResults || !searchSummary) return;
+        activeSearchIndex = matches.length ? 0 : -1;
         if (!query.trim()) {
           searchSummary.textContent = "Suchbegriff eingeben, um passende Knoten zu finden.";
           searchResults.innerHTML = "";
           return;
         }
         searchSummary.textContent = matches.length
-          ? matches.length + " Treffer"
+          ? matches.length + " Treffer · Enter springt zum aktiven Treffer"
           : "Keine Treffer fuer diesen Suchbegriff.";
         searchResults.innerHTML = matches.map((entry) => {
           const titleContent = highlightMatch(entry.title, query);
@@ -1172,6 +1195,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             '<span class="search-result-snippet">' + snippet + '</span>' +
           '</button></li>';
         }).join("");
+        updateActiveSearchResult();
       }
 
       function runSearch(query) {
@@ -1189,6 +1213,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function openSearch() {
         if (!searchOverlay) return;
         searchOverlay.hidden = false;
+        if (searchToolbarButton) {
+          searchToolbarButton.classList.add("is-active");
+          searchToolbarButton.setAttribute("aria-pressed", "true");
+        }
         window.setTimeout(() => {
           if (searchInput) searchInput.focus();
         }, 0);
@@ -1198,6 +1226,42 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function closeSearch() {
         if (!searchOverlay) return;
         searchOverlay.hidden = true;
+        if (searchToolbarButton) {
+          searchToolbarButton.classList.remove("is-active");
+          searchToolbarButton.setAttribute("aria-pressed", "false");
+        }
+      }
+
+      function getSearchButtons() {
+        return searchResults ? Array.from(searchResults.querySelectorAll(".search-result")) : [];
+      }
+
+      function updateActiveSearchResult() {
+        const buttons = getSearchButtons();
+        buttons.forEach((button, index) => {
+          button.classList.toggle("is-active", index === activeSearchIndex);
+        });
+        if (activeSearchIndex >= 0 && buttons[activeSearchIndex]) {
+          buttons[activeSearchIndex].scrollIntoView({ block: "nearest" });
+        }
+      }
+
+      function moveActiveSearchResult(direction) {
+        const buttons = getSearchButtons();
+        if (!buttons.length) return;
+        if (activeSearchIndex < 0) {
+          activeSearchIndex = 0;
+        } else {
+          activeSearchIndex = (activeSearchIndex + direction + buttons.length) % buttons.length;
+        }
+        updateActiveSearchResult();
+      }
+
+      function activateCurrentSearchResult() {
+        const buttons = getSearchButtons();
+        if (!buttons.length) return;
+        const active = buttons[activeSearchIndex >= 0 ? activeSearchIndex : 0];
+        if (active) active.click();
       }
 
       window.openSearch = openSearch;
@@ -1268,11 +1332,19 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
       function showMinimap() {
         if (minimapPanel) minimapPanel.hidden = false;
+        if (minimapToolbarButton) {
+          minimapToolbarButton.classList.add("is-active");
+          minimapToolbarButton.setAttribute("aria-pressed", "true");
+        }
         updateMinimapViewport();
       }
 
       function hideMinimap() {
         if (minimapPanel) minimapPanel.hidden = true;
+        if (minimapToolbarButton) {
+          minimapToolbarButton.classList.remove("is-active");
+          minimapToolbarButton.setAttribute("aria-pressed", "false");
+        }
       }
 
       window.toggleMinimap = function() {
@@ -1388,6 +1460,18 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         searchInput.addEventListener("input", () => {
           runSearch(searchInput.value);
         });
+        searchInput.addEventListener("keydown", (event) => {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            moveActiveSearchResult(1);
+          } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            moveActiveSearchResult(-1);
+          } else if (event.key === "Enter") {
+            event.preventDefault();
+            activateCurrentSearchResult();
+          }
+        });
       }
       if (searchResults) {
         searchResults.addEventListener("click", (event) => {
@@ -1399,6 +1483,16 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           if (!nodeId) return;
           focusNode(nodeId);
           closeSearch();
+        });
+        searchResults.addEventListener("mousemove", (event) => {
+          const target = event.target instanceof Element ? event.target.closest(".search-result") : null;
+          if (!target) return;
+          const buttons = getSearchButtons();
+          const index = buttons.indexOf(target);
+          if (index >= 0 && index !== activeSearchIndex) {
+            activeSearchIndex = index;
+            updateActiveSearchResult();
+          }
         });
       }
       if (searchCloseButton) {
@@ -1412,6 +1506,14 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         });
       }
       window.addEventListener("keydown", (event) => {
+        const target = event.target instanceof HTMLElement ? event.target : null;
+        const targetTag = target?.tagName || "";
+        const isTypingContext = targetTag === "INPUT" || targetTag === "TEXTAREA" || Boolean(target?.isContentEditable);
+        if (!isTypingContext && event.key === "/") {
+          event.preventDefault();
+          openSearch();
+          return;
+        }
         if (event.key === "Escape" && searchOverlay && !searchOverlay.hidden) {
           closeSearch();
         }
