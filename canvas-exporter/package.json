@@ -1,10 +1,11 @@
 {
   "name": "canvas-exporter",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "description": "Export Obsidian Canvas to interactive HTML",
   "main": "main.js",
   "scripts": {
     "build": "node build.mjs",
+    "build:deploy": "node build.mjs --deploy",
     "test": "npm run test:math && npm run test:markdown && npm run test:export && npm run test:canvas-html && npm run test:links && npm run test:paths && npm run test:preview && npm run test:export-files && npm run test:integration",
     "test:canvas-html": "tsc -p tsconfig.tests.json && node .test-build/tests/canvas-html-rendering.test.js",
     "test:export": "tsc -p tsconfig.tests.json && node .test-build/tests/exporter-helpers.test.js",
@@ -16,8 +17,11 @@
     "test:math": "tsc -p tsconfig.tests.json && node .test-build/tests/math-rendering.test.js",
     "test:markdown": "tsc -p tsconfig.tests.json && node .test-build/tests/markdown-rendering.test.js",
     "dev": "node build.mjs --watch",
+    "dev:deploy": "node build.mjs --watch --deploy",
     "build:prod": "node build.mjs --production",
-    "dev:prod": "node build.mjs --watch --production"
+    "build:prod:deploy": "node build.mjs --production --deploy",
+    "dev:prod": "node build.mjs --watch --production",
+    "dev:prod:deploy": "node build.mjs --watch --production --deploy"
   },
   "keywords": [],
   "author": "Holger Kohlhoff",

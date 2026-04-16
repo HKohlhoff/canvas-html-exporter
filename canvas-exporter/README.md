@@ -1,74 +1,104 @@
 # Canvas to HTML
 
-Stabile Arbeitsbasis für ein Obsidian-Plugin, das `.canvas`-Dateien als eigenständige HTML-Dateien exportiert.
+Canvas to HTML exports the active Obsidian Canvas as a portable HTML package that can be opened in any modern browser.
 
-## Aktueller Stand
+The export keeps the canvas layout and creates a self-contained folder with an `index.html`, copied assets, and optional HTML subpages for embedded Markdown notes.
 
-Diese überarbeitete Version ist bewusst reduziert und soll vor allem zuverlässig funktionieren.
+## Features
 
-Unterstützt werden derzeit:
+- Export the active `.canvas` file as an interactive HTML package
+- Preserve canvas layout, node styling, groups, and connection lines
+- Export Markdown file nodes as standalone HTML subpages
+- Rewrite internal Markdown links, wiki links, heading links, and block references
+- Copy linked images and files into the export package
+- Render LaTeX math with KaTeX
+- Highlight fenced code blocks with Shiki
+- Support link nodes with preview pages and offline fallbacks
+- Optional canvas minimap
+- Optional canvas search overlay with result navigation
+- Light or dark default theme for exported pages
 
-- Export der **aktiven Canvas-Datei** als HTML
-- einfache Darstellung von
-  - Text-Knoten
-  - Gruppen-Knoten
-  - Link-Knoten
-  - Datei-Knoten
-- Kanten zwischen Knoten
-- schlichtes Zoom im exportierten HTML
-- ein einfaches Einstellungs-Panel
-- Export von Markdown-Dateiknoten als HTML-Unterseiten
-- Rewrite interner Links und Wiki-Links in exportierten Markdown-Seiten
-- Kopie von Bildern und Dateien nach `assets/images` bzw. `assets/files`
-- Markdown-Vorschau in Datei-Knoten
-- defensivere Validierung und Normalisierung von Canvas-JSON, Nodes und Edges vor dem Export
+## Export Structure
 
-Noch **nicht** stabil umgesetzt und deshalb bewusst entfernt oder nicht mehr behauptet:
+Each export creates a dedicated folder inside the configured output directory:
 
-- eingebettete Webseiten
-- Minimap
-- Suche
-- Drag & Drop im Export
-- echte Bild-Einbettung als Base64
-- vollständige Unterstützung aller denkbaren Canvas-Sonderfälle
+```text
+Canvas-Exports/
+  My Canvas/
+    index.html
+    assets/
+      images/
+      files/
+```
 
-## Warum diese Fassung?
+Depending on the canvas contents, the export may also include additional HTML pages for Markdown and link nodes.
 
-Die vorherige Version hatte bereits gute Ansätze, war aber an mehreren Stellen noch prototypisch. Ziel dieser Fassung ist eine verlässliche Grundlage, auf der man sauber weiterentwickeln kann.
+## How To Use
 
-## Bedienung
+1. Open a canvas in Obsidian.
+2. Run the command `Export: Aktuelles Canvas als HTML speichern`.
+3. Open the generated `index.html` from the configured output folder.
 
-Nach dem Aktivieren des Plugins steht folgender Command zur Verfügung:
+You can also use the ribbon icon to trigger the export.
 
-- **Export: Aktuelles Canvas als HTML speichern**
+## Plugin Settings
 
-Die erzeugten HTML-Dateien werden in den eingestellten Ausgabeordner im Vault geschrieben.
+- `Dunkles Standard-Theme`: use a dark default theme for exported HTML
+- `Minimap anzeigen`: include a minimap on the exported canvas page
+- `Suche anzeigen`: include a search overlay on the exported canvas page
+- `Syntax-Highlighting`: choose the Shiki theme family for code blocks
+- `Ausgabeordner`: choose the export folder inside the vault
 
-Pro Canvas wird ein portables Export-Paket erzeugt. Je nach Inhalt enthält es:
+## Supported Content
 
-- `index.html` für die Canvas-Ansicht
-- `assets/images` für exportierte Bilder
-- `assets/files` für sonstige Dateien
-- zusätzliche HTML-Unterseiten für Markdown-Dateien, falls solche als Dateiknoten referenziert werden
+The current exporter covers the most important Obsidian canvas workflows:
 
-## Entwicklung
+- text nodes
+- group nodes
+- link nodes
+- Markdown file nodes
+- image and generic file nodes
+- callouts, tables, lists, blockquotes, and code fences in Markdown
+- section links and block references
+- PDF and file embeds in exported Markdown pages
+
+## Notes And Limitations
+
+- External websites may refuse to load inside an embedded frame because of their own security headers.
+- Exported HTML is designed to be portable, but remote website previews still need an internet connection.
+- Mobile support is not separately documented yet; the plugin is currently implemented with standard Obsidian plugin APIs and is not intentionally desktop-only.
+
+## Development
+
+Install dependencies and run the checks:
 
 ```bash
 npm install
-npm run build
 npm test
+npm run build
 ```
 
-Für die Entwicklung mit Watch-Modus:
+Development workflows:
 
 ```bash
 npm run dev
+npm run build:prod
 ```
 
-## Nächste sinnvolle Schritte
+To deploy a local development build directly into an Obsidian vault, set `OBSIDIAN_PLUGINS_DIR` and use one of the deploy scripts:
 
-1. automatisierte Export-Regressionstests für Markdown-, Link- und Asset-Fälle
-2. echte Behandlung weiterer Bild- und Medien-Sonderfälle
-3. relative Ressourcenpfade noch robuster machen
-4. optionale Vorschau im Browser
-5. später zusätzliche Interaktivität gezielt wieder einbauen
+```bash
+export OBSIDIAN_PLUGINS_DIR="/path/to/.obsidian/plugins"
+npm run build:deploy
+npm run dev:deploy
+```
+
+## Community Plugin Notes
+
+This repository includes the files expected by the Obsidian community plugin workflow:
+
+- `manifest.json`
+- `versions.json`
+- release artifacts in `release/`
+
+For a public release, the Git tag should match the plugin version from `manifest.json`.

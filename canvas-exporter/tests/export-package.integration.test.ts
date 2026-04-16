@@ -542,7 +542,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.match(markdownPage?.text || "", /class="shiki/);
     assert.match(markdownPage?.text || "", /style="color:#[0-9A-Fa-f]{6}/);
     assert.match(markdownPage?.text || "", /&#x3C;\?|&#x3C;<\/span><span[^>]*>\?/);
-    assert.match(markdownPage?.text || "", /meta name="canvas-exporter-build" content="0\.2\.0-(shiki|github)"/);
+    assert.match(markdownPage?.text || "", /meta name="canvas-exporter-build" content="0\.4\.0-(shiki|github)"/);
   });
 
   await test("keeps embedded markdown images relative to exported subpages", async () => {

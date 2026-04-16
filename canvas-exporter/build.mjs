@@ -4,6 +4,7 @@ import path from "node:path";
 
 const isProd = process.argv.includes("--production");
 const watchMode = process.argv.includes("--watch");
+const deployMode = process.argv.includes("--deploy");
 
 const RELEASE_DIR = "release";
 const ENTRY = "src/main.ts";
@@ -11,9 +12,7 @@ const ENTRY = "src/main.ts";
 // Anpassen, falls deine Plugin-ID im manifest.json anders lautet:
 const PLUGIN_ID = "canvas-exporter";
 
-const OBSIDIAN_PLUGINS_DIR =
-  process.env.OBSIDIAN_PLUGINS_DIR ||
-  "/Users/Holger/SynologyDrive/Obsidian/HolgersVault/.obsidian/plugins";
+const OBSIDIAN_PLUGINS_DIR = process.env.OBSIDIAN_PLUGINS_DIR || "";
 
 function resolveVaultPluginDir(pluginsDirOrPluginDir, pluginId) {
   if (!pluginsDirOrPluginDir) return "";
@@ -96,9 +95,14 @@ function ensureHotReloadMarker() {
 }
 
 function deployToVault() {
+  if (!deployMode) {
+    console.log("[deploy] skipped: --deploy not enabled");
+    return;
+  }
+
   if (!OBSIDIAN_PLUGINS_DIR) {
     console.log(
-      "[deploy] übersprungen: OBSIDIAN_PLUGINS_DIR ist nicht gesetzt"
+      "[deploy] skipped: OBSIDIAN_PLUGINS_DIR is not set"
     );
     return;
   }
@@ -107,8 +111,8 @@ function deployToVault() {
   ensureDir(VAULT_PLUGIN_DIR);
 
   console.log(`[deploy] plugin id: ${PLUGIN_ID}`);
-  console.log(`[deploy] plugins-pfad: ${OBSIDIAN_PLUGINS_DIR}`);
-  console.log(`[deploy] zielordner: ${VAULT_PLUGIN_DIR}`);
+  console.log(`[deploy] plugins dir: ${OBSIDIAN_PLUGINS_DIR}`);
+  console.log(`[deploy] target dir: ${VAULT_PLUGIN_DIR}`);
 
   const copiedMain = safeCopy(
     path.join(RELEASE_DIR, "main.js"),
@@ -137,7 +141,7 @@ function deployToVault() {
       copiedMain ? "copied" : "missing"
     }, manifest.json=${copiedManifest ? "copied" : "missing"}, styles.css=${cssStatus}`
   );
-  console.log("[deploy] release -> vault plugin folder kopiert");
+  console.log("[deploy] copied release artifacts to the vault plugin folder");
 }
 
 function watchStaticFile(file, onChange) {
@@ -152,6 +156,12 @@ function watchStaticFile(file, onChange) {
 
 ensureReleaseDir();
 copyStaticToRelease();
+
+if (deployMode && !OBSIDIAN_PLUGINS_DIR) {
+  console.warn(
+    "[deploy] --deploy was requested, but OBSIDIAN_PLUGINS_DIR is not set."
+  );
+}
 
 const common = {
   entryPoints: [ENTRY],
@@ -196,9 +206,9 @@ const ctx = await esbuild.context(common);
 await ctx.watch();
 
 console.log(
-  `👀 Watch-Modus aktiv${
+  `👀 Watch mode active${
     isProd ? " (production)" : ""
-  } — Build nach release/, danach Deploy in den Vault.`
+  } — building to release/${deployMode ? ", then deploying to the vault plugin folder." : "."}`
 );
 
 const staticWatchers = [
