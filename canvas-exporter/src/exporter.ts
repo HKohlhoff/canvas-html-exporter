@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { App, TAbstractFile, TFile } from "obsidian";
 import {
   buildBlockAnchorId,
@@ -30,6 +32,7 @@ type PreparedCanvasData = CanvasData;
 
 type MarkdownContext = {
   app: App;
+  outputMode: "vault" | "filesystem";
   outputRoot: string;
   assetsFilesDir: string;
   assetsImagesDir: string;
@@ -85,18 +88,18 @@ export async function exportCanvasPackage(
     throw new Error(`Invalid canvas JSON in ${canvasFile.path}`);
   }
 
-  const baseFolder = normalizeFolder(settings.outputDir);
-  await ensureFolderExists(app, baseFolder);
+  const outputMode = path.isAbsolute(settings.outputDir) ? "filesystem" : "vault";
+  const baseFolder = resolveBaseFolder(settings.outputDir, outputMode);
+  const exportFolder = joinOutputPath(outputMode, baseFolder, safeSegment(canvasFile.basename));
+  const assetsDir = joinOutputPath(outputMode, exportFolder, "assets");
+  const imagesDir = joinOutputPath(outputMode, assetsDir, "images");
+  const filesDir = joinOutputPath(outputMode, assetsDir, "files");
 
-  const exportFolder = normalizePath(`${baseFolder}/${safeSegment(canvasFile.basename)}`);
-  const assetsDir = normalizePath(`${exportFolder}/assets`);
-  const imagesDir = normalizePath(`${assetsDir}/images`);
-  const filesDir = normalizePath(`${assetsDir}/files`);
-
-  await ensureFolderExists(app, exportFolder);
-  await ensureFolderExists(app, assetsDir);
-  await ensureFolderExists(app, imagesDir);
-  await ensureFolderExists(app, filesDir);
+  await ensureFolderExists(app, baseFolder, outputMode);
+  await ensureFolderExists(app, exportFolder, outputMode);
+  await ensureFolderExists(app, assetsDir, outputMode);
+  await ensureFolderExists(app, imagesDir, outputMode);
+  await ensureFolderExists(app, filesDir, outputMode);
 
   const normalized = normalizeCanvasData(parsed, canvasFile.basename);
   const nodes = normalized.nodes;
@@ -105,6 +108,7 @@ export async function exportCanvasPackage(
 
   const ctx: MarkdownContext = {
     app,
+    outputMode,
     outputRoot: exportFolder,
     assetsFilesDir: filesDir,
     assetsImagesDir: imagesDir,
@@ -235,7 +239,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   if (ext === "pdf") {
     const pdfFilename = exportPath.split("/").pop() || "";
     const viewerName = pdfFilename.replace(/\.pdf$/i, "-viewer.html");
-    const viewerPath = normalizePath(`${ctx.assetsFilesDir}/${viewerName}`);
+    const viewerPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, viewerName);
     const viewerHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -249,7 +253,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
 </head>
 <body><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
 </html>`;
-    await writeTextFile(ctx.app, viewerPath, viewerHtml);
+    await writeTextFile(ctx.app, viewerPath, viewerHtml, ctx.outputMode);
     const canvasHref = normalizeExportHref(`assets/files/${viewerName}`);
     return {
       ...node,
@@ -272,10 +276,10 @@ async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promi
   const url = typeof node.url === "string" ? node.url.trim() : "";
   const title = typeof node.label === "string" && node.label.trim() ? node.label.trim() : url || "Link";
   const outputName = uniqueOutputName(ctx, title || "Link", "html");
-  const outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
+  const outputPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, outputName);
   const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
   const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme);
-  await writeTextFile(ctx.app, outputPath, html);
+  await writeTextFile(ctx.app, outputPath, html, ctx.outputMode);
   return rel;
 }
 
@@ -422,7 +426,7 @@ async function renderMarkdownFileToHtml(
 
   if (activeStack.has(file.path)) {
     return mode === "page"
-      ? normalizeExportHref(ctx.htmlMap.get(file.path) || toExportRelativePath(`${ctx.assetsFilesDir}/${uniqueOutputName(ctx, file.basename, "html")}`, ctx.outputRoot))
+      ? normalizeExportHref(ctx.htmlMap.get(file.path) || toExportRelativePath(joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, uniqueOutputName(ctx, file.basename, "html")), ctx.outputRoot))
       : "";
   }
 
@@ -433,7 +437,7 @@ async function renderMarkdownFileToHtml(
 
     if (mode === "page") {
       const outputName = uniqueOutputName(ctx, file.basename, "html");
-      outputPath = normalizePath(`${ctx.assetsFilesDir}/${outputName}`);
+      outputPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, outputName);
       rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
       ctx.htmlMap.set(file.path, rel);
     }
@@ -448,7 +452,7 @@ async function renderMarkdownFileToHtml(
 
     const title = (pageTitle || file.basename || file.name).trim();
     const htmlDoc = buildMarkdownDocumentHtml(title, htmlBody, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme);
-    await writeTextFile(ctx.app, outputPath, htmlDoc);
+    await writeTextFile(ctx.app, outputPath, htmlDoc, ctx.outputMode);
 
     return rel;
   } finally {
@@ -737,7 +741,7 @@ async function copyVaultFile(ctx: MarkdownContext, file: TFile, kind: "image" | 
   const outputName = uniqueOutputName(ctx, file.basename, file.extension);
   const outputPath = normalizePath(`${folder}/${outputName}`);
   const bytes = await ctx.app.vault.readBinary(file);
-  await writeBinaryFile(ctx.app, outputPath, bytes);
+  await writeBinaryFile(ctx.app, outputPath, bytes, ctx.outputMode);
 
   const rel = toExportRelativePath(outputPath, ctx.outputRoot);
   ctx.fileMap.set(file.path, rel);
@@ -749,7 +753,13 @@ function uniqueOutputName(ctx: MarkdownContext, basename: string, extension: str
   return buildUniqueOutputName(ctx.counter, basename, extension);
 }
 
-async function ensureFolderExists(app: App, folderPath: string): Promise<void> {
+async function ensureFolderExists(app: App, folderPath: string, outputMode: "vault" | "filesystem"): Promise<void> {
+  if (outputMode === "filesystem") {
+    if (!folderPath) return;
+    await fs.mkdir(folderPath, { recursive: true });
+    return;
+  }
+
   const parts = normalizePath(folderPath).split("/").filter(Boolean);
   let current = "";
   for (const part of parts) {
@@ -767,7 +777,13 @@ async function ensureFolderExists(app: App, folderPath: string): Promise<void> {
   }
 }
 
-async function writeTextFile(app: App, filePath: string, content: string): Promise<void> {
+async function writeTextFile(app: App, filePath: string, content: string, outputMode: "vault" | "filesystem" = "vault"): Promise<void> {
+  if (outputMode === "filesystem") {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, content, "utf8");
+    return;
+  }
+
   const existing = app.vault.getAbstractFileByPath(filePath);
   if (isTFile(existing)) {
     await app.vault.modify(existing, content);
@@ -776,7 +792,13 @@ async function writeTextFile(app: App, filePath: string, content: string): Promi
   await app.vault.create(filePath, content);
 }
 
-async function writeBinaryFile(app: App, filePath: string, data: ArrayBuffer): Promise<void> {
+async function writeBinaryFile(app: App, filePath: string, data: ArrayBuffer, outputMode: "vault" | "filesystem" = "vault"): Promise<void> {
+  if (outputMode === "filesystem") {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, Buffer.from(data));
+    return;
+  }
+
   const existing = app.vault.getAbstractFileByPath(filePath);
   if (isTFile(existing)) {
     await app.vault.modifyBinary(existing, data);
@@ -1111,4 +1133,21 @@ function escapeHtmlAttr(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function resolveBaseFolder(outputDir: string, outputMode: "vault" | "filesystem"): string {
+  if (outputMode === "filesystem") {
+    return path.resolve(outputDir);
+  }
+
+  const normalized = String(outputDir || "").trim();
+  if (normalized === "/" || normalized === ".") return "";
+  return normalizeFolder(normalized);
+}
+
+function joinOutputPath(outputMode: "vault" | "filesystem", ...parts: string[]): string {
+  if (outputMode === "filesystem") {
+    return path.join(...parts.filter(Boolean));
+  }
+  return normalizePath(parts.filter(Boolean).join("/"));
 }

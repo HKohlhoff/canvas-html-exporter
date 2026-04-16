@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import { Notice, Plugin, TFile } from "obsidian";
 import { convertCanvasToHtml } from "./converter";
 import { exportCanvasPackage } from "./exporter";
@@ -47,6 +49,12 @@ export default class CanvasExporterPlugin extends Plugin {
   }
 
   private async writeIndexFile(folderPath: string, html: string): Promise<void> {
+    if (path.isAbsolute(folderPath)) {
+      await fs.mkdir(folderPath, { recursive: true });
+      await fs.writeFile(path.join(folderPath, "index.html"), html, "utf8");
+      return;
+    }
+
     const filePath = `${folderPath}/index.html`;
     const existing = this.app.vault.getAbstractFileByPath(filePath);
     if (existing instanceof TFile) {

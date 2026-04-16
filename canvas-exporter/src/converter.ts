@@ -223,7 +223,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   // CSS variables for custom canvas colors override the Obsidian defaults.
   const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
   const minimapHtml = showMinimap
-    ? `<aside id="minimap-panel" class="minimap" aria-label="Canvas-Minimap">
+    ? `<aside id="minimap-panel" class="minimap" aria-label="Canvas-Minimap" hidden>
     <div id="minimap-drag-handle" class="minimap-header" title="Move minimap">
       <div class="minimap-header-copy">
         <strong>Minimap</strong>
@@ -665,7 +665,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     .minimap {
       position: fixed;
       right: 24px;
-      bottom: 24px;
+      top: 64px;
+      bottom: auto;
       z-index: 20;
       width: min(240px, calc(100vw - 32px));
       padding: 10px;
@@ -867,6 +868,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   ${searchHtml}
   <script>
     (() => {
+      const toolbar = document.querySelector(".toolbar");
       const edgeLayer = document.getElementById("edge-layer");
       const canvas = document.getElementById("canvas");
       const viewport = document.querySelector(".viewport");
@@ -1330,8 +1332,22 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         minimapPanel.style.bottom = "auto";
       }
 
+      function placeMinimapUnderToolbar() {
+        if (!minimapPanel) return;
+        const toolbarRect = toolbar ? toolbar.getBoundingClientRect() : null;
+        const panelWidth = minimapPanel.offsetWidth || 240;
+        const top = (toolbarRect ? toolbarRect.bottom : 48) + 8;
+        const left = window.innerWidth - panelWidth - 24;
+        applyMinimapPosition(left, top);
+      }
+
       function showMinimap() {
-        if (minimapPanel) minimapPanel.hidden = false;
+        if (minimapPanel) {
+          minimapPanel.hidden = false;
+          if (minimapPanel.dataset.positionMode !== "custom") {
+            placeMinimapUnderToolbar();
+          }
+        }
         if (minimapToolbarButton) {
           minimapToolbarButton.classList.add("is-active");
           minimapToolbarButton.setAttribute("aria-pressed", "true");
@@ -1370,6 +1386,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
       function moveMinimap(event) {
         if (!minimapDrag || !minimapPanel) return;
+        minimapPanel.dataset.positionMode = "custom";
         applyMinimapPosition(event.clientX - minimapDrag.offsetX, event.clientY - minimapDrag.offsetY);
       }
 
@@ -1438,8 +1455,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         drawEdges();
         window.resetZoom();
         if (minimapPanel) {
-          const rect = minimapPanel.getBoundingClientRect();
-          applyMinimapPosition(rect.left, rect.top);
+          if (minimapPanel.dataset.positionMode === "custom") {
+            const rect = minimapPanel.getBoundingClientRect();
+            applyMinimapPosition(rect.left, rect.top);
+          } else {
+            placeMinimapUnderToolbar();
+          }
         }
       });
       viewport.addEventListener("scroll", updateMinimapViewport, { passive: true });

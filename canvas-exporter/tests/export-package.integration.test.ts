@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { exportCanvasPackage } from "../src/exporter";
 
 type MockFile = {
@@ -236,6 +239,41 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         }),
       /Invalid canvas JSON/,
     );
+  });
+
+  await test("exports package into an absolute filesystem folder", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "canvas-exporter-"));
+    try {
+      const canvasJson = JSON.stringify({
+        name: "Absolute Export",
+        nodes: [
+          { id: "main", type: "file", x: 0, y: 0, width: 320, height: 180, file: "notes/main.md" },
+        ],
+        edges: [],
+      });
+
+      const { app, files } = createMockApp([
+        { path: "canvases/demo.canvas", text: canvasJson },
+        { path: "notes/main.md", text: "# Absolute\nContent" },
+      ]);
+
+      const canvasFile = files.get("canvases/demo.canvas") as MockFile;
+      const result = await exportCanvasPackage(app as never, canvasFile as never, {
+        darkMode: true,
+        outputDir: tempRoot,
+      });
+
+      assert.equal(result.folderPath, path.join(tempRoot, "demo"));
+      const markdownNode = result.data.nodes.find((node) => node.id === "main");
+      assert.ok(markdownNode?.exportHtmlPath);
+
+      const exportedMarkdownPath = path.join(result.folderPath, markdownNode?.exportHtmlPath || "");
+      const exportedMarkdown = await fs.readFile(exportedMarkdownPath, "utf8");
+      assert.match(exportedMarkdown, /<h1>main<\/h1>/);
+      assert.match(exportedMarkdown, /<h1 id="absolute">Absolute<\/h1>/);
+    } finally {
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
   });
 
   await test("exports markdown fixtures with heading links and section embeds", async () => {

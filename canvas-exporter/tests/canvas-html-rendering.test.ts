@@ -336,7 +336,7 @@ await test("renders minimap markup and viewport sync when enabled", async () => 
   };
 
   const html = await convertCanvasToHtml(data, baseOptions);
-  assert.match(html, /id="minimap-panel" class="minimap"/);
+  assert.match(html, /id="minimap-panel" class="minimap" aria-label="Canvas-Minimap" hidden/);
   assert.match(html, /id="minimap-drag-handle" class="minimap-header"/);
   assert.match(html, /id="minimap-toolbar-button" type="button" onclick="toggleMinimap\(\)"/);
   assert.doesNotMatch(html, />Navigation</);

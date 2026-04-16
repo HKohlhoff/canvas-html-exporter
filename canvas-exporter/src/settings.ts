@@ -1,5 +1,6 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting, TextComponent } from "obsidian";
 import type { HighlightingThemeChoice } from "./converter";
+import { normalizeStoredOutputPath, openVaultFolderPicker, pickFolderPath } from "./path-pickers";
 
 export type PluginSettings = {
   darkMode: boolean;
@@ -30,10 +31,11 @@ const VALID_HIGHLIGHTING_THEMES = new Set<HighlightingThemeChoice>(Object.keys(H
 export function normalizePluginSettings(saved: unknown): PluginSettings {
   const data = saved && typeof saved === "object" ? (saved as Record<string, unknown>) : {};
   const highlightingTheme = String(data.highlightingTheme || "").trim() as HighlightingThemeChoice;
+  const normalizedOutputDir = normalizeStoredOutputPath(typeof data.outputDir === "string" ? data.outputDir : "");
 
   return {
     darkMode: typeof data.darkMode === "boolean" ? data.darkMode : DEFAULT_SETTINGS.darkMode,
-    outputDir: typeof data.outputDir === "string" && data.outputDir.trim() ? data.outputDir.trim() : DEFAULT_SETTINGS.outputDir,
+    outputDir: normalizedOutputDir || DEFAULT_SETTINGS.outputDir,
     highlightingTheme: VALID_HIGHLIGHTING_THEMES.has(highlightingTheme) ? highlightingTheme : DEFAULT_SETTINGS.highlightingTheme,
     showMinimap: typeof data.showMinimap === "boolean" ? data.showMinimap : DEFAULT_SETTINGS.showMinimap,
     showSearch: typeof data.showSearch === "boolean" ? data.showSearch : DEFAULT_SETTINGS.showSearch,
@@ -47,6 +49,7 @@ type SettingsHost = {
 
 export class CanvasExporterSettingTab extends PluginSettingTab {
   plugin: SettingsHost;
+  private outputDirText: TextComponent | null = null;
 
   constructor(app: App, plugin: SettingsHost) {
     super(app, plugin as never);
@@ -109,17 +112,79 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
         });
       });
 
-    new Setting(containerEl)
+    const outputFolderSetting = new Setting(containerEl)
       .setName("Output folder")
-      .setDesc("Relative destination folder inside the vault, for example Canvas-Exports.")
-      .addText((text) =>
+      .setDesc("Use either a folder inside the vault or an absolute folder on your system.")
+      .addText((text) => {
+        this.outputDirText = text;
         text
           .setPlaceholder("Canvas-Exports")
           .setValue(this.plugin.settings.outputDir)
           .onChange(async (value) => {
-            this.plugin.settings.outputDir = value.trim() || DEFAULT_SETTINGS.outputDir;
+            this.plugin.settings.outputDir = normalizeStoredOutputPath(value) || DEFAULT_SETTINGS.outputDir;
             await this.plugin.saveSettings();
-          }),
-      );
+          });
+      })
+      .addButton((button) => {
+        button.setButtonText("In vault...");
+        button.onClick(() => {
+          openVaultFolderPicker(this.app, async (vaultPath) => {
+            const nextValue = normalizeStoredOutputPath(vaultPath) || DEFAULT_SETTINGS.outputDir;
+            this.plugin.settings.outputDir = nextValue;
+            this.outputDirText?.setValue(nextValue);
+            await this.plugin.saveSettings();
+          });
+        });
+      })
+      .addButton((button) => {
+        button.setButtonText("Choose folder...");
+        button.onClick(async () => {
+          const picked = await pickFolderPath();
+          if (!picked) return;
+          const nextValue = normalizeStoredOutputPath(picked) || DEFAULT_SETTINGS.outputDir;
+          this.plugin.settings.outputDir = nextValue;
+          this.outputDirText?.setValue(nextValue);
+          await this.plugin.saveSettings();
+        });
+      });
+
+    this.layoutOutputFolderSetting(outputFolderSetting);
+  }
+
+  private layoutOutputFolderSetting(setting: Setting): void {
+    const controlEl = (setting as unknown as { controlEl?: HTMLElement }).controlEl;
+    if (!controlEl) return;
+
+    controlEl.style.display = "block";
+    controlEl.style.width = "100%";
+
+    const textInput = this.outputDirText?.inputEl;
+    const textWrapper = textInput?.parentElement as HTMLElement | null;
+    if (textWrapper) {
+      textWrapper.style.display = "block";
+      textWrapper.style.width = "100%";
+      textWrapper.style.marginBottom = "8px";
+    }
+    if (textInput) {
+      textInput.style.width = "100%";
+      textInput.style.maxWidth = "100%";
+      textInput.style.boxSizing = "border-box";
+    }
+
+    const buttonRow = document.createElement("div");
+    buttonRow.style.display = "flex";
+    buttonRow.style.flexWrap = "wrap";
+    buttonRow.style.gap = "8px";
+    buttonRow.style.justifyContent = "flex-start";
+
+    const buttonWrappers = Array.from(controlEl.children)
+      .filter((child) => child !== textWrapper) as HTMLElement[];
+
+    for (const wrapper of buttonWrappers) {
+      wrapper.style.marginTop = "0";
+      buttonRow.appendChild(wrapper);
+    }
+
+    controlEl.appendChild(buttonRow);
   }
 }
