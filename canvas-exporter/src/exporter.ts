@@ -23,6 +23,7 @@ export type ExportSettings = {
   canvasColors?: Record<string, string>;
   highlightingTheme?: HighlightingThemeChoice;
   showMinimap?: boolean;
+  showSearch?: boolean;
 };
 
 type PreparedCanvasData = CanvasData;
@@ -133,6 +134,7 @@ export async function exportCanvasPackage(
       title,
       highlightingTheme: settings.highlightingTheme,
       showMinimap: settings.showMinimap,
+      showSearch: settings.showSearch,
     },
   };
 }
@@ -964,6 +966,12 @@ function buildLinkDocumentHtml(
     .link-page-card p + p {
       margin-top: 0.9em;
     }
+    mark.search-highlight {
+      background: rgba(255, 214, 10, 0.45);
+      color: inherit;
+      padding: 0 0.08em;
+      border-radius: 3px;
+    }
   </style>
 </head>
 <body>
@@ -1045,6 +1053,18 @@ function buildLinkDocumentHtml(
       }, 4000);
       window.addEventListener("online", syncState);
       window.addEventListener("offline", syncState);
+
+      const query = (new URLSearchParams(window.location.search).get("q") || "").trim();
+      if (query && status) {
+        const safeQuery = query
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+        status.innerHTML = 'Suchbegriff: <mark class="search-highlight">' + safeQuery + '</mark>';
+        status.classList.add("is-visible");
+      }
     })();
   </script>
 </body>

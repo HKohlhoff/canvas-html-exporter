@@ -24,6 +24,7 @@ const baseOptions = {
   darkMode: true,
   title: "Test Canvas",
   showMinimap: true,
+  showSearch: true,
 };
 
 (async () => {
@@ -130,6 +131,8 @@ await test("renders standalone markdown documents with wrapper and title", () =>
   assert.match(html, /<title>Dokument<\/title>/);
   assert.match(html, /<main class="md-page">/);
   assert.match(html, /<p>Inhalt<\/p>/);
+  assert.match(html, /URLSearchParams\(window\.location\.search\)/);
+  assert.match(html, /className = "search-highlight"/);
 });
 
 await test("escapes markdown document titles", () => {
@@ -336,6 +339,62 @@ await test("renders minimap markup and viewport sync when enabled", async () => 
   assert.doesNotMatch(html, /@media print/);
 });
 
+await test("renders search overlay and toolbar button when enabled", async () => {
+  const data: CanvasData = {
+    name: "Suche",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 240, height: 120, text: "Alpha Beta Gamma" },
+      { id: "b", type: "file", x: 280, y: 0, width: 280, height: 160, fileKind: "markdown", displayName: "Suche Notiz", previewText: "Enthaelt Beta und Delta", canvasHref: "assets/files/suche-notiz.html" },
+    ],
+    edges: [],
+  };
+
+  const html = await convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /id="search-toolbar-button" type="button" onclick="openSearch\(\)"/);
+  assert.match(html, /id="search-overlay" class="search-overlay" hidden/);
+  assert.match(html, /id="search-input" class="search-input" type="search"/);
+  assert.match(html, /id="search-results" class="search-results"/);
+  assert.match(html, /function runSearch\(query\)/);
+  assert.match(html, /function openSearch\(\)/);
+  assert.match(html, /function closeSearch\(\)/);
+  assert.match(html, /function focusNode\(nodeId\)/);
+  assert.match(html, /function appendSearchQueryToHref\(href, query\)/);
+  assert.match(html, /searchInput\.addEventListener\("input"/);
+  assert.match(html, /searchResults\.addEventListener\("click"/);
+  assert.match(html, /window\.openSearch = openSearch/);
+  assert.match(html, /"title":"Alpha Beta Gamma"/);
+  assert.match(html, /"openHref":"assets\/files\/suche-notiz\.html"|\"openHref\":\"assets\/files\//);
+  assert.match(html, /target="_blank" rel="noopener noreferrer" data-search-open="true"/);
+  assert.match(html, /search-result-title-link/);
+  assert.match(html, /"kindLabel":"Markdown"/);
+});
+
+await test("indexes visible markdown preview html instead of hidden raw preview text", async () => {
+  const data: CanvasData = {
+    name: "Suche Sichtbar",
+    nodes: [
+      {
+        id: "md1",
+        type: "file",
+        x: 0,
+        y: 0,
+        width: 280,
+        height: 160,
+        fileKind: "markdown",
+        displayName: "Teilansicht",
+        canvasHref: "assets/files/teilansicht.html",
+        previewHtml: "<p>Nur sichtbarer Abschnitt</p>",
+        previewText: "Nur sichtbarer Abschnitt VersteckterSuchbegriff",
+      },
+    ],
+    edges: [],
+  };
+
+  const html = await convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /"text":"Teilansicht Nur sichtbarer Abschnitt"/);
+  assert.doesNotMatch(html, /VersteckterSuchbegriff/);
+});
+
 await test("omits minimap when disabled", async () => {
   const data: CanvasData = {
     name: "Ohne Mini",
@@ -348,5 +407,20 @@ await test("omits minimap when disabled", async () => {
   const html = await convertCanvasToHtml(data, { ...baseOptions, showMinimap: false });
   assert.doesNotMatch(html, /class="minimap"/);
   assert.doesNotMatch(html, /id="minimap-svg"/);
+});
+
+await test("omits search ui when disabled", async () => {
+  const data: CanvasData = {
+    name: "Ohne Suche",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+    ],
+    edges: [],
+  };
+
+  const html = await convertCanvasToHtml(data, { ...baseOptions, showSearch: false });
+  assert.doesNotMatch(html, /search-toolbar-button/);
+  assert.doesNotMatch(html, /id="search-overlay"/);
+  assert.doesNotMatch(html, /id="search-input"/);
 });
 })();

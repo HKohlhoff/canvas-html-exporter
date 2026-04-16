@@ -6,6 +6,7 @@ export type PluginSettings = {
   outputDir: string;
   highlightingTheme: HighlightingThemeChoice;
   showMinimap: boolean;
+  showSearch: boolean;
 };
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -13,6 +14,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   outputDir: "Canvas-Exports",
   highlightingTheme: "shiki",
   showMinimap: true,
+  showSearch: true,
 };
 
 const HIGHLIGHTING_THEME_LABELS: Record<HighlightingThemeChoice, string> = {
@@ -34,6 +36,7 @@ export function normalizePluginSettings(saved: unknown): PluginSettings {
     outputDir: typeof data.outputDir === "string" && data.outputDir.trim() ? data.outputDir.trim() : DEFAULT_SETTINGS.outputDir,
     highlightingTheme: VALID_HIGHLIGHTING_THEMES.has(highlightingTheme) ? highlightingTheme : DEFAULT_SETTINGS.highlightingTheme,
     showMinimap: typeof data.showMinimap === "boolean" ? data.showMinimap : DEFAULT_SETTINGS.showMinimap,
+    showSearch: typeof data.showSearch === "boolean" ? data.showSearch : DEFAULT_SETTINGS.showSearch,
   };
 }
 
@@ -75,6 +78,16 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showMinimap).onChange(async (value) => {
           this.plugin.settings.showMinimap = value;
+          await this.plugin.saveSettings();
+        }),
+      );
+
+    new Setting(containerEl)
+      .setName("Suche anzeigen")
+      .setDesc("Zeigt auf der exportierten Canvas-Seite eine Suchfunktion mit Trefferliste und Sprung zum Knoten.")
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.showSearch).onChange(async (value) => {
+          this.plugin.settings.showSearch = value;
           await this.plugin.saveSettings();
         }),
       );

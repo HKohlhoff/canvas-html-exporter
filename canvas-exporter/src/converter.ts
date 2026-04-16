@@ -52,6 +52,7 @@ export interface ExportOptions {
   canvasColors?: Record<string, string>;
   highlightingTheme?: HighlightingThemeChoice;
   showMinimap?: boolean;
+  showSearch?: boolean;
 }
 
 export const EXPORTER_VERSION = "0.2.0";
@@ -192,6 +193,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const nodes = Array.isArray(data.nodes) ? data.nodes : [];
   const edges = Array.isArray(data.edges) ? data.edges : [];
   const showMinimap = options.showMinimap !== false;
+  const showSearch = options.showSearch !== false;
 
   const bounds = getBounds(nodes);
   const theme = getTheme(options.darkMode);
@@ -214,6 +216,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     label: edge.label ?? "",
     color: edge.color ?? "",
   }));
+  const searchEntries = nodes
+    .map((node) => buildSearchEntry(node, bounds.offsetX, bounds.offsetY))
+    .filter((entry) => entry.text);
 
   // CSS-Variablen für benutzerdefinierte Canvas-Farben (überschreiben die Obsidian-Defaults)
   const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
@@ -230,6 +235,19 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       <rect id="minimap-viewport" class="minimap-viewport" x="0" y="0" width="0" height="0"></rect>
     </svg>
   </aside>`
+    : "";
+  const searchHtml = showSearch
+    ? `<div id="search-overlay" class="search-overlay" hidden>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-labelledby="search-title">
+      <div class="search-panel-header">
+        <strong id="search-title">Suche</strong>
+        <button id="search-close-button" type="button" class="search-close-button" aria-label="Suche schließen">Schließen</button>
+      </div>
+      <input id="search-input" class="search-input" type="search" placeholder="Suchbegriff eingeben" autocomplete="off">
+      <div id="search-summary" class="search-summary">Suchbegriff eingeben, um passende Knoten zu finden.</div>
+      <ul id="search-results" class="search-results"></ul>
+    </div>
+  </div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -522,6 +540,118 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       cursor: pointer;
     }
     .toolbar button:hover { background: ${theme.chipBackground}; }
+    .node.search-hit {
+      box-shadow: 0 0 0 4px rgba(25, 103, 210, 0.22), 0 8px 24px rgba(0,0,0,0.16);
+      transition: box-shadow 0.2s ease;
+    }
+    .search-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 84px 16px 24px;
+      background: rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(4px);
+    }
+    .search-overlay[hidden] {
+      display: none;
+    }
+    .search-panel {
+      width: min(720px, 100%);
+      max-height: min(75vh, 820px);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid ${theme.canvasBorder};
+      background: ${theme.canvasBackground};
+      box-shadow: 0 18px 40px rgba(0,0,0,0.18);
+    }
+    .search-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .search-panel-header strong {
+      font-size: 1rem;
+    }
+    .search-close-button {
+      border: 1px solid ${theme.canvasBorder};
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .search-close-button:hover {
+      background: ${theme.chipBackground};
+    }
+    .search-input {
+      width: 100%;
+      border: 1px solid ${theme.canvasBorder};
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+    }
+    .search-summary {
+      color: ${theme.mutedText};
+      font-size: 0.92rem;
+    }
+    .search-results {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .search-result-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .search-result {
+      width: 100%;
+      text-align: left;
+      border: 1px solid ${theme.canvasBorder};
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      border-radius: 12px;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+    .search-result:hover {
+      background: ${theme.chipBackground};
+    }
+    .search-result-title {
+      display: inline-block;
+      font-weight: 700;
+      color: ${theme.text};
+      text-decoration: none;
+    }
+    .search-result-title-link:hover {
+      text-decoration: underline;
+    }
+    .search-result-meta,
+    .search-result-snippet {
+      display: block;
+      color: ${theme.mutedText};
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+    .search-result mark {
+      background: rgba(255, 214, 10, 0.45);
+      color: inherit;
+      padding: 0 0.05em;
+      border-radius: 3px;
+    }
     .minimap {
       position: fixed;
       right: 24px;
@@ -710,6 +840,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     <button type="button" onclick="zoomBy(1 / 1.15)">Zoom −</button>
     <button type="button" onclick="resetZoom()">Reset</button>
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
+    ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Suche...</button>` : ""}
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>
@@ -722,6 +853,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     </div>
   </div>
   ${minimapHtml}
+  ${searchHtml}
   <script>
     (() => {
       const edgeLayer = document.getElementById("edge-layer");
@@ -732,15 +864,23 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
       const minimapSvg = document.getElementById("minimap-svg");
       const minimapViewport = document.getElementById("minimap-viewport");
+      const searchOverlay = document.getElementById("search-overlay");
+      const searchInput = document.getElementById("search-input");
+      const searchResults = document.getElementById("search-results");
+      const searchSummary = document.getElementById("search-summary");
+      const searchCloseButton = document.getElementById("search-close-button");
       const edgeColor = ${JSON.stringify(theme.edge)};
       const textColor = ${JSON.stringify(theme.text)};
       const obsidianColors = ${JSON.stringify(
         Object.fromEntries(Object.entries(OBSIDIAN_COLORS).map(([key, value]) => [key, value.border]))
       )};
       const edges = ${JSON.stringify(edgesData)};
+      const searchEntries = ${JSON.stringify(searchEntries)};
       let currentScale = 1;
       let minimapDrag = null;
       let minimapPan = null;
+      let highlightedNodeId = null;
+      let searchHighlightTimer = null;
 
       function resolveEdgeColor(color) {
         const normalized = String(color || "").trim();
@@ -952,6 +1092,117 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         window.requestAnimationFrame(updateMinimapViewport);
       }
 
+      function focusNode(nodeId) {
+        const target = document.getElementById("node-" + nodeId);
+        if (!target) return;
+        const left = parseFloat(target.style.left || "0");
+        const top = parseFloat(target.style.top || "0");
+        const width = target.offsetWidth / Math.max(currentScale, 0.0001);
+        const height = target.offsetHeight / Math.max(currentScale, 0.0001);
+        scrollViewportToCanvasPoint(left + width / 2, top + height / 2, "smooth");
+        if (highlightedNodeId) {
+          const prev = document.getElementById("node-" + highlightedNodeId);
+          if (prev) prev.classList.remove("search-hit");
+        }
+        target.classList.add("search-hit");
+        highlightedNodeId = nodeId;
+        if (searchHighlightTimer) {
+          window.clearTimeout(searchHighlightTimer);
+        }
+        searchHighlightTimer = window.setTimeout(() => {
+          target.classList.remove("search-hit");
+          if (highlightedNodeId === nodeId) {
+            highlightedNodeId = null;
+          }
+        }, 2200);
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function escapeRegExp(value) {
+        return String(value || "").replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+      }
+
+      function highlightMatch(text, query) {
+        const safeText = escapeHtml(text);
+        if (!query) return safeText;
+        const pattern = new RegExp("(" + escapeRegExp(query) + ")", "ig");
+        return safeText.replace(pattern, "<mark>$1</mark>");
+      }
+
+      function appendSearchQueryToHref(href, query) {
+        const rawHref = String(href || "");
+        if (!rawHref) return "";
+        if (!query || !query.trim()) return rawHref;
+        const hashIndex = rawHref.indexOf("#");
+        const base = hashIndex >= 0 ? rawHref.slice(0, hashIndex) : rawHref;
+        const hash = hashIndex >= 0 ? rawHref.slice(hashIndex) : "";
+        const separator = base.includes("?") ? "&" : "?";
+        return base + separator + "q=" + encodeURIComponent(query) + hash;
+      }
+
+      function renderSearchResults(matches, query) {
+        if (!searchResults || !searchSummary) return;
+        if (!query.trim()) {
+          searchSummary.textContent = "Suchbegriff eingeben, um passende Knoten zu finden.";
+          searchResults.innerHTML = "";
+          return;
+        }
+        searchSummary.textContent = matches.length
+          ? matches.length + " Treffer"
+          : "Keine Treffer fuer diesen Suchbegriff.";
+        searchResults.innerHTML = matches.map((entry) => {
+          const titleContent = highlightMatch(entry.title, query);
+          const title = entry.openHref
+            ? '<a class="search-result-title search-result-title-link" href="' + escapeHtml(appendSearchQueryToHref(entry.openHref, query)) + '" target="_blank" rel="noopener noreferrer" data-search-open="true">' + titleContent + '</a>'
+            : '<span class="search-result-title">' + titleContent + '</span>';
+          const snippet = highlightMatch(entry.snippet, query);
+          const meta = escapeHtml(entry.kindLabel + " · " + entry.positionLabel);
+          return '<li class="search-result-item">' +
+            title +
+            '<button type="button" class="search-result" data-node-id="' + escapeHtml(entry.id) + '">' +
+            '<span class="search-result-meta">' + meta + '</span>' +
+            '<span class="search-result-snippet">' + snippet + '</span>' +
+          '</button></li>';
+        }).join("");
+      }
+
+      function runSearch(query) {
+        const normalized = String(query || "").trim().toLowerCase();
+        if (!normalized) {
+          renderSearchResults([], "");
+          return;
+        }
+        const matches = searchEntries
+          .filter((entry) => entry.text.toLowerCase().includes(normalized))
+          .slice(0, 50);
+        renderSearchResults(matches, query);
+      }
+
+      function openSearch() {
+        if (!searchOverlay) return;
+        searchOverlay.hidden = false;
+        window.setTimeout(() => {
+          if (searchInput) searchInput.focus();
+        }, 0);
+        runSearch(searchInput ? searchInput.value : "");
+      }
+
+      function closeSearch() {
+        if (!searchOverlay) return;
+        searchOverlay.hidden = true;
+      }
+
+      window.openSearch = openSearch;
+      window.closeSearch = closeSearch;
+
       function mapClientPointToMinimap(event) {
         if (!minimapSvg) return;
         const point = minimapSvg.createSVGPoint();
@@ -1133,6 +1384,38 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         window.addEventListener("pointercancel", stopMinimapPan);
         minimapSvg.addEventListener("click", jumpViaMinimap);
       }
+      if (searchInput) {
+        searchInput.addEventListener("input", () => {
+          runSearch(searchInput.value);
+        });
+      }
+      if (searchResults) {
+        searchResults.addEventListener("click", (event) => {
+          const openLink = event.target instanceof Element ? event.target.closest("[data-search-open]") : null;
+          if (openLink) return;
+          const target = event.target instanceof Element ? event.target.closest(".search-result") : null;
+          if (!target) return;
+          const nodeId = target.getAttribute("data-node-id");
+          if (!nodeId) return;
+          focusNode(nodeId);
+          closeSearch();
+        });
+      }
+      if (searchCloseButton) {
+        searchCloseButton.addEventListener("click", closeSearch);
+      }
+      if (searchOverlay) {
+        searchOverlay.addEventListener("click", (event) => {
+          if (event.target === searchOverlay) {
+            closeSearch();
+          }
+        });
+      }
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && searchOverlay && !searchOverlay.hidden) {
+          closeSearch();
+        }
+      });
       window.addEventListener("online", syncLinkOfflineState);
       window.addEventListener("offline", syncLinkOfflineState);
     })();
@@ -1250,6 +1533,12 @@ export function buildMarkdownDocumentHtml(
     .file-chip:hover {
       text-decoration: underline;
     }
+    mark.search-highlight {
+      background: rgba(255, 214, 10, 0.45);
+      color: inherit;
+      padding: 0 0.08em;
+      border-radius: 3px;
+    }
     .unresolved-link {
       color: #d64545;
       font-style: italic;
@@ -1260,6 +1549,61 @@ export function buildMarkdownDocumentHtml(
   <main class="md-page">
     ${bodyHtml}
   </main>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const query = (params.get("q") || "").trim();
+      if (!query) return;
+      const root = document.querySelector(".md-page");
+      if (!root) return;
+
+      const pattern = new RegExp(query.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, "\\\\$&"), "ig");
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          if (["SCRIPT", "STYLE"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+          if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          if (!pattern.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+          pattern.lastIndex = 0;
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
+
+      const matches = [];
+      let current = walker.nextNode();
+      while (current) {
+        matches.push(current);
+        current = walker.nextNode();
+      }
+
+      for (const textNode of matches) {
+        const text = textNode.nodeValue || "";
+        pattern.lastIndex = 0;
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0;
+        let match = pattern.exec(text);
+
+        while (match) {
+          if (match.index > lastIndex) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+          }
+          const mark = document.createElement("mark");
+          mark.className = "search-highlight";
+          mark.textContent = match[0];
+          fragment.appendChild(mark);
+          lastIndex = match.index + match[0].length;
+          match = pattern.exec(text);
+        }
+
+        if (lastIndex < text.length) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        textNode.parentNode.replaceChild(fragment, textNode);
+      }
+    })();
+  </script>
 </body>
 </html>`;
 }
@@ -1306,6 +1650,79 @@ function renderMinimapNode(
   const radius = type === "group" ? 14 : 10;
 
   return `<rect class="${classes}" x="${frame.left}" y="${frame.top}" width="${frame.width}" height="${frame.height}" rx="${radius}" ry="${radius}" fill="${escapeAttribute(colors.minimapFill)}" stroke="${escapeAttribute(colors.minimapStroke)}"></rect>`;
+}
+
+function buildSearchEntry(
+  node: CanvasNode,
+  offsetX: number,
+  offsetY: number,
+): { id: string; title: string; snippet: string; text: string; kindLabel: string; positionLabel: string; openHref?: string } {
+  const frame = getNodeFrame(node, offsetX, offsetY);
+  const previewText = node.previewHtml
+    ? normalizeSearchText(htmlToSearchText(node.previewHtml))
+    : normalizeSearchText(node.previewText);
+  const parts = [
+    node.label,
+    node.displayName,
+    node.text,
+    previewText,
+    node.url,
+  ]
+    .map((value) => normalizeSearchText(value))
+    .filter(Boolean);
+  const title = parts[0] || defaultNodeTitle(node);
+  const snippet = parts.slice(1).join(" ").slice(0, 220) || title;
+  return {
+    id: node.id,
+    title,
+    snippet,
+    text: parts.join(" ").trim(),
+    kindLabel: humanizeNodeKind(node),
+    positionLabel: `x ${Math.round(frame.left)} · y ${Math.round(frame.top)}`,
+    openHref: resolveNodeOpenHref(node),
+  };
+}
+
+function resolveNodeOpenHref(node: CanvasNode): string | undefined {
+  if (node.canvasHref) return node.canvasHref;
+  if (node.exportHtmlPath) return node.exportHtmlPath;
+  return undefined;
+}
+
+function defaultNodeTitle(node: CanvasNode): string {
+  return humanizeNodeKind(node);
+}
+
+function humanizeNodeKind(node: CanvasNode): string {
+  const type = (node.type || "text").toLowerCase();
+  if (type === "file" && node.fileKind === "markdown") return "Markdown";
+  if (type === "file" && node.fileKind === "image") return "Bild";
+  if (type === "file" && node.fileKind === "pdf") return "PDF";
+  if (type === "file") return "Datei";
+  if (type === "link") return "Link";
+  if (type === "group") return "Gruppe";
+  return "Text";
+}
+
+function normalizeSearchText(value: string | undefined): string {
+  return String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[#>*`_\[\]()!|-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function htmlToSearchText(html: string | undefined): string {
+  return String(html || "")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"');
 }
 
 async function renderNodeContent(
