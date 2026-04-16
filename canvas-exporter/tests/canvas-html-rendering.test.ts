@@ -130,6 +130,7 @@ await test("renders standalone markdown documents with wrapper and title", () =>
   const html = buildMarkdownDocumentHtml("Dokument", "<p>Inhalt</p>", true);
   assert.match(html, /<title>Dokument<\/title>/);
   assert.match(html, /<main class="md-page">/);
+  assert.match(html, /<h1>Dokument<\/h1>/);
   assert.match(html, /<p>Inhalt<\/p>/);
   assert.match(html, /URLSearchParams\(window\.location\.search\)/);
   assert.match(html, /className = "search-highlight"/);

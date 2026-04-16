@@ -189,7 +189,8 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
     let canvasHref: string | undefined;
 
     try {
-      exportHtmlPath = await exportMarkdownNote(ctx, file);
+      const pageTitle = typeof node.label === "string" && node.label.trim() ? node.label.trim() : file.basename;
+      exportHtmlPath = await exportMarkdownNote(ctx, file, pageTitle);
       if (exportHtmlPath) {
         const outputName = exportHtmlPath.split("/").pop() || exportHtmlPath;
         canvasHref = normalizeExportHref(`assets/files/${outputName}`);
@@ -278,8 +279,8 @@ async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promi
   return rel;
 }
 
-async function exportMarkdownNote(ctx: MarkdownContext, file: TFile): Promise<string> {
-  return renderMarkdownFileToHtml(ctx, file, "page", "page");
+async function exportMarkdownNote(ctx: MarkdownContext, file: TFile, pageTitle?: string): Promise<string> {
+  return renderMarkdownFileToHtml(ctx, file, "page", "page", pageTitle);
 }
 
 async function exportMarkdownContentInline(
@@ -412,6 +413,7 @@ async function renderMarkdownFileToHtml(
   file: TFile,
   mode: "page" | "inline",
   linkBase: LinkBase,
+  pageTitle?: string,
 ): Promise<string> {
   const activeStack = mode === "page" ? ctx.pageStack : ctx.inlineStack;
   const cached = mode === "page" ? ctx.htmlMap.get(file.path) : null;
@@ -444,7 +446,7 @@ async function renderMarkdownFileToHtml(
       return htmlBody;
     }
 
-    const title = file.basename;
+    const title = (pageTitle || file.basename || file.name).trim();
     const htmlDoc = buildMarkdownDocumentHtml(title, htmlBody, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme);
     await writeTextFile(ctx.app, outputPath, htmlDoc);
 

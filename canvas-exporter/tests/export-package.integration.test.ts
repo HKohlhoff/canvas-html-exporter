@@ -175,7 +175,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const canvasJson = JSON.stringify({
       name: "Demo Canvas",
       nodes: [
-        { id: "md", type: "file", x: 0, y: 0, width: 320, height: 180, file: "notes/main.md" },
+        { id: "md", type: "file", x: 0, y: 0, width: 320, height: 180, file: "notes/main.md", label: "Canvas Titel" },
         { id: "img", type: "file", x: 360, y: 0, width: 240, height: 180, file: "assets/picture.png" },
       ],
       edges: [{ fromNode: "md", toNode: "img", label: "zeigt" }],
@@ -217,6 +217,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
 
     assert.ok(exportedMarkdown);
     assert.ok(exportedImage);
+    assert.match(exportedMarkdown?.text || "", /<h1>Canvas Titel<\/h1>/);
     assert.match(exportedMarkdown?.text || "", /zweite Notiz/);
     assert.match(exportedMarkdown?.text || "", /<img src="\.\.\/images\//);
   });

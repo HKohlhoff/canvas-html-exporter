@@ -1547,6 +1547,7 @@ export function buildMarkdownDocumentHtml(
 </head>
 <body>
   <main class="md-page">
+    <h1>${escapeHtml(title)}</h1>
     ${bodyHtml}
   </main>
   <script>
