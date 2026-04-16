@@ -36,18 +36,18 @@ Depending on the canvas contents, the export may also include additional HTML pa
 ## How To Use
 
 1. Open a canvas in Obsidian.
-2. Run the command `Export: Aktuelles Canvas als HTML speichern`.
+2. Run the command `Export active canvas as HTML`.
 3. Open the generated `index.html` from the configured output folder.
 
 You can also use the ribbon icon to trigger the export.
 
 ## Plugin Settings
 
-- `Dunkles Standard-Theme`: use a dark default theme for exported HTML
-- `Minimap anzeigen`: include a minimap on the exported canvas page
-- `Suche anzeigen`: include a search overlay on the exported canvas page
+- `Dark default theme`: use a dark default theme for exported HTML
+- `Show minimap`: include a minimap on the exported canvas page
+- `Show search`: include a search overlay on the exported canvas page
 - `Syntax-Highlighting`: choose the Shiki theme family for code blocks
-- `Ausgabeordner`: choose the export folder inside the vault
+- `Output folder`: choose the export folder inside the vault
 
 ## Supported Content
 

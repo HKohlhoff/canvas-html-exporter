@@ -220,11 +220,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     .map((node) => buildSearchEntry(node, bounds.offsetX, bounds.offsetY))
     .filter((entry) => entry.text);
 
-  // CSS-Variablen für benutzerdefinierte Canvas-Farben (überschreiben die Obsidian-Defaults)
+  // CSS variables for custom canvas colors override the Obsidian defaults.
   const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
   const minimapHtml = showMinimap
     ? `<aside id="minimap-panel" class="minimap" aria-label="Canvas-Minimap">
-    <div id="minimap-drag-handle" class="minimap-header" title="Minimap verschieben">
+    <div id="minimap-drag-handle" class="minimap-header" title="Move minimap">
       <div class="minimap-header-copy">
         <strong>Minimap</strong>
       </div>
@@ -240,18 +240,18 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     ? `<div id="search-overlay" class="search-overlay" hidden>
     <div class="search-panel" role="dialog" aria-modal="true" aria-labelledby="search-title">
       <div class="search-panel-header">
-        <strong id="search-title">Suche</strong>
-        <button id="search-close-button" type="button" class="search-close-button" aria-label="Suche schließen">Schließen</button>
+        <strong id="search-title">Search</strong>
+        <button id="search-close-button" type="button" class="search-close-button" aria-label="Close search">Close</button>
       </div>
-      <input id="search-input" class="search-input" type="search" placeholder="Suchbegriff eingeben" autocomplete="off">
-      <div id="search-summary" class="search-summary">Suchbegriff eingeben, um passende Knoten zu finden.</div>
+      <input id="search-input" class="search-input" type="search" placeholder="Enter a search term" autocomplete="off">
+      <div id="search-summary" class="search-summary">Enter a search term to find matching nodes.</div>
       <ul id="search-results" class="search-results"></ul>
     </div>
   </div>`
     : "";
 
   return `<!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -851,11 +851,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     <button type="button" onclick="zoomBy(1 / 1.15)">Zoom −</button>
     <button type="button" onclick="resetZoom()">Reset</button>
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
-    ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Suche...</button>` : ""}
+    ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>
-    <p>${nodes.length} Knoten · ${edges.length} Verbindungen</p>
+    <p>${nodes.length} nodes · ${edges.length} connections</p>
   </div>
   <div class="viewport">
     <div id="canvas">
@@ -1174,13 +1174,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         if (!searchResults || !searchSummary) return;
         activeSearchIndex = matches.length ? 0 : -1;
         if (!query.trim()) {
-          searchSummary.textContent = "Suchbegriff eingeben, um passende Knoten zu finden.";
+          searchSummary.textContent = "Enter a search term to find matching nodes.";
           searchResults.innerHTML = "";
           return;
         }
         searchSummary.textContent = matches.length
-          ? matches.length + " Treffer · Enter springt zum aktiven Treffer"
-          : "Keine Treffer fuer diesen Suchbegriff.";
+          ? matches.length + " results · Press Enter to jump to the active result"
+          : "No results found for this search term.";
         searchResults.innerHTML = matches.map((entry) => {
           const titleContent = highlightMatch(entry.title, query);
           const title = entry.openHref
@@ -1534,7 +1534,7 @@ export function buildMarkdownDocumentHtml(
   highlightingTheme?: HighlightingThemeChoice,
 ): string {
   const theme = getTheme(darkMode);
-  return `<!DOCTYPE html>\n<html lang="de">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="generator" content="${EXPORTER_SIGNATURE}">\n  <meta name="canvas-exporter-build" content="${buildExporterBuildMeta(highlightingTheme)}">\n  <title>${escapeHtml(title)}</title>\n  <!-- Exported by ${EXPORTER_SIGNATURE} -->\n  <style>\n    :root { ${buildCanvasColorVariables(canvasColors)} }\n    html, body { margin: 0; padding: 0; }
+  return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="generator" content="${EXPORTER_SIGNATURE}">\n  <meta name="canvas-exporter-build" content="${buildExporterBuildMeta(highlightingTheme)}">\n  <title>${escapeHtml(title)}</title>\n  <!-- Exported by ${EXPORTER_SIGNATURE} -->\n  <style>\n    :root { ${buildCanvasColorVariables(canvasColors)} }\n    html, body { margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: ${theme.bodyBackground};
@@ -1799,11 +1799,11 @@ function defaultNodeTitle(node: CanvasNode): string {
 function humanizeNodeKind(node: CanvasNode): string {
   const type = (node.type || "text").toLowerCase();
   if (type === "file" && node.fileKind === "markdown") return "Markdown";
-  if (type === "file" && node.fileKind === "image") return "Bild";
+  if (type === "file" && node.fileKind === "image") return "Image";
   if (type === "file" && node.fileKind === "pdf") return "PDF";
-  if (type === "file") return "Datei";
+  if (type === "file") return "File";
   if (type === "link") return "Link";
-  if (type === "group") return "Gruppe";
+  if (type === "group") return "Group";
   return "Text";
 }
 
@@ -1841,7 +1841,7 @@ async function renderNodeContent(
 
   if (type === "link") {
     const url = typeof node.url === "string" ? node.url.trim() : "";
-    if (!url) return "<p>Leerer Link-Knoten</p>";
+    if (!url) return "<p>Empty link node</p>";
     const displayName = escapeHtml(node.displayName || url);
     const iframeSrc = escapeAttribute(url);
     const href = escapeAttribute(node.canvasHref || node.exportHtmlPath || url);
@@ -1849,14 +1849,14 @@ async function renderNodeContent(
       <div class="link-preview-header">
         <a class="link-preview-title" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a>
       </div>
-      <div class="link-offline-note" data-link-offline hidden>Es besteht keine Internetverbindung.</div>
-      <div class="link-offline-note" data-link-blocked hidden>Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame. Nutze die Ueberschrift oben.</div>
+      <div class="link-offline-note" data-link-offline hidden>No internet connection is available.</div>
+      <div class="link-offline-note" data-link-blocked hidden>This website may not allow embedded previews. Use the heading above.</div>
       <div class="link-preview-frame"><iframe src="${iframeSrc}" title="${escapeAttribute(node.displayName || url)}" loading="lazy"></iframe></div>
     </div>`;
   }
 
   if (type === "file") {
-    const displayName = escapeHtml(node.displayName || node.file || "Datei");
+    const displayName = escapeHtml(node.displayName || node.file || "File");
     const href = escapeAttribute(
       node.fileKind === "markdown" && node.canvasHref
         ? node.canvasHref
@@ -1877,14 +1877,14 @@ async function renderNodeContent(
 
     if (node.fileKind === "pdf") {
       const pdfHref = escapeAttribute(node.exportPath || node.file || "");
-      if (!pdfHref) return "<p>Leerer PDF-Knoten</p>";
+      if (!pdfHref) return "<p>Empty PDF node</p>";
       const viewerHref = escapeAttribute(node.canvasHref || node.exportPath || node.file || "");
       const pdfTitle = escapeHtml(node.displayName || node.file || "PDF");
       const pdfTitleAttr = escapeAttribute(node.displayName || node.file || "PDF");
       return `<div class="pdf-embed"><a class="pdf-title-link" href="${viewerHref}" target="_blank" rel="noopener noreferrer"><div class="pdf-title">${pdfTitle}</div></a><iframe src="${pdfHref}" title="${pdfTitleAttr}" loading="lazy"></iframe></div>`;
     }
 
-    if (!href) return "<p>Leerer Datei-Knoten</p>";
+    if (!href) return "<p>Empty file node</p>";
     return `<p><a class="file-chip" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a></p>`;
   }
 

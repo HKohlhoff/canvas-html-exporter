@@ -82,7 +82,7 @@ export async function exportCanvasPackage(
   try {
     parsed = JSON.parse(rawContent);
   } catch (error) {
-    throw new Error(`Ungültiges Canvas-JSON in ${canvasFile.path}`);
+    throw new Error(`Invalid canvas JSON in ${canvasFile.path}`);
   }
 
   const baseFolder = normalizeFolder(settings.outputDir);
@@ -196,7 +196,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
         canvasHref = normalizeExportHref(`assets/files/${outputName}`);
       }
     } catch (error) {
-      console.error(`[canvas-exporter] Markdown-Seitenexport fehlgeschlagen für ${file.path}`, error);
+      console.error(`[canvas-exporter] Markdown page export failed for ${file.path}`, error);
     }
 
     try {
@@ -204,7 +204,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       previewText = preview.text;
       previewHtml = preview.html;
     } catch (error) {
-      console.error(`[canvas-exporter] Markdown-Vorschau fehlgeschlagen für ${file.path}`, error);
+      console.error(`[canvas-exporter] Markdown preview generation failed for ${file.path}`, error);
     }
 
     if (exportHtmlPath) {
@@ -237,7 +237,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
     const viewerName = pdfFilename.replace(/\.pdf$/i, "-viewer.html");
     const viewerPath = normalizePath(`${ctx.assetsFilesDir}/${viewerName}`);
     const viewerHtml = `<!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -532,7 +532,7 @@ async function rewriteWikiLinks(
     let replacement = original;
 
     if (!targetFile) {
-      replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
+      replacement = `<span class="unresolved-link">Unresolved embed: ${escapeHtmlAttr(target)}</span>`;
     } else if (targetFile.extension.toLowerCase() === "md") {
       try {
         if (mode === "page") {
@@ -542,13 +542,13 @@ async function rewriteWikiLinks(
           ? await exportMarkdownSectionInline(ctx, targetFile, parsedTargetSection(parsed.core)!, linkBase)
           : await exportMarkdownContentInline(ctx, targetFile, linkBase);
         if (!replacement) {
-          replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
+          replacement = `<span class="unresolved-link">Unresolved embed: ${escapeHtmlAttr(target)}</span>`;
         } else {
           replacement = `<div class="md-embed-block">${replacement}</div>`;
         }
       } catch (error) {
-        console.error(`[canvas-exporter] Markdown-Embed-Export fehlgeschlagen für ${targetFile.path}`, error);
-        replacement = `<span class="unresolved-link">Nicht auflösbarer Embed: ${escapeHtmlAttr(target)}</span>`;
+        console.error(`[canvas-exporter] Markdown embed export failed for ${targetFile.path}`, error);
+        replacement = `<span class="unresolved-link">Unresolved embed: ${escapeHtmlAttr(target)}</span>`;
       }
     } else if (isImageExt(targetFile.extension.toLowerCase())) {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, true, false, mode, linkBase);
@@ -576,7 +576,7 @@ async function rewriteWikiLinks(
     const alias = parsed.display || target;
     const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false, mode, linkBase);
     if (!resolved) {
-      const fallback = `<span class="unresolved-link">Nicht auflösbarer Link: ${escapeHtmlAttr(alias)}</span>`;
+      const fallback = `<span class="unresolved-link">Unresolved link: ${escapeHtmlAttr(alias)}</span>`;
       result = result.replace(original, fallback);
       continue;
     }
@@ -722,7 +722,7 @@ async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<
   try {
     html = await rewriteMarkdownHtmlAssets(ctx, file, html, "inline", "canvas");
   } catch (error) {
-    console.error(`[canvas-exporter] Vorschau-Render fehlgeschlagen für ${file.path}`, error);
+    console.error(`[canvas-exporter] Preview rendering failed for ${file.path}`, error);
     html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode, highlightingTheme: ctx.highlightingTheme });
   }
 
@@ -861,7 +861,7 @@ function buildLinkDocumentHtml(
   const canvasColorVars = buildCanvasColorVariables(canvasColors);
 
   return `<!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -989,8 +989,8 @@ function buildLinkDocumentHtml(
     </div>
     <div id="link-fallback" class="link-page-fallback">
       <div class="link-page-card">
-        <p>Nutze den Link oben, wenn die Website das Einbetten blockiert oder du die Seite in einem eigenen Browser-Tab sehen willst.</p>
-        <p>Wenn keine Internetverbindung besteht, bleibt nur dieser Direktaufruf verfuegbar.</p>
+        <p>Use the link above if the website blocks embedding or if you want to open the page in its own browser tab.</p>
+        <p>If there is no internet connection, only the direct link remains available.</p>
       </div>
     </div>
   </div>
@@ -1027,7 +1027,7 @@ function buildLinkDocumentHtml(
       function syncState() {
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
         if (offline) {
-          showStatus("Es besteht keine Internetverbindung.");
+          showStatus("No internet connection is available.");
           showFallback();
           return;
         }
@@ -1049,7 +1049,7 @@ function buildLinkDocumentHtml(
       window.setTimeout(() => {
         const offline = typeof navigator !== "undefined" && navigator.onLine === false;
         if (!offline && !frameLoaded) {
-          showStatus("Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame. Nutze den Link oben.");
+          showStatus("This website may not allow embedded previews. Use the link above.");
           showFallback();
         }
       }, 4000);
@@ -1064,7 +1064,7 @@ function buildLinkDocumentHtml(
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#39;");
-        status.innerHTML = 'Suchbegriff: <mark class="search-highlight">' + safeQuery + '</mark>';
+        status.innerHTML = 'Search term: <mark class="search-highlight">' + safeQuery + '</mark>';
         status.classList.add("is-visible");
       }
     })();

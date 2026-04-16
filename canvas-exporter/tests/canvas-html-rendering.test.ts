@@ -167,8 +167,8 @@ await test("renders link nodes with preview iframe and direct-open action", asyn
   assert.doesNotMatch(html, /link-preview-action/);
   assert.match(html, /<iframe src="https:\/\/openai\.com\/\?a=1&amp;b=2"/);
   assert.match(html, />https:\/\/openai\.com\/\?a=1&amp;b=2<\/a>/);
-  assert.match(html, /Es besteht keine Internetverbindung\./);
-  assert.match(html, /Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame\. Nutze die Ueberschrift oben\./);
+  assert.match(html, /No internet connection is available\./);
+  assert.match(html, /This website may not allow embedded previews\. Use the heading above\./);
   assert.match(html, /function syncLinkOfflineState\(\)/);
   assert.match(html, /window\.setTimeout\(\(\) => \{/);
   assert.doesNotMatch(html, /class="link-meta"/);
@@ -191,7 +191,7 @@ await test("renders empty link nodes with fallback text", async () => {
   };
 
   const html = await convertCanvasToHtml(data, baseOptions);
-  assert.match(html, /Leerer Link-Knoten/);
+  assert.match(html, /Empty link node/);
 });
 
 await test("renders empty generic file nodes with fallback text", async () => {
@@ -211,7 +211,7 @@ await test("renders empty generic file nodes with fallback text", async () => {
   };
 
   const html = await convertCanvasToHtml(data, baseOptions);
-  assert.match(html, /Leerer Datei-Knoten/);
+  assert.match(html, /Empty file node/);
 });
 
 await test("injects custom canvas color variables into the document", async () => {
@@ -263,7 +263,7 @@ await test("renders page header counts for nodes and edges", async () => {
 
   const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /<h1>Test Canvas<\/h1>/);
-  assert.match(html, /2 Knoten · 1 Verbindungen/);
+  assert.match(html, /2 nodes · 1 connections/);
 });
 
 await test("renders edge marker and line style metadata into canvas script", async () => {
@@ -370,7 +370,7 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /searchInput\.addEventListener\("input"/);
   assert.match(html, /searchResults\.addEventListener\("click"/);
   assert.match(html, /searchResults\.addEventListener\("mousemove"/);
-  assert.match(html, /Enter springt zum aktiven Treffer/);
+  assert.match(html, /Press Enter to jump to the active result/);
   assert.match(html, /window\.openSearch = openSearch/);
   assert.match(html, /event\.key === "\/"/);
   assert.match(html, /"title":"Alpha Beta Gamma"/);

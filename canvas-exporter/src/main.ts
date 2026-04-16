@@ -11,13 +11,13 @@ export default class CanvasExporterPlugin extends Plugin {
   async onload(): Promise<void> {
     await this.loadSettings();
 
-    this.addRibbonIcon("file-down", "Canvas als HTML exportieren", async () => {
+    this.addRibbonIcon("file-down", "Export canvas as HTML", async () => {
       await this.exportCurrentCanvas();
     });
 
     this.addCommand({
       id: "export-current-canvas-to-html",
-      name: "Export: Aktuelles Canvas als HTML speichern",
+      name: "Export active canvas as HTML",
       callback: async () => {
         await this.exportCurrentCanvas();
       },
@@ -29,7 +29,7 @@ export default class CanvasExporterPlugin extends Plugin {
   async exportCurrentCanvas(): Promise<void> {
     const file = this.getActiveCanvasFile();
     if (!file) {
-      new Notice("Keine aktive Canvas-Datei gefunden.", 4000);
+      new Notice("No active canvas file found.", 4000);
       return;
     }
 
@@ -38,11 +38,11 @@ export default class CanvasExporterPlugin extends Plugin {
       const result = await exportCanvasPackage(this.app, file, { ...this.settings, canvasColors });
       const html = await convertCanvasToHtml(result.data, result.options);
       await this.writeIndexFile(result.folderPath, html);
-      new Notice(`Canvas-Paket exportiert: ${result.folderPath}`, 6000);
+      new Notice(`Canvas package exported: ${result.folderPath}`, 6000);
     } catch (error) {
-      console.error("[canvas-exporter] Export fehlgeschlagen", error);
-      const message = error instanceof Error ? error.message : "Unbekannter Fehler";
-      new Notice(`Canvas-Export fehlgeschlagen: ${message}`, 7000);
+      console.error("[canvas-exporter] Export failed", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      new Notice(`Canvas export failed: ${message}`, 7000);
     }
   }
 

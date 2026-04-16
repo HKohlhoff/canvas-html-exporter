@@ -59,12 +59,12 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
 
     containerEl.createEl("h2", { text: "Canvas to HTML" });
     containerEl.createEl("p", {
-      text: "Exportiert ein portables Paket pro Canvas mit index.html sowie assets/images und assets/files. Markdown-Dateiknoten werden dabei zusätzlich als HTML-Unterseiten exportiert.",
+      text: "Exports a portable package for each canvas with index.html plus assets/images and assets/files. Markdown file nodes are additionally exported as HTML subpages.",
     });
 
     new Setting(containerEl)
-      .setName("Dunkles Standard-Theme")
-      .setDesc("Verwendet beim Export standardmäßig ein dunkles HTML-Layout.")
+      .setName("Dark default theme")
+      .setDesc("Use a dark HTML layout by default for exported pages.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.darkMode).onChange(async (value) => {
           this.plugin.settings.darkMode = value;
@@ -73,8 +73,8 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Minimap anzeigen")
-      .setDesc("Blendet in der exportierten Canvas-Seite eine Minimap mit aktuellem Viewport ein.")
+      .setName("Show minimap")
+      .setDesc("Include a minimap with the current viewport on the exported canvas page.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showMinimap).onChange(async (value) => {
           this.plugin.settings.showMinimap = value;
@@ -83,8 +83,8 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Suche anzeigen")
-      .setDesc("Zeigt auf der exportierten Canvas-Seite eine Suchfunktion mit Trefferliste und Sprung zum Knoten.")
+      .setName("Show search")
+      .setDesc("Include a search overlay with result list and node navigation on the exported canvas page.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showSearch).onChange(async (value) => {
           this.plugin.settings.showSearch = value;
@@ -94,7 +94,7 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Syntax-Highlighting")
-      .setDesc("Waehlt das Farbschema fuer Codebloecke im HTML-Export.")
+      .setDesc("Choose the color theme used for fenced code blocks in the HTML export.")
       .addDropdown((dropdown) => {
         for (const [value, label] of Object.entries(HIGHLIGHTING_THEME_LABELS)) {
           dropdown.addOption(value, label);
@@ -110,8 +110,8 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Ausgabeordner")
-      .setDesc("Relativer Zielordner im Vault, zum Beispiel Canvas-Exports.")
+      .setName("Output folder")
+      .setDesc("Relative destination folder inside the vault, for example Canvas-Exports.")
       .addText((text) =>
         text
           .setPlaceholder("Canvas-Exports")

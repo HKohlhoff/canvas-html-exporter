@@ -234,7 +234,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
           darkMode: true,
           outputDir: "Canvas-Exports",
         }),
-      /Ungültiges Canvas-JSON/,
+      /Invalid canvas JSON/,
     );
   });
 
@@ -506,9 +506,9 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const exportedLinkPage = files.get(`Canvas-Exports/link/${linkNode?.exportHtmlPath || ""}`);
     assert.ok(exportedLinkPage);
     const linkHtml = exportedLinkPage?.text || "";
-    assert.match(linkHtml, /Es besteht keine Internetverbindung\./);
-    assert.match(linkHtml, /Diese Website erlaubt moeglicherweise keine Anzeige im eingebetteten Frame\. Nutze den Link oben\./);
-    assert.match(linkHtml, /Nutze den Link oben, wenn die Website das Einbetten blockiert oder du die Seite in einem eigenen Browser-Tab sehen willst\./);
+    assert.match(linkHtml, /No internet connection is available\./);
+    assert.match(linkHtml, /This website may not allow embedded previews\. Use the link above\./);
+    assert.match(linkHtml, /Use the link above if the website blocks embedding or if you want to open the page in its own browser tab\./);
     assert.match(linkHtml, /<a class="link-page-title" href="https:\/\/openai\.com\/index\/"/);
     assert.doesNotMatch(linkHtml, /link-page-back/);
     assert.doesNotMatch(linkHtml, /class="link-page-action"/);
