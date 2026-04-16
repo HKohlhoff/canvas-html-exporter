@@ -378,7 +378,14 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       word-break: break-word;
       flex: 1 1 auto;
       min-height: 0;
-      overflow-y: auto;
+      overflow: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      overscroll-behavior: contain;
+    }
+    .node-content::-webkit-scrollbar {
+      width: 0;
+      height: 0;
     }
     .node-content h1, .node-content h2, .node-content h3, .node-content h4, .node-content h5, .node-content h6 {
       margin: 0.5em 0 0.35em;
@@ -511,6 +518,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       border-radius: 10px;
       overflow: hidden;
       background: ${theme.canvasBackground};
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .link-preview-frame::-webkit-scrollbar {
+      width: 0;
+      height: 0;
     }
     .link-preview-frame iframe {
       display: block;
@@ -821,6 +834,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       border-radius: 10px;
       overflow: hidden;
       background: ${theme.nodeBackground};
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .pdf-embed-block::-webkit-scrollbar {
+      width: 0;
+      height: 0;
     }
     .pdf-embed-block iframe {
       display: block;
