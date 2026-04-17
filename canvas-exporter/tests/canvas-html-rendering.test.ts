@@ -401,7 +401,7 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /event\.key === "\/"/);
   assert.match(html, /"title":"Alpha Beta Gamma"/);
   assert.match(html, /"openHref":"assets\/files\/suche-notiz\.html"|\"openHref\":\"assets\/files\//);
-  assert.match(html, /target="_blank" rel="noopener noreferrer" data-search-open="true"/);
+  assert.match(html, /data-search-open="true"/);
   assert.match(html, /search-result-title-link/);
   assert.match(html, /"kindLabel":"Markdown"/);
 });

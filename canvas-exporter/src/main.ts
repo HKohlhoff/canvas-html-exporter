@@ -38,8 +38,9 @@ export default class CanvasExporterPlugin extends Plugin {
       const canvasColors = this.readCanvasPaletteColors();
       const result = await exportCanvasPackage(this.app, file, { ...this.settings, canvasColors });
       const html = await convertCanvasToHtml(result.data, result.options);
-      await this.writeIndexFile(result.folderPath, html);
-      new Notice(`Canvas package exported: ${result.folderPath}`, 6000);
+      await this.writeOutput(result.outputPath, result.outputKind, html);
+      const label = result.outputKind === "file" ? "Canvas HTML exported" : "Canvas package exported";
+      new Notice(`${label}: ${result.outputPath}`, 6000);
     } catch (error) {
       console.error("[canvas-exporter] Export failed", error);
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -47,15 +48,16 @@ export default class CanvasExporterPlugin extends Plugin {
     }
   }
 
-  private async writeIndexFile(folderPath: string, html: string): Promise<void> {
-    if (isAbsoluteFilesystemPath(folderPath)) {
+  private async writeOutput(outputPath: string, outputKind: "folder" | "file", html: string): Promise<void> {
+    if (isAbsoluteFilesystemPath(outputPath)) {
       const { fs, path } = requireDesktopNodeApis();
-      await fs.mkdir(folderPath, { recursive: true });
-      await fs.writeFile(path.join(folderPath, "index.html"), html, "utf8");
+      const targetPath = outputKind === "folder" ? path.join(outputPath, "index.html") : outputPath;
+      await fs.mkdir(path.dirname(targetPath), { recursive: true });
+      await fs.writeFile(targetPath, html, "utf8");
       return;
     }
 
-    const filePath = `${folderPath}/index.html`;
+    const filePath = outputKind === "folder" ? `${outputPath}/index.html` : outputPath;
     const existing = this.app.vault.getAbstractFileByPath(filePath);
     if (existing instanceof TFile) {
       await this.app.vault.modify(existing, html);
