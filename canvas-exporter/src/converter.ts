@@ -263,7 +263,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const embeddedPagesHtml = exportFormat === "single-html" && embeddedPages.length
     ? `<section id="single-page-view" class="single-page-view" hidden>
     <div class="single-page-toolbar">
-      <strong id="single-page-title"></strong>
+      <a id="single-page-canvas-link" class="single-page-canvas-link" href="#">Canvas</a>
     </div>
     <main id="single-page-body" class="single-page-body"></main>
   </section>
@@ -579,6 +579,15 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       background: ${theme.chipBackground};
       box-shadow: 0 0 0 3px rgba(25, 103, 210, 0.14);
     }
+    .single-page-view {
+      max-width: 960px;
+      margin: 32px auto;
+      background: ${theme.canvasBackground};
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      overflow: hidden;
+    }
     .single-page-view[hidden] {
       display: none;
     }
@@ -587,19 +596,33 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       top: 0;
       z-index: 12;
       display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 16px 24px 10px;
-      background: linear-gradient(to bottom, ${theme.bodyBackground}, rgba(255,255,255,0));
-      border-bottom: 1px solid ${theme.canvasBorder};
-      backdrop-filter: blur(8px);
+      justify-content: flex-end;
+      margin: 0;
+      padding: 32px 32px 0;
+      background: transparent;
+    }
+    .single-page-canvas-link {
+      color: ${theme.link};
+      text-decoration: none;
+      font-size: 0.95em;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .single-page-canvas-link:hover {
+      text-decoration: underline;
     }
     .single-page-body {
-      padding: 20px 24px 40px;
+      padding: 0 32px 32px;
+      background: transparent;
     }
     .single-page-body .md-page {
-      max-width: 960px;
-      margin: 0 auto;
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
     }
     .single-page-body h1,
     .single-page-body h2,
@@ -1077,8 +1100,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const canvas = document.getElementById("canvas");
       const viewport = document.querySelector(".viewport");
       const singlePageView = document.getElementById("single-page-view");
-      const singlePageTitle = document.getElementById("single-page-title");
       const singlePageBody = document.getElementById("single-page-body");
+      const singlePageCanvasLink = document.getElementById("single-page-canvas-link");
       const minimapPanel = document.getElementById("minimap-panel");
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
@@ -1093,6 +1116,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const embeddedPageTemplates = Array.from(document.querySelectorAll("#embedded-pages-store template"));
       const edgeColor = ${JSON.stringify(theme.edge)};
       const textColor = ${JSON.stringify(theme.text)};
+      const inlineBlobCache = new Map();
       const obsidianColors = ${JSON.stringify(
         Object.fromEntries(Object.entries(OBSIDIAN_COLORS).map(([key, value]) => [key, value.border]))
       )};
@@ -1389,7 +1413,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const pageId = String(href).replace(/^#page-/, "");
           return ' href="#page-' + escapeHtml(pageId) + '" data-inline-page="' + escapeHtml(pageId) + '"';
         }
-        return ' href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer"';
+        return ' href="' + escapeHtml(href) + '"';
       }
 
       function renderSearchResults(matches, query) {
@@ -1576,18 +1600,64 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       }
 
       function renderEmbeddedPage(pageId) {
-        if (exportFormat !== "single-html" || !canvasShell || !singlePageView || !singlePageBody || !singlePageTitle) {
+        if (exportFormat !== "single-html" || !canvasShell || !singlePageView || !singlePageBody) {
           return false;
         }
         const template = embeddedPageTemplates.find((item) => item.dataset.pageId === pageId);
         if (!template) return false;
-        singlePageTitle.textContent = template.dataset.pageTitle || "Page";
         singlePageBody.innerHTML = template.innerHTML;
+        materializeInlineAssets(singlePageBody);
         canvasShell.hidden = true;
         singlePageView.hidden = false;
         document.title = (template.dataset.pageTitle || "Page") + " - " + baseDocumentTitle;
         window.scrollTo({ top: 0, behavior: "auto" });
         return true;
+      }
+
+      function dataUrlToBlobUrl(dataUrl) {
+        if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:")) {
+          return dataUrl;
+        }
+        if (inlineBlobCache.has(dataUrl)) {
+          return inlineBlobCache.get(dataUrl);
+        }
+        const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(dataUrl);
+        if (!match) {
+          return dataUrl;
+        }
+        const mimeType = match[1] || "application/octet-stream";
+        const isBase64 = Boolean(match[2]);
+        const payload = match[3] || "";
+        let blobUrl = dataUrl;
+        try {
+          let bytes;
+          if (isBase64) {
+            const binary = atob(payload);
+            bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) {
+              bytes[i] = binary.charCodeAt(i);
+            }
+          } else {
+            const decoded = decodeURIComponent(payload);
+            bytes = new TextEncoder().encode(decoded);
+          }
+          blobUrl = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+        } catch (error) {
+          blobUrl = dataUrl;
+        }
+        inlineBlobCache.set(dataUrl, blobUrl);
+        return blobUrl;
+      }
+
+      function materializeInlineAssets(root) {
+        if (exportFormat !== "single-html" || !root) return;
+        root.querySelectorAll('img[src^="data:"]').forEach((img) => {
+          const original = img.getAttribute("data-inline-src") || img.getAttribute("src") || "";
+          if (!img.getAttribute("data-inline-src")) {
+            img.setAttribute("data-inline-src", original);
+          }
+          img.setAttribute("src", dataUrlToBlobUrl(original));
+        });
       }
 
       function syncEmbeddedPageFromHash() {
@@ -1790,24 +1860,22 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         if (!pageId) return;
         event.preventDefault();
         const href = "#page-" + pageId;
-        const isCanvasView = !singlePageView || singlePageView.hidden;
-        if (isCanvasView) {
-          const opened = openSingleHtmlPageInNewTab(pageId);
-          if (!opened) {
-            if (window.location.hash === href) {
-              syncEmbeddedPageFromHash();
-              return;
-            }
-            window.location.hash = href;
-          }
-          return;
-        }
         if (window.location.hash === href) {
           syncEmbeddedPageFromHash();
           return;
         }
         window.location.hash = href;
       });
+      if (singlePageCanvasLink) {
+        singlePageCanvasLink.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (window.location.hash) {
+            window.location.hash = "";
+          } else {
+            syncEmbeddedPageFromHash();
+          }
+        });
+      }
       if (exportFormat === "single-html") {
         syncEmbeddedPageFromHash();
         window.addEventListener("hashchange", syncEmbeddedPageFromHash);
@@ -1828,88 +1896,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       window.addEventListener("online", syncLinkOfflineState);
       window.addEventListener("offline", syncLinkOfflineState);
 
-      function openSingleHtmlPageInNewTab(pageId) {
-        try {
-          const template = embeddedPageTemplates.find((item) => item.dataset.pageId === pageId);
-          if (!template) return null;
-          const opened = window.open("about:blank", "_blank");
-          if (!opened) return null;
+      materializeInlineAssets(document);
 
-          const styleText = Array.from(document.querySelectorAll("style"))
-            .map((style) => style.textContent || "")
-            .join("\\n");
-          const templatesHtml = embeddedPageTemplates.map((item) => item.outerHTML).join("\\n");
-          const initialTitle = template.dataset.pageTitle || "Page";
-          const safeStyleText = styleText.replace(/<\\/style/gi, "<\\\\/style");
-          const scriptLines = [
-            '(() => {',
-            '  const baseTitle = ' + JSON.stringify(baseDocumentTitle) + ';',
-            '  const body = document.getElementById("single-page-body");',
-            '  const title = document.getElementById("single-page-title");',
-            '  const templates = Array.from(document.querySelectorAll("#embedded-pages-store template"));',
-            '  function parsePageHash(hash) {',
-            '    const value = String(hash || "").replace(/^#/, "");',
-            '    return value.startsWith("page-") ? value.slice(5) : "";',
-            '  }',
-            '  function renderPage(pageId) {',
-            '    const template = templates.find((item) => item.dataset.pageId === pageId) || templates[0];',
-            '    if (!template || !body || !title) return;',
-            '    title.textContent = template.dataset.pageTitle || "Page";',
-            '    body.innerHTML = template.innerHTML;',
-            '    document.title = (template.dataset.pageTitle || "Page") + " - " + baseTitle;',
-            '  }',
-            '  document.addEventListener("click", (event) => {',
-            '    const link = event.target instanceof Element ? event.target.closest("[data-inline-page]") : null;',
-            '    if (!link) return;',
-            '    const nextPageId = link.getAttribute("data-inline-page") || "";',
-            '    if (!nextPageId) return;',
-            '    event.preventDefault();',
-            '    location.hash = "#page-" + nextPageId;',
-            '  });',
-            '  window.addEventListener("hashchange", () => renderPage(parsePageHash(location.hash)));',
-            '  location.hash = "#page-" + ' + JSON.stringify(pageId) + ';',
-            '  renderPage(parsePageHash(location.hash));',
-            '})();',
-          ];
-          const html = [
-            '<!DOCTYPE html>',
-            '<html lang="en">',
-            '<head>',
-            '  <meta charset="utf-8">',
-            '  <meta name="viewport" content="width=device-width, initial-scale=1">',
-            '  <title>' + escapeHtml(initialTitle) + ' - ' + escapeHtml(baseDocumentTitle) + '</title>',
-            '  <style>' + safeStyleText + '</style>',
-            '</head>',
-            '<body>',
-            '  <section class="single-page-view">',
-            '    <div class="single-page-toolbar">',
-            '      <strong id="single-page-title">' + escapeHtml(initialTitle) + '</strong>',
-            '    </div>',
-            '    <main id="single-page-body" class="single-page-body"></main>',
-            '  </section>',
-            '  <div id="embedded-pages-store" hidden>',
-            templatesHtml,
-            '  </div>',
-            '  <scr' + 'ipt>',
-            scriptLines.join('\\n'),
-            '  </scr' + 'ipt>',
-            '</body>',
-            '</html>',
-          ].join('\\n');
-
-          opened.document.open();
-          opened.document.write(html);
-          opened.document.close();
-          try {
-            opened.opener = null;
-          } catch (_error) {
-            // Ignore browsers that do not allow changing opener here.
-          }
-          return opened;
-        } catch (_error) {
-          return null;
-        }
-      }
     })();
   </script>
 </body>
@@ -1922,7 +1910,7 @@ export function buildMarkdownDocumentHtml(
   darkMode: boolean,
   canvasColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
-  backHref?: string,
+  canvasHref?: string,
 ): string {
   const theme = getTheme(darkMode);
   return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="generator" content="${EXPORTER_SIGNATURE}">\n  <meta name="canvas-exporter-build" content="${buildExporterBuildMeta(highlightingTheme)}">\n  <title>${escapeHtml(title)}</title>\n  <!-- Exported by ${EXPORTER_SIGNATURE} -->\n  <style>\n    :root { ${buildCanvasColorVariables(canvasColors)} }\n    html, body { margin: 0; padding: 0; }
@@ -1931,6 +1919,20 @@ export function buildMarkdownDocumentHtml(
       background: ${theme.bodyBackground};
       color: ${theme.text};
       line-height: 1.65;
+    }
+    .md-page-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 1em;
+    }
+    .md-page-canvas-link {
+      color: ${theme.link};
+      text-decoration: none;
+      font-size: 0.95em;
+      font-weight: 600;
+    }
+    .md-page-canvas-link:hover {
+      text-decoration: underline;
     }
     .md-page {
       max-width: 960px;
@@ -2040,24 +2042,14 @@ export function buildMarkdownDocumentHtml(
 </head>
 <body>
   <main class="md-page">
+    <div class="md-page-toolbar">
+      ${canvasHref ? `<a class="md-page-canvas-link" href="${escapeHtml(canvasHref)}">Canvas</a>` : ""}
+    </div>
     <h1>${escapeHtml(title)}</h1>
     ${bodyHtml}
   </main>
   <script>
     (() => {
-      const backHref = ${JSON.stringify(backHref || "")};
-      if (backHref && (!history.state || history.state.__canvasExporterSubpage !== true)) {
-        const currentUrl = window.location.href;
-        history.replaceState({ __canvasExporterCanvasProxy: true }, "", backHref);
-        history.pushState({ __canvasExporterSubpage: true }, "", currentUrl);
-        window.addEventListener("popstate", (event) => {
-          const state = event.state || {};
-          if (state.__canvasExporterCanvasProxy) {
-            window.location.replace(backHref);
-          }
-        });
-      }
-
       const params = new URLSearchParams(window.location.search);
       const query = (params.get("q") || "").trim();
       if (!query) return;
@@ -2235,9 +2227,10 @@ function htmlToSearchText(html: string | undefined): string {
 function buildAnchorAttributes(href: string): string {
   const safeHref = escapeAttribute(href);
   if (href.startsWith("#page-")) {
-    return `href="${safeHref}" data-inline-page="true"`;
+    const pageId = href.replace(/^#page-/, "");
+    return `href="${safeHref}" data-inline-page="${escapeAttribute(pageId)}"`;
   }
-  return `href="${safeHref}" target="_blank" rel="noopener noreferrer"`;
+  return `href="${safeHref}"`;
 }
 
 async function renderNodeContent(

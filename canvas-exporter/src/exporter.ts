@@ -325,6 +325,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       : exportPath.split("/").pop() || "";
     const viewerName = file.basename.replace(/\.pdf$/i, "") + "-viewer.html";
     const viewerPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, viewerName);
+    const canvasHrefForViewer = normalizeExportHref(getHrefForMarkdownPage(normalizeExportHref(`assets/files/${viewerName}`), "index.html"));
     const viewerHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -334,9 +335,16 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-${ctx.highlightingTheme || "shiki"}">
   <title>${escapeHtmlAttr(file.basename)}</title>
   <!-- Exported by ${EXPORTER_SIGNATURE} -->
-  <style>html,body{margin:0;padding:0;height:100%;}iframe{display:block;width:100%;height:100vh;border:none;}</style>
+  <style>
+    html,body{margin:0;padding:0;height:100%;}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f5f8;color:#1b2733;}
+    .pdf-viewer-toolbar{display:flex;justify-content:flex-end;padding:12px 16px;border-bottom:1px solid #d6dde7;background:#fff;}
+    .pdf-viewer-canvas-link{color:#1967d2;text-decoration:none;font-size:0.95em;font-weight:600;}
+    .pdf-viewer-canvas-link:hover{text-decoration:underline;}
+    iframe{display:block;width:100%;height:calc(100vh - 53px);border:none;}
+  </style>
 </head>
-<body><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
+<body><div class="pdf-viewer-toolbar"><a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHrefForViewer)}">Canvas</a></div><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
 </html>`;
     if (ctx.exportFormat !== "single-html") {
       await writeTextFile(ctx.app, viewerPath, viewerHtml, ctx.outputMode);
@@ -372,10 +380,11 @@ async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promi
   if (ctx.exportFormat === "single-html") {
     return registerSingleHtmlPage(ctx, title, "link", buildSingleHtmlLinkPageBody(title, url));
   }
-  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme);
   const outputName = uniqueOutputName(ctx, title || "Link", "html");
   const outputPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, outputName);
   const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
+  const canvasHref = normalizeExportHref(getHrefForMarkdownPage(rel, "index.html"));
+  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme, canvasHref);
   await writeTextFile(ctx.app, outputPath, html, ctx.outputMode);
   return rel;
 }
@@ -554,14 +563,14 @@ async function renderMarkdownFileToHtml(
       return inlineHref;
     }
     const title = (pageTitle || file.basename || file.name).trim();
-    const backHref = getHrefForMarkdownPage(rel, "index.html");
+    const canvasHref = getHrefForMarkdownPage(rel, "index.html");
     const htmlDoc = buildMarkdownDocumentHtml(
       title,
       htmlBody,
       ctx.darkMode,
       ctx.canvasColors,
       ctx.highlightingTheme,
-      backHref,
+      canvasHref,
     );
     await writeTextFile(ctx.app, outputPath, htmlDoc, ctx.outputMode);
     return rel;
@@ -579,16 +588,18 @@ async function rewriteMarkdownHtmlAssets(
 ): Promise<string> {
   let result = html;
 
-  const imgMatches = [...result.matchAll(/<img\s+src="([^"]+)"\s+alt="([^"]*)">/g)];
+  const imgMatches = [...result.matchAll(/<img\b([^>]*?)\bsrc="([^"]*)"([^>]*)>/g)];
   for (const match of imgMatches) {
     const original = match[0];
-    const target = match[1] || "";
+    const leadingAttrs = match[1] || "";
+    const target = match[2] || "";
+    const trailingAttrs = match[3] || "";
     const { path: targetPath } = splitTargetSuffix(target);
     if (!shouldRewriteInternalTarget(targetPath)) continue;
 
     const resolved = await exportInternalTarget(ctx, sourceFile, target, true, linkBase);
     if (resolved) {
-      const replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(match[2] || "")}">`;
+      const replacement = `<img${leadingAttrs}src="${escapeHtmlAttr(resolved.href)}"${trailingAttrs}>`;
       result = result.replace(original, replacement);
     }
   }
@@ -614,7 +625,7 @@ async function rewriteMarkdownHtmlAssets(
     if (resolved) {
       const label = match[3] || "";
       const attrs = match[2] || "";
-      const replacement = `<a href="${escapeHtmlAttr(resolved.href)}"${attrs}>${label}</a>`;
+      const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href)}${attrs}>${label}</a>`;
       result = result.replace(original, replacement);
     }
   }
@@ -672,7 +683,7 @@ async function rewriteWikiLinks(
     } else {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false, mode, linkBase);
       if (resolved) {
-        replacement = renderFileEmbed(resolved.href, targetFile, embedLabel || target, parsed.size);
+        replacement = renderFileEmbed(resolved.href, targetFile, embedLabel || target, parsed.size, ctx);
       }
     }
 
@@ -695,7 +706,7 @@ async function rewriteWikiLinks(
       continue;
     }
 
-    const replacement = `<a href="${escapeHtmlAttr(resolved.href)}">${escapeHtmlAttr(alias)}</a>`;
+    const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href)}>${escapeHtmlAttr(alias)}</a>`;
     result = result.replace(original, replacement);
   }
 
@@ -713,16 +724,27 @@ function renderFileEmbed(
   file: TFile,
   label: string,
   size: { width?: number; height?: number } | null,
+  ctx?: MarkdownContext,
 ): string {
   const safeHref = escapeHtmlAttr(href);
   const safeLabel = escapeHtmlAttr(label || file.basename || file.name);
+  const anchorAttrs = ctx ? buildPageAnchorAttributes(ctx, href) : `href="${safeHref}" target="_blank" rel="noopener noreferrer"`;
 
   if (file.extension.toLowerCase() === "pdf") {
     const sizeAttrs = embedSizeAttributes(size);
-    return `<div class="pdf-embed-block"><a class="pdf-title-link" href="${safeHref}" target="_blank" rel="noopener noreferrer"><div class="pdf-title">${safeLabel}</div></a><iframe src="${safeHref}" title="${safeLabel}" loading="lazy"${sizeAttrs}></iframe></div>`;
+    return `<div class="pdf-embed-block"><a class="pdf-title-link" ${anchorAttrs}><div class="pdf-title">${safeLabel}</div></a><iframe src="${safeHref}" title="${safeLabel}" loading="lazy"${sizeAttrs}></iframe></div>`;
   }
 
-  return `<div class="file-embed-block"><a class="file-chip" href="${safeHref}" target="_blank" rel="noopener noreferrer">${safeLabel}</a></div>`;
+  return `<div class="file-embed-block"><a class="file-chip" ${anchorAttrs}>${safeLabel}</a></div>`;
+}
+
+function buildPageAnchorAttributes(ctx: MarkdownContext, href: string): string {
+  const safeHref = escapeHtmlAttr(href);
+  if (ctx.exportFormat === "single-html" && href.startsWith("#page-")) {
+    const pageId = href.replace(/^#page-/, "");
+    return `href="${safeHref}" data-inline-page="${escapeHtmlAttr(pageId)}"`;
+  }
+  return `href="${safeHref}"`;
 }
 
 function getEmbedLabel(
@@ -999,6 +1021,7 @@ function buildLinkDocumentHtml(
   darkMode: boolean,
   canvasColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
+  canvasHref?: string,
 ): string {
   const theme = getLinkPageTheme(darkMode);
   const safeTitle = escapeHtmlAttr(url || title || "Link");
@@ -1049,6 +1072,15 @@ function buildLinkDocumentHtml(
       word-break: break-all;
     }
     .link-page-title:hover {
+      text-decoration: underline;
+    }
+    .link-page-canvas-link {
+      color: ${theme.text};
+      text-decoration: none;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .link-page-canvas-link:hover {
       text-decoration: underline;
     }
     .link-page-status {
@@ -1126,6 +1158,7 @@ function buildLinkDocumentHtml(
     <div class="link-page-nav">
       <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
     </div>
+    ${canvasHref ? `<a class="link-page-canvas-link" href="${escapeHtmlAttr(canvasHref)}">Canvas</a>` : ""}
   </div>
   <div id="link-status" class="link-page-status"></div>
   <div class="link-page-body">

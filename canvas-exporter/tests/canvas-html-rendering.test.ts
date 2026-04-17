@@ -54,6 +54,37 @@ await test("renders markdown file nodes with title link and preview", async () =
   assert.match(html, /class="md-card-preview"><p>Vorschau<\/p>/);
 });
 
+await test("renders single html canvas links with the embedded page id", async () => {
+  const data: CanvasData = {
+    name: "Single",
+    nodes: [
+      {
+        id: "md-single",
+        type: "file",
+        x: 0,
+        y: 0,
+        width: 320,
+        height: 180,
+        fileKind: "markdown",
+        displayName: "Single note",
+        canvasHref: "#page-p7",
+        previewHtml: "<p>Preview</p>",
+      },
+    ],
+    edges: [],
+  };
+
+  const html = await convertCanvasToHtml(data, {
+    ...baseOptions,
+    exportFormat: "single-html",
+    embeddedPages: [{ id: "p7", title: "Single note", kind: "markdown", bodyHtml: "<article>Body</article>" }],
+  });
+
+  assert.match(html, /href="#page-p7" data-inline-page="p7"/);
+  assert.match(html, /id="single-page-canvas-link" class="single-page-canvas-link" href="#"/);
+  assert.doesNotMatch(html, /window\.open\(/);
+});
+
 await test("renders pdf nodes with viewer link and iframe", async () => {
   const data: CanvasData = {
     name: "Test",

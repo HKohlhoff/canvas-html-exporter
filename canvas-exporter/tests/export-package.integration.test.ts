@@ -222,13 +222,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.ok(exportedMarkdown);
     assert.ok(exportedImage);
     assert.match(exportedMarkdown?.text || "", /<h1>Canvas Titel<\/h1>/);
+    assert.match(exportedMarkdown?.text || "", /<a class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
     assert.match(exportedMarkdown?.text || "", /zweite Notiz/);
     assert.doesNotMatch(exportedMarkdown?.text || "", /md-page-back-link/);
     assert.match(exportedMarkdown?.text || "", /<a href="[^"]+\.html">zweite Notiz<\/a>/);
-    assert.match(
-      exportedMarkdown?.text || "",
-      /const backHref = "\.\.\/\.\.\/index\.html";/,
-    );
+    assert.doesNotMatch(exportedMarkdown?.text || "", /__canvasExporterCanvasProxy/);
     assert.match(exportedMarkdown?.text || "", /<img src="\.\.\/images\//);
   });
 
@@ -552,6 +550,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const exportedLinkPage = files.get(`Canvas-Exports/link/${linkNode?.exportHtmlPath || ""}`);
     assert.ok(exportedLinkPage);
     const linkHtml = exportedLinkPage?.text || "";
+    assert.match(linkHtml, /<a class="link-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
     assert.match(linkHtml, /No internet connection is available\./);
     assert.match(linkHtml, /This website may not allow embedded previews\. Use the link above\./);
     assert.match(linkHtml, /Use the link above if the website blocks embedding or if you want to open the page in its own browser tab\./);
@@ -674,6 +673,9 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.equal(files.has("Canvas-Exports/single/assets/files/001_main.html"), false);
     assert.equal(files.has("Canvas-Exports/single/assets/images/"), false);
     assert.ok(result.options.embeddedPages?.some((page) => page.id === markdownNode?.canvasHref?.replace(/^#page-/, "")));
+    const markdownPage = result.options.embeddedPages?.find((page) => page.id === markdownNode?.canvasHref?.replace(/^#page-/, ""));
+    assert.match(markdownPage?.bodyHtml || "", /data-inline-page="p\d+"/);
+    assert.match(markdownPage?.bodyHtml || "", /href="#page-p\d+"/);
   });
 })().catch((error) => {
   console.error(error);

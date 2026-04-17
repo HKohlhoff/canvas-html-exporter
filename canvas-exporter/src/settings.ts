@@ -84,7 +84,7 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Export format")
-      .setDesc("Choose between the classic package folder export and a single self-contained HTML file.")
+      .setDesc("Choose between the classic package folder export and a single self-contained HTML file.\nSelf-contained pages can quickly become quite large (several MB).")
       .addDropdown((dropdown) => {
         for (const [value, label] of Object.entries(EXPORT_FORMAT_LABELS)) {
           dropdown.addOption(value, label);
