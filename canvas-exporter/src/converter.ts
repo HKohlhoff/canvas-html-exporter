@@ -55,7 +55,7 @@ export interface ExportOptions {
   showSearch?: boolean;
 }
 
-export const EXPORTER_VERSION = "0.4.0";
+export const EXPORTER_VERSION = "0.5.0";
 export const EXPORTER_SIGNATURE = `canvas-exporter v${EXPORTER_VERSION}`;
 export type HighlightingThemeChoice = "shiki" | "github" | "vscode" | "catppuccin" | "material";
 

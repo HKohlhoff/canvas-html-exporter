@@ -2,7 +2,7 @@
 
 Canvas to HTML exports the active Obsidian Canvas as a portable HTML package that can be opened in any modern browser.
 
-The export keeps the canvas layout and creates a self-contained folder with an `index.html`, copied assets, and optional HTML subpages for embedded Markdown notes.
+The export keeps the canvas layout and creates a portable folder with an `index.html`, copied assets, and optional HTML subpages for embedded Markdown notes.
 
 ## Features
 
@@ -47,7 +47,7 @@ You can also use the ribbon icon to trigger the export.
 - `Show minimap`: include a minimap on the exported canvas page
 - `Show search`: include a search overlay on the exported canvas page
 - `Syntax-Highlighting`: choose the Shiki theme family for code blocks
-- `Output folder`: choose the export folder inside the vault
+- `Output folder`: choose a folder inside the vault or an absolute filesystem folder on desktop
 
 ## Supported Content
 
@@ -66,7 +66,7 @@ The current exporter covers the most important Obsidian canvas workflows:
 
 - External websites may refuse to load inside an embedded frame because of their own security headers.
 - Exported HTML is designed to be portable, but remote website previews still need an internet connection.
-- Mobile support is not separately documented yet; the plugin is currently implemented with standard Obsidian plugin APIs and is not intentionally desktop-only.
+- On mobile, the plugin stays available and exports into the vault. Absolute filesystem folders are desktop-only.
 
 ## Development
 
