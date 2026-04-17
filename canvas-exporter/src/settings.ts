@@ -84,7 +84,7 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Export format")
-      .setDesc("Choose between the classic package folder export and a single self-contained HTML file.\nSelf-contained pages can quickly become quite large (several MB).")
+      .setDesc("Choose between the classic package folder export and a single self-contained HTML file.\nSingle HTML keeps everything in one file, but large canvases can quickly grow to several MB and browser-dependent limits may matter more.")
       .addDropdown((dropdown) => {
         for (const [value, label] of Object.entries(EXPORT_FORMAT_LABELS)) {
           dropdown.addOption(value, label);
@@ -150,8 +150,8 @@ export class CanvasExporterSettingTab extends PluginSettingTab {
       .setName("Output folder")
       .setDesc(
         isMobile
-          ? "Choose a folder inside the vault. Absolute system folders are available on desktop only."
-          : "Use either a folder inside the vault or an absolute folder on your system.",
+          ? "Choose a folder inside the vault. Desktop-only filesystem folders are not available on mobile."
+          : "Choose either a folder inside the vault or an absolute folder on your system. In single HTML mode the export writes one HTML file into that target location.",
       )
       .addText((text) => {
         this.outputDirText = text;

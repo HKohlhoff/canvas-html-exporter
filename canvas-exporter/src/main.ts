@@ -39,7 +39,7 @@ export default class CanvasExporterPlugin extends Plugin {
       const result = await exportCanvasPackage(this.app, file, { ...this.settings, canvasColors });
       const html = await convertCanvasToHtml(result.data, result.options);
       await this.writeOutput(result.outputPath, result.outputKind, html);
-      const label = result.outputKind === "file" ? "Canvas HTML exported" : "Canvas package exported";
+      const label = result.outputKind === "file" ? "Self-contained canvas HTML exported" : "Canvas package exported";
       new Notice(`${label}: ${result.outputPath}`, 6000);
     } catch (error) {
       console.error("[canvas-exporter] Export failed", error);
