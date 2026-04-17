@@ -1,12 +1,15 @@
 # Canvas to HTML
 
-Canvas to HTML exports the active Obsidian Canvas as a portable HTML package that can be opened in any modern browser.
+Canvas to HTML exports the active Obsidian Canvas into browser-ready HTML that can be opened in any modern browser.
 
-The export keeps the canvas layout and creates a portable folder with an `index.html`, copied assets, and optional HTML subpages for embedded Markdown notes.
+The plugin supports two export formats:
+
+- `Package folder`: creates a portable folder with `index.html`, copied assets, and optional HTML subpages
+- `Single HTML file`: creates one self-contained HTML document with inline assets and virtual subpages
 
 ## Features
 
-- Export the active `.canvas` file as an interactive HTML package
+- Export the active `.canvas` file as an interactive HTML package or as a single self-contained HTML file
 - Preserve canvas layout, node styling, groups, and connection lines
 - Export Markdown file nodes as standalone HTML subpages
 - Rewrite internal Markdown links, wiki links, heading links, and block references
@@ -18,9 +21,11 @@ The export keeps the canvas layout and creates a portable folder with an `index.
 - Optional canvas search overlay with result navigation
 - Light or dark default theme for exported pages
 
-## Export Structure
+## Export Formats
 
-Each export creates a dedicated folder inside the configured output directory:
+### Package folder
+
+Each package export creates a dedicated folder inside the configured output directory:
 
 ```text
 Canvas-Exports/
@@ -33,11 +38,24 @@ Canvas-Exports/
 
 Depending on the canvas contents, the export may also include additional HTML pages for Markdown and link nodes.
 
+### Single HTML file
+
+Single HTML exports create one file in the configured output location:
+
+```text
+Canvas-Exports/
+  My Canvas.html
+```
+
+The canvas page, embedded assets, and internal subpages live inside that one document.
+
 ## How To Use
 
 1. Open a canvas in Obsidian.
 2. Run the command `Export active canvas as HTML`.
-3. Open the generated `index.html` from the configured output folder.
+3. Open the generated export:
+   - `index.html` for `Package folder`
+   - `My Canvas.html` for `Single HTML file`
 
 You can also use the ribbon icon to trigger the export.
 
@@ -67,6 +85,8 @@ The current exporter covers the most important Obsidian canvas workflows:
 - External websites may refuse to load inside an embedded frame because of their own security headers.
 - Exported HTML is designed to be portable, but remote website previews still need an internet connection.
 - On mobile, the plugin stays available and exports into the vault. Absolute filesystem folders are desktop-only.
+- `Single HTML file` is convenient for sharing, but very large canvases or many embedded files can make the output file quite large.
+- Browser behavior around very large inline assets, PDF rendering, and history can vary more in `Single HTML file` mode than in the classic package export.
 
 ## Development
 

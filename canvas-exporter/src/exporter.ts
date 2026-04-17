@@ -1,5 +1,6 @@
 import type { App, TAbstractFile, TFile } from "obsidian";
 import {
+  EmbeddedPage,
   buildBlockAnchorId,
   buildCanvasColorVariables,
   buildMarkdownDocumentHtml,
@@ -17,20 +18,30 @@ import { normalizeCanvasData, shouldRewriteInternalTarget } from "./exporter-hel
 import { embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTargetSuffix } from "./link-helpers";
 import { getHrefForMarkdownPage } from "./path-helpers";
 import { buildPreviewText } from "./preview-helpers";
+import type { ExportFormatChoice } from "./settings";
 
 export type ExportSettings = {
   darkMode: boolean;
   outputDir: string;
+  exportFormat?: ExportFormatChoice;
   canvasColors?: Record<string, string>;
   highlightingTheme?: HighlightingThemeChoice;
   showMinimap?: boolean;
   showSearch?: boolean;
 };
 
+export type ExportResult = {
+  outputPath: string;
+  outputKind: "folder" | "file";
+  data: PreparedCanvasData;
+  options: ExportOptions;
+};
+
 type PreparedCanvasData = CanvasData;
 
 type MarkdownContext = {
   app: App;
+  exportFormat: ExportFormatChoice;
   outputMode: "vault" | "filesystem";
   outputRoot: string;
   assetsFilesDir: string;
@@ -43,6 +54,8 @@ type MarkdownContext = {
   pageStack: Set<string>;
   inlineStack: Set<string>;
   canvasColors?: Record<string, string>;
+  singleHtmlPages: EmbeddedPage[];
+  pageIdCounter: number;
 };
 
 type LinkBase = "canvas" | "page";
@@ -73,11 +86,68 @@ function normalizeExportHref(href: string): string {
   return normalizePath(href).replace(/^\/+/, "");
 }
 
+function buildHtmlDataUrl(html: string): string {
+  return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+}
+
+function buildBinaryDataUrl(data: ArrayBuffer, mimeType: string): string {
+  const bytes = new Uint8Array(data);
+  const base64 = bytesToBase64(bytes);
+  return `data:${mimeType};base64,${base64}`;
+}
+
+function registerSingleHtmlPage(
+  ctx: MarkdownContext,
+  title: string,
+  kind: EmbeddedPage["kind"],
+  bodyHtml: string,
+): string {
+  ctx.pageIdCounter += 1;
+  const pageId = `p${ctx.pageIdCounter}`;
+  ctx.singleHtmlPages.push({
+    id: pageId,
+    title,
+    kind,
+    bodyHtml,
+  });
+  return `#page-${pageId}`;
+}
+
+function getMimeTypeForExtension(extension: string): string {
+  switch (extension.toLowerCase()) {
+    case "png": return "image/png";
+    case "jpg":
+    case "jpeg": return "image/jpeg";
+    case "gif": return "image/gif";
+    case "svg": return "image/svg+xml";
+    case "webp": return "image/webp";
+    case "bmp": return "image/bmp";
+    case "pdf": return "application/pdf";
+    case "html": return "text/html;charset=utf-8";
+    case "txt": return "text/plain;charset=utf-8";
+    case "md": return "text/markdown;charset=utf-8";
+    case "zip": return "application/zip";
+    default: return "application/octet-stream";
+  }
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(bytes).toString("base64");
+  }
+
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
 export async function exportCanvasPackage(
   app: App,
   canvasFile: TFile,
   settings: ExportSettings,
-): Promise<{ folderPath: string; data: PreparedCanvasData; options: ExportOptions }> {
+): Promise<ExportResult> {
   const rawContent = await app.vault.read(canvasFile);
   let parsed: unknown;
 
@@ -89,16 +159,22 @@ export async function exportCanvasPackage(
 
   const outputMode = isAbsoluteFilesystemPath(settings.outputDir) ? "filesystem" : "vault";
   const baseFolder = resolveBaseFolder(settings.outputDir, outputMode);
-  const exportFolder = joinOutputPath(outputMode, baseFolder, safeSegment(canvasFile.basename));
-  const assetsDir = joinOutputPath(outputMode, exportFolder, "assets");
-  const imagesDir = joinOutputPath(outputMode, assetsDir, "images");
-  const filesDir = joinOutputPath(outputMode, assetsDir, "files");
+  const safeCanvasName = safeSegment(canvasFile.basename);
+  const exportFolder = joinOutputPath(outputMode, baseFolder, safeCanvasName);
+  const singleHtmlPath = joinOutputPath(outputMode, baseFolder, `${safeCanvasName}.html`);
+  const exportFormat = settings.exportFormat || "package";
+  const useSingleHtml = exportFormat === "single-html";
+  const assetsDir = useSingleHtml ? "" : joinOutputPath(outputMode, exportFolder, "assets");
+  const imagesDir = useSingleHtml ? "" : joinOutputPath(outputMode, assetsDir, "images");
+  const filesDir = useSingleHtml ? "" : joinOutputPath(outputMode, assetsDir, "files");
 
   await ensureFolderExists(app, baseFolder, outputMode);
-  await ensureFolderExists(app, exportFolder, outputMode);
-  await ensureFolderExists(app, assetsDir, outputMode);
-  await ensureFolderExists(app, imagesDir, outputMode);
-  await ensureFolderExists(app, filesDir, outputMode);
+  if (!useSingleHtml) {
+    await ensureFolderExists(app, exportFolder, outputMode);
+    await ensureFolderExists(app, assetsDir, outputMode);
+    await ensureFolderExists(app, imagesDir, outputMode);
+    await ensureFolderExists(app, filesDir, outputMode);
+  }
 
   const normalized = normalizeCanvasData(parsed, canvasFile.basename);
   const nodes = normalized.nodes;
@@ -107,8 +183,9 @@ export async function exportCanvasPackage(
 
   const ctx: MarkdownContext = {
     app,
+    exportFormat,
     outputMode,
-    outputRoot: exportFolder,
+    outputRoot: useSingleHtml ? singleHtmlPath : exportFolder,
     assetsFilesDir: filesDir,
     assetsImagesDir: imagesDir,
     darkMode: settings.darkMode,
@@ -119,6 +196,8 @@ export async function exportCanvasPackage(
     pageStack: new Set<string>(),
     inlineStack: new Set<string>(),
     canvasColors: settings.canvasColors,
+    singleHtmlPages: [],
+    pageIdCounter: 0,
   };
 
   const preparedNodes: CanvasNode[] = [];
@@ -130,7 +209,8 @@ export async function exportCanvasPackage(
   const preparedEdges = edges.filter((edge) => nodeIds.has(edge.fromNode) && nodeIds.has(edge.toNode));
 
   return {
-    folderPath: exportFolder,
+    outputPath: useSingleHtml ? singleHtmlPath : exportFolder,
+    outputKind: useSingleHtml ? "file" : "folder",
     data: { nodes: preparedNodes, edges: preparedEdges, name: title },
     options: {
       darkMode: settings.darkMode,
@@ -138,6 +218,8 @@ export async function exportCanvasPackage(
       highlightingTheme: settings.highlightingTheme,
       showMinimap: settings.showMinimap,
       showSearch: settings.showSearch,
+      exportFormat,
+      embeddedPages: ctx.singleHtmlPages,
     },
   };
 }
@@ -150,8 +232,9 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
     if (!url) return { ...node };
 
     const exportHtmlPath = await exportLinkNodePage(ctx, node);
-    const outputName = exportHtmlPath.split("/").pop() || exportHtmlPath;
-    const canvasHref = normalizeExportHref(`assets/files/${outputName}`);
+    const canvasHref = ctx.exportFormat === "single-html"
+      ? exportHtmlPath
+      : normalizeExportHref(`assets/files/${exportHtmlPath.split("/").pop() || exportHtmlPath}`);
 
     return {
       ...node,
@@ -195,8 +278,9 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       const pageTitle = typeof node.label === "string" && node.label.trim() ? node.label.trim() : file.basename;
       exportHtmlPath = await exportMarkdownNote(ctx, file, pageTitle);
       if (exportHtmlPath) {
-        const outputName = exportHtmlPath.split("/").pop() || exportHtmlPath;
-        canvasHref = normalizeExportHref(`assets/files/${outputName}`);
+        canvasHref = ctx.exportFormat === "single-html"
+          ? exportHtmlPath
+          : normalizeExportHref(`assets/files/${exportHtmlPath.split("/").pop() || exportHtmlPath}`);
       }
     } catch (error) {
       console.error(`[canvas-exporter] Markdown page export failed for ${file.path}`, error);
@@ -236,9 +320,12 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   const exportPath = await copyVaultFile(ctx, file, "file");
 
   if (ext === "pdf") {
-    const pdfFilename = exportPath.split("/").pop() || "";
-    const viewerName = pdfFilename.replace(/\.pdf$/i, "-viewer.html");
+    const pdfFilename = ctx.exportFormat === "single-html"
+      ? exportPath
+      : exportPath.split("/").pop() || "";
+    const viewerName = file.basename.replace(/\.pdf$/i, "") + "-viewer.html";
     const viewerPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, viewerName);
+    const canvasHrefForViewer = normalizeExportHref(getHrefForMarkdownPage(normalizeExportHref(`assets/files/${viewerName}`), "index.html"));
     const viewerHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -248,12 +335,28 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   <meta name="canvas-exporter-build" content="${EXPORTER_VERSION}-${ctx.highlightingTheme || "shiki"}">
   <title>${escapeHtmlAttr(file.basename)}</title>
   <!-- Exported by ${EXPORTER_SIGNATURE} -->
-  <style>html,body{margin:0;padding:0;height:100%;}iframe{display:block;width:100%;height:100vh;border:none;}</style>
+  <style>
+    html,body{margin:0;padding:0;height:100%;}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f5f8;color:#1b2733;}
+    .pdf-viewer-toolbar{display:flex;justify-content:flex-end;padding:12px 16px;border-bottom:1px solid #d6dde7;background:#fff;}
+    .pdf-viewer-canvas-link{color:#1967d2;text-decoration:none;font-size:0.95em;font-weight:600;}
+    .pdf-viewer-canvas-link:hover{text-decoration:underline;}
+    iframe{display:block;width:100%;height:calc(100vh - 53px);border:none;}
+  </style>
 </head>
-<body><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
+<body><div class="pdf-viewer-toolbar"><a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHrefForViewer)}">Canvas</a></div><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
 </html>`;
-    await writeTextFile(ctx.app, viewerPath, viewerHtml, ctx.outputMode);
-    const canvasHref = normalizeExportHref(`assets/files/${viewerName}`);
+    if (ctx.exportFormat !== "single-html") {
+      await writeTextFile(ctx.app, viewerPath, viewerHtml, ctx.outputMode);
+    }
+    const canvasHref = ctx.exportFormat === "single-html"
+      ? registerSingleHtmlPage(
+          ctx,
+          file.basename,
+          "pdf",
+          `<div class="single-link-page"><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}" loading="lazy"></iframe></div>`,
+        )
+      : normalizeExportHref(`assets/files/${viewerName}`);
     return {
       ...node,
       displayName: file.name,
@@ -274,10 +377,14 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
 async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promise<string> {
   const url = typeof node.url === "string" ? node.url.trim() : "";
   const title = typeof node.label === "string" && node.label.trim() ? node.label.trim() : url || "Link";
+  if (ctx.exportFormat === "single-html") {
+    return registerSingleHtmlPage(ctx, title, "link", buildSingleHtmlLinkPageBody(title, url));
+  }
   const outputName = uniqueOutputName(ctx, title || "Link", "html");
   const outputPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, outputName);
   const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
-  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme);
+  const canvasHref = normalizeExportHref(getHrefForMarkdownPage(rel, "index.html"));
+  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme, canvasHref);
   await writeTextFile(ctx.app, outputPath, html, ctx.outputMode);
   return rel;
 }
@@ -434,7 +541,7 @@ async function renderMarkdownFileToHtml(
     let outputPath = "";
     let rel = "";
 
-    if (mode === "page") {
+    if (mode === "page" && ctx.exportFormat !== "single-html") {
       const outputName = uniqueOutputName(ctx, file.basename, "html");
       outputPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, outputName);
       rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
@@ -449,10 +556,23 @@ async function renderMarkdownFileToHtml(
       return htmlBody;
     }
 
+    if (ctx.exportFormat === "single-html") {
+      const title = (pageTitle || file.basename || file.name).trim();
+      const inlineHref = registerSingleHtmlPage(ctx, title, "markdown", buildSingleHtmlMarkdownPageBody(title, htmlBody));
+      ctx.htmlMap.set(file.path, inlineHref);
+      return inlineHref;
+    }
     const title = (pageTitle || file.basename || file.name).trim();
-    const htmlDoc = buildMarkdownDocumentHtml(title, htmlBody, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme);
+    const canvasHref = getHrefForMarkdownPage(rel, "index.html");
+    const htmlDoc = buildMarkdownDocumentHtml(
+      title,
+      htmlBody,
+      ctx.darkMode,
+      ctx.canvasColors,
+      ctx.highlightingTheme,
+      canvasHref,
+    );
     await writeTextFile(ctx.app, outputPath, htmlDoc, ctx.outputMode);
-
     return rel;
   } finally {
     activeStack.delete(file.path);
@@ -468,16 +588,18 @@ async function rewriteMarkdownHtmlAssets(
 ): Promise<string> {
   let result = html;
 
-  const imgMatches = [...result.matchAll(/<img\s+src="([^"]+)"\s+alt="([^"]*)">/g)];
+  const imgMatches = [...result.matchAll(/<img\b([^>]*?)\bsrc="([^"]*)"([^>]*)>/g)];
   for (const match of imgMatches) {
     const original = match[0];
-    const target = match[1] || "";
+    const leadingAttrs = match[1] || "";
+    const target = match[2] || "";
+    const trailingAttrs = match[3] || "";
     const { path: targetPath } = splitTargetSuffix(target);
     if (!shouldRewriteInternalTarget(targetPath)) continue;
 
     const resolved = await exportInternalTarget(ctx, sourceFile, target, true, linkBase);
     if (resolved) {
-      const replacement = `<img src="${escapeHtmlAttr(resolved.href)}" alt="${escapeHtmlAttr(match[2] || "")}">`;
+      const replacement = `<img${leadingAttrs}src="${escapeHtmlAttr(resolved.href)}"${trailingAttrs}>`;
       result = result.replace(original, replacement);
     }
   }
@@ -503,7 +625,7 @@ async function rewriteMarkdownHtmlAssets(
     if (resolved) {
       const label = match[3] || "";
       const attrs = match[2] || "";
-      const replacement = `<a href="${escapeHtmlAttr(resolved.href)}"${attrs}>${label}</a>`;
+      const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href)}${attrs}>${label}</a>`;
       result = result.replace(original, replacement);
     }
   }
@@ -561,7 +683,7 @@ async function rewriteWikiLinks(
     } else {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false, mode, linkBase);
       if (resolved) {
-        replacement = renderFileEmbed(resolved.href, targetFile, embedLabel || target, parsed.size);
+        replacement = renderFileEmbed(resolved.href, targetFile, embedLabel || target, parsed.size, ctx);
       }
     }
 
@@ -584,7 +706,7 @@ async function rewriteWikiLinks(
       continue;
     }
 
-    const replacement = `<a href="${escapeHtmlAttr(resolved.href)}" target="_blank" rel="noopener noreferrer">${escapeHtmlAttr(alias)}</a>`;
+    const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href)}>${escapeHtmlAttr(alias)}</a>`;
     result = result.replace(original, replacement);
   }
 
@@ -602,16 +724,27 @@ function renderFileEmbed(
   file: TFile,
   label: string,
   size: { width?: number; height?: number } | null,
+  ctx?: MarkdownContext,
 ): string {
   const safeHref = escapeHtmlAttr(href);
   const safeLabel = escapeHtmlAttr(label || file.basename || file.name);
+  const anchorAttrs = ctx ? buildPageAnchorAttributes(ctx, href) : `href="${safeHref}" target="_blank" rel="noopener noreferrer"`;
 
   if (file.extension.toLowerCase() === "pdf") {
     const sizeAttrs = embedSizeAttributes(size);
-    return `<div class="pdf-embed-block"><a class="pdf-title-link" href="${safeHref}" target="_blank" rel="noopener noreferrer"><div class="pdf-title">${safeLabel}</div></a><iframe src="${safeHref}" title="${safeLabel}" loading="lazy"${sizeAttrs}></iframe></div>`;
+    return `<div class="pdf-embed-block"><a class="pdf-title-link" ${anchorAttrs}><div class="pdf-title">${safeLabel}</div></a><iframe src="${safeHref}" title="${safeLabel}" loading="lazy"${sizeAttrs}></iframe></div>`;
   }
 
-  return `<div class="file-embed-block"><a class="file-chip" href="${safeHref}" target="_blank" rel="noopener noreferrer">${safeLabel}</a></div>`;
+  return `<div class="file-embed-block"><a class="file-chip" ${anchorAttrs}>${safeLabel}</a></div>`;
+}
+
+function buildPageAnchorAttributes(ctx: MarkdownContext, href: string): string {
+  const safeHref = escapeHtmlAttr(href);
+  if (ctx.exportFormat === "single-html" && href.startsWith("#page-")) {
+    const pageId = href.replace(/^#page-/, "");
+    return `href="${safeHref}" data-inline-page="${escapeHtmlAttr(pageId)}"`;
+  }
+  return `href="${safeHref}"`;
 }
 
 function getEmbedLabel(
@@ -698,14 +831,18 @@ async function resolveObsidianTarget(
     const exported = cached || await exportMarkdownNote(ctx, resolved);
     const headingSuffix = parsedTargetSection(target);
     const normalizedSuffix = headingSuffix ? buildMarkdownAnchorSuffix(headingSuffix) : suffix;
-    const href = linkBase === "page"
+    const href = ctx.exportFormat === "single-html"
+      ? exported
+      : linkBase === "page"
       ? getHrefForMarkdownPage(ctx.htmlMap.get(sourceFile.path) || "", exported)
       : `${exported}`;
     return { href: `${href}${normalizedSuffix}`, found: true, kind: "markdown", displayText: resolved.basename };
   }
 
   const rel = await copyVaultFile(ctx, resolved, expectImage || isImageExt(resolved.extension.toLowerCase()) ? "image" : "file");
-  const href = linkBase === "page"
+  const href = ctx.exportFormat === "single-html"
+    ? rel
+    : linkBase === "page"
     ? getHrefForMarkdownPage(ctx.htmlMap.get(sourceFile.path) || "", rel)
     : rel;
   return {
@@ -736,10 +873,16 @@ async function copyVaultFile(ctx: MarkdownContext, file: TFile, kind: "image" | 
   const cached = ctx.fileMap.get(file.path);
   if (cached) return cached;
 
+  const bytes = await ctx.app.vault.readBinary(file);
+  if (ctx.exportFormat === "single-html") {
+    const dataUrl = buildBinaryDataUrl(bytes, getMimeTypeForExtension(file.extension));
+    ctx.fileMap.set(file.path, dataUrl);
+    return dataUrl;
+  }
+
   const folder = kind === "image" ? ctx.assetsImagesDir : ctx.assetsFilesDir;
   const outputName = uniqueOutputName(ctx, file.basename, file.extension);
   const outputPath = normalizePath(`${folder}/${outputName}`);
-  const bytes = await ctx.app.vault.readBinary(file);
   await writeBinaryFile(ctx.app, outputPath, bytes, ctx.outputMode);
 
   const rel = toExportRelativePath(outputPath, ctx.outputRoot);
@@ -878,6 +1021,7 @@ function buildLinkDocumentHtml(
   darkMode: boolean,
   canvasColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
+  canvasHref?: string,
 ): string {
   const theme = getLinkPageTheme(darkMode);
   const safeTitle = escapeHtmlAttr(url || title || "Link");
@@ -928,6 +1072,15 @@ function buildLinkDocumentHtml(
       word-break: break-all;
     }
     .link-page-title:hover {
+      text-decoration: underline;
+    }
+    .link-page-canvas-link {
+      color: ${theme.text};
+      text-decoration: none;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .link-page-canvas-link:hover {
       text-decoration: underline;
     }
     .link-page-status {
@@ -1005,6 +1158,7 @@ function buildLinkDocumentHtml(
     <div class="link-page-nav">
       <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
     </div>
+    ${canvasHref ? `<a class="link-page-canvas-link" href="${escapeHtmlAttr(canvasHref)}">Canvas</a>` : ""}
   </div>
   <div id="link-status" class="link-page-status"></div>
   <div class="link-page-body">
@@ -1097,6 +1251,20 @@ function buildLinkDocumentHtml(
 </html>`;
 }
 
+function buildSingleHtmlMarkdownPageBody(title: string, bodyHtml: string): string {
+  return `<article class="md-page"><h1>${escapeHtml(title)}</h1>${bodyHtml}</article>`;
+}
+
+function buildSingleHtmlLinkPageBody(title: string, url: string): string {
+  const safeTitle = escapeHtmlAttr(title || url || "Link");
+  const safeUrl = escapeHtmlAttr(url);
+  return `<section class="single-link-page">
+    <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeTitle}</a>
+    <div class="link-page-note">Use the link above if the website blocks embedding or if you want to open the page in its own browser tab.</div>
+    <iframe src="${safeUrl}" title="${safeTitle}" loading="lazy"></iframe>
+  </section>`;
+}
+
 function getLinkPageTheme(darkMode: boolean): {
   bodyBackground: string;
   canvasBackground: string;
@@ -1135,6 +1303,10 @@ function escapeHtmlAttr(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function escapeHtml(value: string): string {
+  return escapeHtmlAttr(value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function resolveBaseFolder(outputDir: string, outputMode: "vault" | "filesystem"): string {

@@ -197,7 +197,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       outputDir: "Canvas-Exports",
     });
 
-    assert.equal(result.folderPath, "Canvas-Exports/demo");
+    assert.equal(result.outputKind, "folder");
+    assert.equal(result.outputPath, "Canvas-Exports/demo");
     assert.equal(result.data.nodes.length, 2);
     assert.equal(result.data.edges.length, 1);
 
@@ -221,7 +222,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.ok(exportedMarkdown);
     assert.ok(exportedImage);
     assert.match(exportedMarkdown?.text || "", /<h1>Canvas Titel<\/h1>/);
+    assert.match(exportedMarkdown?.text || "", /<a class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
     assert.match(exportedMarkdown?.text || "", /zweite Notiz/);
+    assert.doesNotMatch(exportedMarkdown?.text || "", /md-page-back-link/);
+    assert.match(exportedMarkdown?.text || "", /<a href="[^"]+\.html">zweite Notiz<\/a>/);
+    assert.doesNotMatch(exportedMarkdown?.text || "", /__canvasExporterCanvasProxy/);
     assert.match(exportedMarkdown?.text || "", /<img src="\.\.\/images\//);
   });
 
@@ -263,11 +268,12 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         outputDir: tempRoot,
       });
 
-      assert.equal(result.folderPath, path.join(tempRoot, "demo"));
+      assert.equal(result.outputKind, "folder");
+      assert.equal(result.outputPath, path.join(tempRoot, "demo"));
       const markdownNode = result.data.nodes.find((node) => node.id === "main");
       assert.ok(markdownNode?.exportHtmlPath);
 
-      const exportedMarkdownPath = path.join(result.folderPath, markdownNode?.exportHtmlPath || "");
+      const exportedMarkdownPath = path.join(result.outputPath, markdownNode?.exportHtmlPath || "");
       const exportedMarkdown = await fs.readFile(exportedMarkdownPath, "utf8");
       assert.match(exportedMarkdown, /<h1>main<\/h1>/);
       assert.match(exportedMarkdown, /<h1 id="absolute">Absolute<\/h1>/);
@@ -544,6 +550,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const exportedLinkPage = files.get(`Canvas-Exports/link/${linkNode?.exportHtmlPath || ""}`);
     assert.ok(exportedLinkPage);
     const linkHtml = exportedLinkPage?.text || "";
+    assert.match(linkHtml, /<a class="link-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
     assert.match(linkHtml, /No internet connection is available\./);
     assert.match(linkHtml, /This website may not allow embedded previews\. Use the link above\./);
     assert.match(linkHtml, /Use the link above if the website blocks embedding or if you want to open the page in its own browser tab\./);
@@ -626,6 +633,49 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.match(mainHtml, /<div class="md-embed-block">/);
     assert.match(mainHtml, /<img src="\.\.\/images\/\d+_picture\.png" alt="picture\.png">/);
     assert.doesNotMatch(mainHtml, /<img src="assets\/images\//);
+  });
+
+  await test("builds a single self-contained html export with inline assets", async () => {
+    const png = new Uint8Array([137, 80, 78, 71]).buffer;
+    const canvasJson = JSON.stringify({
+      name: "Single HTML",
+      nodes: [
+        { id: "md", type: "file", x: 0, y: 0, width: 320, height: 220, file: "notes/main.md" },
+        { id: "link", type: "link", x: 360, y: 0, width: 320, height: 220, url: "https://pandoc.org/" },
+      ],
+      edges: [],
+    });
+
+    const { app, files } = createMockApp([
+      { path: "canvases/single.canvas", text: canvasJson },
+      { path: "notes/main.md", text: "# Start\n![[picture.png]]\n\nSee [[child]]." },
+      { path: "notes/child.md", text: "## Child\nMore text." },
+      { path: "assets/picture.png", binary: png },
+    ]);
+
+    const canvasFile = files.get("canvases/single.canvas") as MockFile;
+    const result = await exportCanvasPackage(app as never, canvasFile as never, {
+      darkMode: false,
+      outputDir: "Canvas-Exports",
+      exportFormat: "single-html",
+    });
+
+    assert.equal(result.outputKind, "file");
+    assert.equal(result.outputPath, "Canvas-Exports/single.html");
+
+    const markdownNode = result.data.nodes.find((node) => node.id === "md");
+    const linkNode = result.data.nodes.find((node) => node.id === "link");
+
+    assert.ok(markdownNode?.exportHtmlPath?.startsWith("#page-"));
+    assert.ok(markdownNode?.canvasHref?.startsWith("#page-"));
+    assert.match(markdownNode?.previewHtml || "", /<img src="data:image\/png;base64,/);
+    assert.ok(linkNode?.canvasHref?.startsWith("#page-"));
+    assert.equal(files.has("Canvas-Exports/single/assets/files/001_main.html"), false);
+    assert.equal(files.has("Canvas-Exports/single/assets/images/"), false);
+    assert.ok(result.options.embeddedPages?.some((page) => page.id === markdownNode?.canvasHref?.replace(/^#page-/, "")));
+    const markdownPage = result.options.embeddedPages?.find((page) => page.id === markdownNode?.canvasHref?.replace(/^#page-/, ""));
+    assert.match(markdownPage?.bodyHtml || "", /data-inline-page="p\d+"/);
+    assert.match(markdownPage?.bodyHtml || "", /href="#page-p\d+"/);
   });
 })().catch((error) => {
   console.error(error);

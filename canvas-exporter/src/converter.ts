@@ -53,6 +53,15 @@ export interface ExportOptions {
   highlightingTheme?: HighlightingThemeChoice;
   showMinimap?: boolean;
   showSearch?: boolean;
+  exportFormat?: "package" | "single-html";
+  embeddedPages?: EmbeddedPage[];
+}
+
+export interface EmbeddedPage {
+  id: string;
+  title: string;
+  kind: "markdown" | "link" | "pdf";
+  bodyHtml: string;
 }
 
 export const EXPORTER_VERSION = "0.5.0";
@@ -194,6 +203,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const edges = Array.isArray(data.edges) ? data.edges : [];
   const showMinimap = options.showMinimap !== false;
   const showSearch = options.showSearch !== false;
+  const exportFormat = options.exportFormat || "package";
+  const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
 
   const bounds = getBounds(nodes);
   const theme = getTheme(options.darkMode);
@@ -247,6 +258,17 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       <div id="search-summary" class="search-summary">Enter a search term to find matching nodes.</div>
       <ul id="search-results" class="search-results"></ul>
     </div>
+  </div>`
+    : "";
+  const embeddedPagesHtml = exportFormat === "single-html" && embeddedPages.length
+    ? `<section id="single-page-view" class="single-page-view" hidden>
+    <div class="single-page-toolbar">
+      <a id="single-page-canvas-link" class="single-page-canvas-link" href="#">Canvas</a>
+    </div>
+    <main id="single-page-body" class="single-page-body"></main>
+  </section>
+  <div id="embedded-pages-store" hidden>
+    ${embeddedPages.map((page) => `<template data-page-id="${escapeAttribute(page.id)}" data-page-title="${escapeAttribute(page.title)}" data-page-kind="${escapeAttribute(page.kind)}">${page.bodyHtml}</template>`).join("\n    ")}
   </div>`
     : "";
 
@@ -557,6 +579,173 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       background: ${theme.chipBackground};
       box-shadow: 0 0 0 3px rgba(25, 103, 210, 0.14);
     }
+    .single-page-view {
+      max-width: 960px;
+      margin: 32px auto;
+      background: ${theme.canvasBackground};
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      overflow: hidden;
+    }
+    .single-page-view[hidden] {
+      display: none;
+    }
+    .single-page-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 12;
+      display: flex;
+      justify-content: flex-end;
+      margin: 0;
+      padding: 32px 32px 0;
+      background: transparent;
+    }
+    .single-page-canvas-link {
+      color: ${theme.link};
+      text-decoration: none;
+      font-size: 0.95em;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .single-page-canvas-link:hover {
+      text-decoration: underline;
+    }
+    .single-page-body {
+      padding: 0 32px 32px;
+      background: transparent;
+    }
+    .single-page-body .md-page {
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .single-page-body h1,
+    .single-page-body h2,
+    .single-page-body h3,
+    .single-page-body h4 {
+      line-height: 1.25;
+      margin-top: 1.1em;
+    }
+    .single-page-body h1 { margin-top: 0; }
+    .single-page-body a { color: ${theme.link}; text-decoration: none; }
+    .single-page-body a:hover { text-decoration: underline; }
+    .single-page-body code {
+      background: ${theme.inlineCodeBackground};
+      border-radius: 4px;
+      padding: 0.1em 0.35em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92em;
+    }
+    .single-page-body pre,
+    .single-page-body .shiki {
+      margin: 0.9em 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: ${theme.codeBlockBackground};
+      overflow-x: auto;
+    }
+    .single-page-body pre code,
+    .single-page-body .shiki code { padding: 0; background: transparent; }
+    .single-page-body blockquote {
+      margin: 0.9em 0;
+      padding-left: 12px;
+      border-left: 3px solid ${theme.link};
+      color: ${theme.mutedText};
+    }
+    .single-page-body .callout { border-radius: 6px; margin: 0.9em 0; overflow: hidden; border: 1px solid #888; }
+    .single-page-body .callout-title { padding: 5px 10px; font-weight: 600; font-size: 0.88em; letter-spacing: 0.01em; }
+    .single-page-body .callout-content { padding: 4px 10px 6px; }
+    .single-page-body .callout-icon { margin-right: 5px; font-style: normal; }
+    .single-page-body .callout-note, .single-page-body .callout-info, .single-page-body .callout-todo, .single-page-body .callout-abstract, .single-page-body .callout-summary, .single-page-body .callout-tldr { border-color: #4a9eff; }
+    .single-page-body .callout-note .callout-title, .single-page-body .callout-info .callout-title, .single-page-body .callout-todo .callout-title, .single-page-body .callout-abstract .callout-title, .single-page-body .callout-summary .callout-title, .single-page-body .callout-tldr .callout-title { background: rgba(74,158,255,0.15); color: #4a9eff; }
+    .single-page-body .callout-tip, .single-page-body .callout-hint, .single-page-body .callout-important, .single-page-body .callout-success, .single-page-body .callout-check, .single-page-body .callout-done { border-color: #4ade80; }
+    .single-page-body .callout-tip .callout-title, .single-page-body .callout-hint .callout-title, .single-page-body .callout-important .callout-title, .single-page-body .callout-success .callout-title, .single-page-body .callout-check .callout-title, .single-page-body .callout-done .callout-title { background: rgba(74,222,128,0.15); color: #2d9e57; }
+    .single-page-body .callout-warning, .single-page-body .callout-caution, .single-page-body .callout-attention, .single-page-body .callout-question, .single-page-body .callout-help, .single-page-body .callout-faq { border-color: #f59e0b; }
+    .single-page-body .callout-warning .callout-title, .single-page-body .callout-caution .callout-title, .single-page-body .callout-attention .callout-title, .single-page-body .callout-question .callout-title, .single-page-body .callout-help .callout-title, .single-page-body .callout-faq .callout-title { background: rgba(245,158,11,0.15); color: #b97a10; }
+    .single-page-body .callout-danger, .single-page-body .callout-error, .single-page-body .callout-failure, .single-page-body .callout-fail, .single-page-body .callout-missing, .single-page-body .callout-bug { border-color: #ef4444; }
+    .single-page-body .callout-danger .callout-title, .single-page-body .callout-error .callout-title, .single-page-body .callout-failure .callout-title, .single-page-body .callout-fail .callout-title, .single-page-body .callout-missing .callout-title, .single-page-body .callout-bug .callout-title { background: rgba(239,68,68,0.15); color: #c93535; }
+    .single-page-body .callout-example { border-color: #a855f7; }
+    .single-page-body .callout-example .callout-title { background: rgba(168,85,247,0.15); color: #8b3ec9; }
+    .single-page-body .callout-quote, .single-page-body .callout-cite { border-color: #94a3b8; }
+    .single-page-body .callout-quote .callout-title, .single-page-body .callout-cite .callout-title { background: rgba(148,163,184,0.15); color: #64748b; }
+    .single-page-body details.callout { display: block; }
+    .single-page-body details.callout > summary.callout-title { cursor: pointer; list-style: none; user-select: none; }
+    .single-page-body details.callout > summary.callout-title::-webkit-details-marker { display: none; }
+    .single-page-body details.callout > summary.callout-title::after { content: " ›"; font-size: 0.85em; }
+    .single-page-body details.callout[open] > summary.callout-title::after { content: " ⌄"; }
+    .single-page-body hr { border: none; border-top: 1px solid ${theme.rule}; margin: 1em 0; }
+    .single-page-body img { display: block; max-width: 100%; border-radius: 8px; margin: 0.8em 0; }
+    .single-page-body table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+    .single-page-body th, .single-page-body td { border: 1px solid ${theme.canvasBorder}; padding: 8px 10px; text-align: left; }
+    .single-page-body .md-embed-block { margin: 0.8em 0; }
+    .single-page-body .pdf-embed-block {
+      margin: 0.8em 0;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 10px;
+      overflow: hidden;
+      background: ${theme.nodeBackground};
+    }
+    .single-page-body .pdf-embed-block iframe {
+      display: block;
+      width: 100%;
+      min-height: 420px;
+      border: none;
+      background: ${theme.canvasBackground};
+    }
+    .single-page-body .file-embed-block { margin: 0.8em 0; }
+    .single-page-body .file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+      padding: 0.4em 0.7em;
+      border-radius: 999px;
+      border: 1px solid ${theme.canvasBorder};
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .single-page-body .file-chip:hover { text-decoration: underline; }
+    .single-page-body mark.search-highlight {
+      background: rgba(255, 214, 10, 0.45);
+      color: inherit;
+      padding: 0 0.08em;
+      border-radius: 3px;
+    }
+    .single-page-body .unresolved-link {
+      color: #d64545;
+      font-style: italic;
+    }
+    .single-link-page {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .single-link-page .link-page-note {
+      color: ${theme.mutedText};
+      line-height: 1.5;
+    }
+    .single-link-page .link-page-title {
+      color: ${theme.link};
+      text-decoration: none;
+      font-weight: 700;
+      word-break: break-all;
+    }
+    .single-link-page .link-page-title:hover { text-decoration: underline; }
+    .single-link-page iframe {
+      width: 100%;
+      min-height: 72vh;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 12px;
+      background: ${theme.canvasBackground};
+    }
     .node.search-hit {
       box-shadow: 0 0 0 4px rgba(25, 103, 210, 0.22), 0 8px 24px rgba(0,0,0,0.16);
       transition: box-shadow 0.2s ease;
@@ -857,6 +1046,21 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       border-radius: 14px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.12);
     }
+    .md-page-nav {
+      margin-bottom: 1.2em;
+    }
+    .md-page-back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+      font-size: 0.95em;
+      font-weight: 600;
+      color: ${theme.link};
+      text-decoration: none;
+    }
+    .md-page-back-link:hover {
+      text-decoration: underline;
+    }
     .unresolved-link {
       color: #d64545;
       font-style: italic;
@@ -864,6 +1068,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   </style>
 </head>
 <body>
+  <div id="canvas-shell">
   <div class="toolbar">
     <button type="button" onclick="zoomBy(1.15)">Zoom +</button>
     <button type="button" onclick="zoomBy(1 / 1.15)">Zoom −</button>
@@ -883,12 +1088,20 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   </div>
   ${minimapHtml}
   ${searchHtml}
+  </div>
+  ${embeddedPagesHtml}
   <script>
     (() => {
+      const exportFormat = ${JSON.stringify(exportFormat)};
+      const baseDocumentTitle = ${JSON.stringify(options.title)};
       const toolbar = document.querySelector(".toolbar");
+      const canvasShell = document.getElementById("canvas-shell");
       const edgeLayer = document.getElementById("edge-layer");
       const canvas = document.getElementById("canvas");
       const viewport = document.querySelector(".viewport");
+      const singlePageView = document.getElementById("single-page-view");
+      const singlePageBody = document.getElementById("single-page-body");
+      const singlePageCanvasLink = document.getElementById("single-page-canvas-link");
       const minimapPanel = document.getElementById("minimap-panel");
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
@@ -900,8 +1113,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const searchResults = document.getElementById("search-results");
       const searchSummary = document.getElementById("search-summary");
       const searchCloseButton = document.getElementById("search-close-button");
+      const embeddedPageTemplates = Array.from(document.querySelectorAll("#embedded-pages-store template"));
       const edgeColor = ${JSON.stringify(theme.edge)};
       const textColor = ${JSON.stringify(theme.text)};
+      const inlineBlobCache = new Map();
       const obsidianColors = ${JSON.stringify(
         Object.fromEntries(Object.entries(OBSIDIAN_COLORS).map(([key, value]) => [key, value.border]))
       )};
@@ -1182,11 +1397,27 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const rawHref = String(href || "");
         if (!rawHref) return "";
         if (!query || !query.trim()) return rawHref;
+        if (rawHref.startsWith("#page-")) {
+          const [pageRef, existingQuery = ""] = rawHref.slice(1).split("?");
+          const params = new URLSearchParams(existingQuery);
+          params.set("q", query);
+          return "#" + pageRef + "?" + params.toString();
+        }
         const hashIndex = rawHref.indexOf("#");
         const base = hashIndex >= 0 ? rawHref.slice(0, hashIndex) : rawHref;
         const hash = hashIndex >= 0 ? rawHref.slice(hashIndex) : "";
         const separator = base.includes("?") ? "&" : "?";
         return base + separator + "q=" + encodeURIComponent(query) + hash;
+      }
+
+      function buildLinkAttrs(href, query) {
+        if (!href) return "";
+        if (String(href).startsWith("#page-")) {
+          const pageId = String(href).replace(/^#page-/, "").split("?")[0];
+          const pageHref = appendSearchQueryToHref("#page-" + pageId, query);
+          return ' href="' + escapeHtml(pageHref) + '" data-inline-page="' + escapeHtml(pageId) + '"';
+        }
+        return ' href="' + escapeHtml(href) + '"';
       }
 
       function renderSearchResults(matches, query) {
@@ -1197,13 +1428,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           searchResults.innerHTML = "";
           return;
         }
-        searchSummary.textContent = matches.length
+          searchSummary.textContent = matches.length
           ? matches.length + " results · Press Enter to jump to the active result"
           : "No results found for this search term.";
         searchResults.innerHTML = matches.map((entry) => {
           const titleContent = highlightMatch(entry.title, query);
           const title = entry.openHref
-            ? '<a class="search-result-title search-result-title-link" href="' + escapeHtml(appendSearchQueryToHref(entry.openHref, query)) + '" target="_blank" rel="noopener noreferrer" data-search-open="true">' + titleContent + '</a>'
+            ? '<a class="search-result-title search-result-title-link"' + buildLinkAttrs(entry.openHref, query) + ' data-search-open="true">' + titleContent + '</a>'
             : '<span class="search-result-title">' + titleContent + '</span>';
           const snippet = highlightMatch(entry.snippet, query);
           const meta = escapeHtml(entry.kindLabel + " · " + entry.positionLabel);
@@ -1356,6 +1587,159 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const top = (toolbarRect ? toolbarRect.bottom : 48) + 8;
         const left = window.innerWidth - panelWidth - 24;
         applyMinimapPosition(left, top);
+      }
+
+      function parsePageHash(hash) {
+        const value = String(hash || "").replace(/^#/, "");
+        const [pageRef] = value.split("?");
+        if (!pageRef || !pageRef.startsWith("page-")) return "";
+        return pageRef.slice("page-".length);
+      }
+
+      function parsePageSearchQuery(hash) {
+        const value = String(hash || "").replace(/^#/, "");
+        const queryIndex = value.indexOf("?");
+        if (queryIndex >= 0) {
+          const params = new URLSearchParams(value.slice(queryIndex + 1));
+          const hashQuery = String(params.get("q") || "").trim();
+          if (hashQuery) return hashQuery;
+        }
+        const searchParams = new URLSearchParams(window.location.search);
+        return String(searchParams.get("q") || "").trim();
+      }
+
+      function renderCanvasShell() {
+        if (!canvasShell || !singlePageView) return;
+        canvasShell.hidden = false;
+        singlePageView.hidden = true;
+        document.title = baseDocumentTitle;
+      }
+
+      function clearSearchHighlights(root) {
+        if (!root) return;
+        root.querySelectorAll("mark.search-highlight").forEach((mark) => {
+          const parent = mark.parentNode;
+          if (!parent) return;
+          parent.replaceChild(document.createTextNode(mark.textContent || ""), mark);
+          parent.normalize();
+        });
+      }
+
+      function applySearchHighlights(root, query) {
+        if (!root) return;
+        clearSearchHighlights(root);
+        const normalized = String(query || "").trim();
+        if (!normalized) return;
+        const pattern = new RegExp(normalized.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, "\\\\$&"), "ig");
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+          acceptNode(node) {
+            const parent = node.parentElement;
+            if (!parent) return NodeFilter.FILTER_REJECT;
+            if (["SCRIPT", "STYLE", "MARK"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+            if (!node.nodeValue || !pattern.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+            pattern.lastIndex = 0;
+            return NodeFilter.FILTER_ACCEPT;
+          },
+        });
+        const textNodes = [];
+        let current = walker.nextNode();
+        while (current) {
+          textNodes.push(current);
+          current = walker.nextNode();
+        }
+        for (const textNode of textNodes) {
+          const text = textNode.nodeValue || "";
+          pattern.lastIndex = 0;
+          const fragment = document.createDocumentFragment();
+          let lastIndex = 0;
+          let match = pattern.exec(text);
+          while (match) {
+            const index = match.index || 0;
+            if (index > lastIndex) {
+              fragment.appendChild(document.createTextNode(text.slice(lastIndex, index)));
+            }
+            const mark = document.createElement("mark");
+            mark.className = "search-highlight";
+            mark.textContent = match[0];
+            fragment.appendChild(mark);
+            lastIndex = index + match[0].length;
+            match = pattern.exec(text);
+          }
+          if (lastIndex < text.length) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+          }
+          textNode.parentNode?.replaceChild(fragment, textNode);
+        }
+      }
+
+      function renderEmbeddedPage(pageId) {
+        if (exportFormat !== "single-html" || !canvasShell || !singlePageView || !singlePageBody) {
+          return false;
+        }
+        const template = embeddedPageTemplates.find((item) => item.dataset.pageId === pageId);
+        if (!template) return false;
+        singlePageBody.innerHTML = template.innerHTML;
+        materializeInlineAssets(singlePageBody);
+        applySearchHighlights(singlePageBody, parsePageSearchQuery(window.location.hash));
+        canvasShell.hidden = true;
+        singlePageView.hidden = false;
+        document.title = (template.dataset.pageTitle || "Page") + " - " + baseDocumentTitle;
+        window.scrollTo({ top: 0, behavior: "auto" });
+        return true;
+      }
+
+      function dataUrlToBlobUrl(dataUrl) {
+        if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:")) {
+          return dataUrl;
+        }
+        if (inlineBlobCache.has(dataUrl)) {
+          return inlineBlobCache.get(dataUrl);
+        }
+        const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(dataUrl);
+        if (!match) {
+          return dataUrl;
+        }
+        const mimeType = match[1] || "application/octet-stream";
+        const isBase64 = Boolean(match[2]);
+        const payload = match[3] || "";
+        let blobUrl = dataUrl;
+        try {
+          let bytes;
+          if (isBase64) {
+            const binary = atob(payload);
+            bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) {
+              bytes[i] = binary.charCodeAt(i);
+            }
+          } else {
+            const decoded = decodeURIComponent(payload);
+            bytes = new TextEncoder().encode(decoded);
+          }
+          blobUrl = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+        } catch (error) {
+          blobUrl = dataUrl;
+        }
+        inlineBlobCache.set(dataUrl, blobUrl);
+        return blobUrl;
+      }
+
+      function materializeInlineAssets(root) {
+        if (exportFormat !== "single-html" || !root) return;
+        root.querySelectorAll('img[src^="data:"]').forEach((img) => {
+          const original = img.getAttribute("data-inline-src") || img.getAttribute("src") || "";
+          if (!img.getAttribute("data-inline-src")) {
+            img.setAttribute("data-inline-src", original);
+          }
+          img.setAttribute("src", dataUrlToBlobUrl(original));
+        });
+      }
+
+      function syncEmbeddedPageFromHash() {
+        if (exportFormat !== "single-html") return;
+        const pageId = parsePageHash(window.location.hash);
+        if (!pageId || !renderEmbeddedPage(pageId)) {
+          renderCanvasShell();
+        }
       }
 
       function showMinimap() {
@@ -1543,6 +1927,33 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           }
         });
       }
+      document.addEventListener("click", (event) => {
+        const link = event.target instanceof Element ? event.target.closest("[data-inline-page]") : null;
+        if (!link) return;
+        const pageId = link.getAttribute("data-inline-page") || "";
+        if (!pageId) return;
+        event.preventDefault();
+        const href = link.getAttribute("href") || ("#page-" + pageId);
+        if (window.location.hash === href) {
+          syncEmbeddedPageFromHash();
+          return;
+        }
+        window.location.hash = href;
+      });
+      if (singlePageCanvasLink) {
+        singlePageCanvasLink.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (window.location.hash) {
+            window.location.hash = "";
+          } else {
+            syncEmbeddedPageFromHash();
+          }
+        });
+      }
+      if (exportFormat === "single-html") {
+        syncEmbeddedPageFromHash();
+        window.addEventListener("hashchange", syncEmbeddedPageFromHash);
+      }
       window.addEventListener("keydown", (event) => {
         const target = event.target instanceof HTMLElement ? event.target : null;
         const targetTag = target?.tagName || "";
@@ -1558,6 +1969,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       });
       window.addEventListener("online", syncLinkOfflineState);
       window.addEventListener("offline", syncLinkOfflineState);
+
+      materializeInlineAssets(document);
+
     })();
   </script>
 </body>
@@ -1570,6 +1984,7 @@ export function buildMarkdownDocumentHtml(
   darkMode: boolean,
   canvasColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
+  canvasHref?: string,
 ): string {
   const theme = getTheme(darkMode);
   return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="generator" content="${EXPORTER_SIGNATURE}">\n  <meta name="canvas-exporter-build" content="${buildExporterBuildMeta(highlightingTheme)}">\n  <title>${escapeHtml(title)}</title>\n  <!-- Exported by ${EXPORTER_SIGNATURE} -->\n  <style>\n    :root { ${buildCanvasColorVariables(canvasColors)} }\n    html, body { margin: 0; padding: 0; }
@@ -1578,6 +1993,20 @@ export function buildMarkdownDocumentHtml(
       background: ${theme.bodyBackground};
       color: ${theme.text};
       line-height: 1.65;
+    }
+    .md-page-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 1em;
+    }
+    .md-page-canvas-link {
+      color: ${theme.link};
+      text-decoration: none;
+      font-size: 0.95em;
+      font-weight: 600;
+    }
+    .md-page-canvas-link:hover {
+      text-decoration: underline;
     }
     .md-page {
       max-width: 960px;
@@ -1687,6 +2116,9 @@ export function buildMarkdownDocumentHtml(
 </head>
 <body>
   <main class="md-page">
+    <div class="md-page-toolbar">
+      ${canvasHref ? `<a class="md-page-canvas-link" href="${escapeHtml(canvasHref)}">Canvas</a>` : ""}
+    </div>
     <h1>${escapeHtml(title)}</h1>
     ${bodyHtml}
   </main>
@@ -1866,6 +2298,15 @@ function htmlToSearchText(html: string | undefined): string {
     .replace(/&quot;/gi, '"');
 }
 
+function buildAnchorAttributes(href: string): string {
+  const safeHref = escapeAttribute(href);
+  if (href.startsWith("#page-")) {
+    const pageId = href.replace(/^#page-/, "");
+    return `href="${safeHref}" data-inline-page="${escapeAttribute(pageId)}"`;
+  }
+  return `href="${safeHref}"`;
+}
+
 async function renderNodeContent(
   node: CanvasNode,
   darkMode: boolean,
@@ -1885,7 +2326,7 @@ async function renderNodeContent(
     const href = escapeAttribute(node.canvasHref || node.exportHtmlPath || url);
     return `<div class="link-preview">
       <div class="link-preview-header">
-        <a class="link-preview-title" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a>
+        <a class="link-preview-title" ${buildAnchorAttributes(href)}>${displayName}</a>
       </div>
       <div class="link-offline-note" data-link-offline hidden>No internet connection is available.</div>
       <div class="link-offline-note" data-link-blocked hidden>This website may not allow embedded previews. Use the heading above.</div>
@@ -1902,7 +2343,7 @@ async function renderNodeContent(
     );
 
     if (node.fileKind === "image") {
-      return `<a href="${href}" target="_blank" rel="noopener noreferrer"><img src="${href}" alt="${displayName}"></a>`;
+      return `<a ${buildAnchorAttributes(href)}><img src="${href}" alt="${displayName}"></a>`;
     }
 
     if (node.fileKind === "markdown") {
@@ -1910,7 +2351,7 @@ async function renderNodeContent(
         ? `<div class="md-card-preview">${node.previewHtml}</div>`
         : (node.previewText ? `<p class="md-card-preview-text">${escapeHtml(node.previewText)}</p>` : "");
 
-      return `<div class="md-card"><a class="md-card-title-link" href="${href}" target="_blank" rel="noopener noreferrer"><div class="md-card-title">${displayName}</div></a>${preview}</div>`;
+      return `<div class="md-card"><a class="md-card-title-link" ${buildAnchorAttributes(href)}><div class="md-card-title">${displayName}</div></a>${preview}</div>`;
     }
 
     if (node.fileKind === "pdf") {
@@ -1919,11 +2360,11 @@ async function renderNodeContent(
       const viewerHref = escapeAttribute(node.canvasHref || node.exportPath || node.file || "");
       const pdfTitle = escapeHtml(node.displayName || node.file || "PDF");
       const pdfTitleAttr = escapeAttribute(node.displayName || node.file || "PDF");
-      return `<div class="pdf-embed"><a class="pdf-title-link" href="${viewerHref}" target="_blank" rel="noopener noreferrer"><div class="pdf-title">${pdfTitle}</div></a><iframe src="${pdfHref}" title="${pdfTitleAttr}" loading="lazy"></iframe></div>`;
+      return `<div class="pdf-embed"><a class="pdf-title-link" ${buildAnchorAttributes(viewerHref)}><div class="pdf-title">${pdfTitle}</div></a><iframe src="${pdfHref}" title="${pdfTitleAttr}" loading="lazy"></iframe></div>`;
     }
 
     if (!href) return "<p>Empty file node</p>";
-    return `<p><a class="file-chip" href="${href}" target="_blank" rel="noopener noreferrer">${displayName}</a></p>`;
+    return `<p><a class="file-chip" ${buildAnchorAttributes(href)}>${displayName}</a></p>`;
   }
 
   const text = typeof node.text === "string" ? node.text : "";
