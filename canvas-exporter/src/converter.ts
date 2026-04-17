@@ -1396,10 +1396,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function appendSearchQueryToHref(href, query) {
         const rawHref = String(href || "");
         if (!rawHref) return "";
-        if (rawHref.startsWith("#page-")) {
-          return rawHref;
-        }
         if (!query || !query.trim()) return rawHref;
+        if (rawHref.startsWith("#page-")) {
+          const [pageRef, existingQuery = ""] = rawHref.slice(1).split("?");
+          const params = new URLSearchParams(existingQuery);
+          params.set("q", query);
+          return "#" + pageRef + "?" + params.toString();
+        }
         const hashIndex = rawHref.indexOf("#");
         const base = hashIndex >= 0 ? rawHref.slice(0, hashIndex) : rawHref;
         const hash = hashIndex >= 0 ? rawHref.slice(hashIndex) : "";
@@ -1407,11 +1410,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         return base + separator + "q=" + encodeURIComponent(query) + hash;
       }
 
-      function buildLinkAttrs(href) {
+      function buildLinkAttrs(href, query) {
         if (!href) return "";
         if (String(href).startsWith("#page-")) {
-          const pageId = String(href).replace(/^#page-/, "");
-          return ' href="#page-' + escapeHtml(pageId) + '" data-inline-page="' + escapeHtml(pageId) + '"';
+          const pageId = String(href).replace(/^#page-/, "").split("?")[0];
+          const pageHref = appendSearchQueryToHref("#page-" + pageId, query);
+          return ' href="' + escapeHtml(pageHref) + '" data-inline-page="' + escapeHtml(pageId) + '"';
         }
         return ' href="' + escapeHtml(href) + '"';
       }
@@ -1424,13 +1428,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           searchResults.innerHTML = "";
           return;
         }
-        searchSummary.textContent = matches.length
+          searchSummary.textContent = matches.length
           ? matches.length + " results · Press Enter to jump to the active result"
           : "No results found for this search term.";
         searchResults.innerHTML = matches.map((entry) => {
           const titleContent = highlightMatch(entry.title, query);
           const title = entry.openHref
-            ? '<a class="search-result-title search-result-title-link"' + buildLinkAttrs(appendSearchQueryToHref(entry.openHref, query)) + ' data-search-open="true">' + titleContent + '</a>'
+            ? '<a class="search-result-title search-result-title-link"' + buildLinkAttrs(entry.openHref, query) + ' data-search-open="true">' + titleContent + '</a>'
             : '<span class="search-result-title">' + titleContent + '</span>';
           const snippet = highlightMatch(entry.snippet, query);
           const meta = escapeHtml(entry.kindLabel + " · " + entry.positionLabel);
@@ -1592,11 +1596,80 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         return pageRef.slice("page-".length);
       }
 
+      function parsePageSearchQuery(hash) {
+        const value = String(hash || "").replace(/^#/, "");
+        const queryIndex = value.indexOf("?");
+        if (queryIndex >= 0) {
+          const params = new URLSearchParams(value.slice(queryIndex + 1));
+          const hashQuery = String(params.get("q") || "").trim();
+          if (hashQuery) return hashQuery;
+        }
+        const searchParams = new URLSearchParams(window.location.search);
+        return String(searchParams.get("q") || "").trim();
+      }
+
       function renderCanvasShell() {
         if (!canvasShell || !singlePageView) return;
         canvasShell.hidden = false;
         singlePageView.hidden = true;
         document.title = baseDocumentTitle;
+      }
+
+      function clearSearchHighlights(root) {
+        if (!root) return;
+        root.querySelectorAll("mark.search-highlight").forEach((mark) => {
+          const parent = mark.parentNode;
+          if (!parent) return;
+          parent.replaceChild(document.createTextNode(mark.textContent || ""), mark);
+          parent.normalize();
+        });
+      }
+
+      function applySearchHighlights(root, query) {
+        if (!root) return;
+        clearSearchHighlights(root);
+        const normalized = String(query || "").trim();
+        if (!normalized) return;
+        const pattern = new RegExp(normalized.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, "\\\\$&"), "ig");
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+          acceptNode(node) {
+            const parent = node.parentElement;
+            if (!parent) return NodeFilter.FILTER_REJECT;
+            if (["SCRIPT", "STYLE", "MARK"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+            if (!node.nodeValue || !pattern.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+            pattern.lastIndex = 0;
+            return NodeFilter.FILTER_ACCEPT;
+          },
+        });
+        const textNodes = [];
+        let current = walker.nextNode();
+        while (current) {
+          textNodes.push(current);
+          current = walker.nextNode();
+        }
+        for (const textNode of textNodes) {
+          const text = textNode.nodeValue || "";
+          pattern.lastIndex = 0;
+          const fragment = document.createDocumentFragment();
+          let lastIndex = 0;
+          let match = pattern.exec(text);
+          while (match) {
+            const index = match.index || 0;
+            if (index > lastIndex) {
+              fragment.appendChild(document.createTextNode(text.slice(lastIndex, index)));
+            }
+            const mark = document.createElement("mark");
+            mark.className = "search-highlight";
+            mark.textContent = match[0];
+            fragment.appendChild(mark);
+            lastIndex = index + match[0].length;
+            match = pattern.exec(text);
+          }
+          if (lastIndex < text.length) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+          }
+          textNode.parentNode?.replaceChild(fragment, textNode);
+        }
       }
 
       function renderEmbeddedPage(pageId) {
@@ -1607,6 +1680,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         if (!template) return false;
         singlePageBody.innerHTML = template.innerHTML;
         materializeInlineAssets(singlePageBody);
+        applySearchHighlights(singlePageBody, parsePageSearchQuery(window.location.hash));
         canvasShell.hidden = true;
         singlePageView.hidden = false;
         document.title = (template.dataset.pageTitle || "Page") + " - " + baseDocumentTitle;
@@ -1859,7 +1933,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const pageId = link.getAttribute("data-inline-page") || "";
         if (!pageId) return;
         event.preventDefault();
-        const href = "#page-" + pageId;
+        const href = link.getAttribute("href") || ("#page-" + pageId);
         if (window.location.hash === href) {
           syncEmbeddedPageFromHash();
           return;
