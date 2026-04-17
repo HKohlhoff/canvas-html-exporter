@@ -1,7 +1,7 @@
 {
   "id": "canvas-exporter",
   "name": "Canvas to HTML",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "minAppVersion": "1.5.0",
   "description": "Export Obsidian Canvas files as portable interactive HTML packages.",
   "author": "Holger Kohlhoff",

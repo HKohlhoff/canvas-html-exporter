@@ -64,7 +64,7 @@ export interface EmbeddedPage {
   bodyHtml: string;
 }
 
-export const EXPORTER_VERSION = "0.5.0";
+export const EXPORTER_VERSION = "0.6.0";
 export const EXPORTER_SIGNATURE = `canvas-exporter v${EXPORTER_VERSION}`;
 export type HighlightingThemeChoice = "shiki" | "github" | "vscode" | "catppuccin" | "material";
 
