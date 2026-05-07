@@ -1,0 +1,3 @@
+PDFs may be single or multipage files. Both are shown in the box in readable and scrollable form as all other content is. The examples on the right are pdf-files directly placed on the canvas. They are not embedded in a note.
+By opening their content page a full view showns all its content on a single page. The back button  of the browser or the canvas-link on the right top of the page will bringt you back to canvas-view. 
+This feature used the abilities of your browser and optional add-ons. Therefore, how exactly it looks depends on your specific environment. But all modern borwsers should have no problem with that.

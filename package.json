@@ -1,0 +1,49 @@
+{
+  "name": "canvas2html",
+  "version": "1.0.0",
+  "description": "Export Obsidian canvas to interactive html-package or standalone page.",
+  "main": "main.js",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:deploy": "node build.mjs --deploy",
+    "test": "npm run test:math && npm run test:markdown && npm run test:export && npm run test:canvas-html && npm run test:links && npm run test:paths && npm run test:preview && npm run test:export-files && npm run test:integration",
+    "test:canvas-html": "tsc -p tsconfig.tests.json && node .test-build/tests/canvas-html-rendering.test.js",
+    "test:export": "tsc -p tsconfig.tests.json && node .test-build/tests/exporter-helpers.test.js",
+    "test:export-files": "tsc -p tsconfig.tests.json && node .test-build/tests/export-file-helpers.test.js",
+    "test:integration": "tsc -p tsconfig.tests.json && node .test-build/tests/export-package.integration.test.js",
+    "test:links": "tsc -p tsconfig.tests.json && node .test-build/tests/link-helpers.test.js",
+    "test:paths": "tsc -p tsconfig.tests.json && node .test-build/tests/path-helpers.test.js",
+    "test:preview": "tsc -p tsconfig.tests.json && node .test-build/tests/preview-helpers.test.js",
+    "test:math": "tsc -p tsconfig.tests.json && node .test-build/tests/math-rendering.test.js",
+    "test:markdown": "tsc -p tsconfig.tests.json && node .test-build/tests/markdown-rendering.test.js",
+    "dev": "node build.mjs --watch",
+    "dev:deploy": "node build.mjs --watch --deploy",
+    "build:prod": "node build.mjs --production",
+    "build:prod:deploy": "node build.mjs --production --deploy",
+    "dev:prod": "node build.mjs --watch --production",
+    "dev:prod:deploy": "node build.mjs --watch --production --deploy",
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
+  },
+  "keywords": [],
+  "author": "Holger Kohlhoff",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "katex": "^0.16.0",
+    "shiki": "^4.0.2"
+  },
+  "devDependencies": {
+    "@types/katex": "^0.16.0",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.28.0",
+    "obsidian": "^1.12.3",
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HKohlhoff/canvas2html.git"
+  },
+  "bugs": {
+    "url": "https://github.com/HKohlhoff/canvas2html/issues"
+  },
+  "homepage": "https://github.com/HKohlhoff/canvas2html#readme"
+}
