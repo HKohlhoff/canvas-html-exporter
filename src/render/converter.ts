@@ -67,7 +67,7 @@ export interface EmbeddedPage {
   bodyHtml: string;
 }
 
-export const EXPORTER_VERSION = "1.0.0";
+export const EXPORTER_VERSION = "1.0.1";
 export const EXPORTER_SIGNATURE = `canvas2html v${EXPORTER_VERSION}`;
 export type HighlightingThemeChoice = "shiki" | "github" | "vscode" | "catppuccin" | "material";
 const CALLOUT_FALLBACK_COLORS: Record<string, string> = {

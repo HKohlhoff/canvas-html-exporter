@@ -1,10 +1,10 @@
 {
   "id": "canvas2html",
   "name": "Canvas to HTML",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.5.0",
-  "description": "Export Obsidian canvas files as portable interactive HTML package or standalone page.",
+  "description": "Export canvas files as portable interactive HTML package or standalone page.",
   "author": "Holger Kohlhoff",
-  "authorUrl": "https://github.com/HKohlhoff/canvas2html",
+  "authorUrl": "https://github.com/HKohlhoff",
   "isDesktopOnly": true
 }

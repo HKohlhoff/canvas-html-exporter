@@ -1,7 +1,7 @@
 {
   "name": "canvas2html",
-  "version": "1.0.0",
-  "description": "Export Obsidian canvas to interactive html-package or standalone page.",
+  "version": "1.0.1",
+  "description": "Export canvas files as interactive html-package or standalone page.",
   "main": "main.js",
   "scripts": {
     "build": "node build.mjs",
