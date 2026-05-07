@@ -103,7 +103,7 @@ To use it:
 
 ## Installation
 
-Install from Obsidian Community Plugins once published, or copy manifest.json and main.js into your vault plugin folder. There is no styles.css file.
+Install from Obsidian Community Plugins once published, or copy manifest.json, main.js, and styles.css into your vault plugin folder. 
 
 ## Plugin Settings
 

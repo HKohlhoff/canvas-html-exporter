@@ -23,15 +23,15 @@ export default class Canvas2HtmlPlugin extends Plugin {
   async onload(): Promise<void> {
     await this.loadSettings();
 
-    this.addRibbonIcon("file-down", "Export canvas as HTML", async () => {
-      await this.exportCurrentCanvas();
+    this.addRibbonIcon("file-down", "Export canvas as HTML", () => {
+      void this.exportCurrentCanvas();
     });
 
     this.addCommand({
       id: "export-current-canvas-to-html",
       name: "Export active canvas as HTML",
-      callback: async () => {
-        await this.exportCurrentCanvas();
+      callback: () => {
+        void this.exportCurrentCanvas();
       },
     });
 
@@ -87,7 +87,7 @@ export default class Canvas2HtmlPlugin extends Plugin {
   }
 
   private readCanvasPaletteColors(): CanvasColorMap {
-    if (typeof window === "undefined" || typeof document === "undefined" || !document.body) {
+    if (typeof window === "undefined" || typeof activeDocument === "undefined" || !activeDocument.body) {
       return {};
     }
 
@@ -113,7 +113,7 @@ export default class Canvas2HtmlPlugin extends Plugin {
   }
 
   private readCalloutColors(): CalloutColorMap {
-    if (typeof window === "undefined" || typeof document === "undefined" || !document.body) {
+    if (typeof window === "undefined" || typeof activeDocument === "undefined" || !activeDocument.body) {
       return {};
     }
 
@@ -149,23 +149,15 @@ export default class Canvas2HtmlPlugin extends Plugin {
       "settings",
       "award",
     ];
-    const host = document.createElement("div");
-    host.style.position = "fixed";
-    host.style.left = "-9999px";
-    host.style.top = "-9999px";
-    host.style.width = "1px";
-    host.style.height = "1px";
-    host.style.pointerEvents = "none";
-    host.style.opacity = "0";
-    document.body.appendChild(host);
+    const host = createDiv();
+    this.applyHiddenProbeStyles(host);
+    activeDocument.body.appendChild(host);
 
     try {
       for (const type of types) {
-        const callout = document.createElement("div");
-        callout.className = "callout";
+        const callout = createDiv({ cls: "callout" });
         callout.setAttribute("data-callout", type);
-        const title = document.createElement("div");
-        title.className = "callout-title";
+        const title = createDiv({ cls: "callout-title" });
         title.textContent = type;
         callout.appendChild(title);
         host.appendChild(callout);
@@ -188,21 +180,15 @@ export default class Canvas2HtmlPlugin extends Plugin {
   }
 
   private readHeadingColors(canvasColors: CanvasColorMap = {}): HeadingColorMap {
-    if (typeof window === "undefined" || typeof document === "undefined" || !document.body) {
+    if (typeof window === "undefined" || typeof activeDocument === "undefined" || !activeDocument.body) {
       return this.buildHeadingFallbackColors(canvasColors);
     }
 
     const styleScope = this.getThemeStyleScope();
     const fallbackColors = this.buildHeadingFallbackColors(canvasColors);
-    const host = document.createElement("div");
+    const host = createDiv();
     host.className = "markdown-rendered markdown-preview-view";
-    host.style.position = "fixed";
-    host.style.left = "-9999px";
-    host.style.top = "-9999px";
-    host.style.width = "1px";
-    host.style.height = "1px";
-    host.style.pointerEvents = "none";
-    host.style.opacity = "0";
+    this.applyHiddenProbeStyles(host);
     styleScope.appendChild(host);
 
     try {
@@ -210,7 +196,7 @@ export default class Canvas2HtmlPlugin extends Plugin {
       const sampledColors: HeadingColorMap = {};
 
       for (const level of ["h1", "h2", "h3", "h4", "h5", "h6"]) {
-        const heading = document.createElement(level);
+        const heading = createEl(level as keyof HTMLElementTagNameMap);
         heading.textContent = level.toUpperCase();
         host.appendChild(heading);
         const resolved = this.normalizeCalloutColor(getComputedStyle(heading).color);
@@ -235,25 +221,25 @@ export default class Canvas2HtmlPlugin extends Plugin {
   }
 
   private readInlineStyleColors(): InlineStyleColorMap {
-    if (typeof window === "undefined" || typeof document === "undefined" || !document.body) {
+    if (typeof window === "undefined" || typeof activeDocument === "undefined" || !activeDocument.body) {
       return {};
     }
 
     const styleScope = this.getThemeStyleScope();
-    const host = document.createElement("div");
+    const host = createDiv();
     host.className = "markdown-rendered markdown-preview-view";
-    host.style.position = "fixed";
-    host.style.left = "-9999px";
-    host.style.top = "-9999px";
-    host.style.width = "1px";
-    host.style.height = "1px";
-    host.style.pointerEvents = "none";
-    host.style.opacity = "0";
+    this.applyHiddenProbeStyles(host);
     styleScope.appendChild(host);
 
     try {
-      const paragraph = document.createElement("p");
-      paragraph.innerHTML = "<strong>bold</strong><em>italic</em><del>deleted</del>";
+      const paragraph = createEl("p");
+      const strong = createEl("strong");
+      strong.textContent = "Bold";
+      const em = createEl("em");
+      em.textContent = "Italic";
+      const del = createEl("del");
+      del.textContent = "Deleted";
+      paragraph.append(strong, em, del);
       host.appendChild(paragraph);
       const result: InlineStyleColorMap = {};
       const textColor = this.normalizeCalloutColor(getComputedStyle(paragraph).color) || this.resolveCssVariable("--text-normal");
@@ -288,11 +274,11 @@ export default class Canvas2HtmlPlugin extends Plugin {
   }
 
   private resolveCssVariable(cssVar: string): string {
-    if (typeof document === "undefined" || !document.body) return "";
+    if (typeof activeDocument === "undefined" || !activeDocument.body) return "";
 
     const styleScope = this.getThemeStyleScope();
-    const rootValue = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
-    const bodyValue = getComputedStyle(document.body).getPropertyValue(cssVar).trim();
+    const rootValue = getComputedStyle(activeDocument.documentElement).getPropertyValue(cssVar).trim();
+    const bodyValue = getComputedStyle(activeDocument.body).getPropertyValue(cssVar).trim();
     const scopeValue = getComputedStyle(styleScope).getPropertyValue(cssVar).trim();
     const value = scopeValue || bodyValue || rootValue;
 
@@ -307,15 +293,10 @@ export default class Canvas2HtmlPlugin extends Plugin {
       }
     }
 
-    const probe = document.createElement("div");
-    probe.style.position = "fixed";
-    probe.style.left = "-9999px";
-    probe.style.top = "-9999px";
-    probe.style.width = "1px";
-    probe.style.height = "1px";
-    probe.style.pointerEvents = "none";
-    probe.style.opacity = "0";
-    probe.style.backgroundColor = `var(${cssVar})`;
+    const probe = createDiv();
+    this.applyHiddenProbeStyles(probe);
+    probe.addClass("canvas2html-color-probe");
+    probe.setCssProps({ "--canvas2html-probe-bg": `var(${cssVar})` });
 
     styleScope.appendChild(probe);
     const resolved = getComputedStyle(probe).backgroundColor.trim();
@@ -328,9 +309,13 @@ export default class Canvas2HtmlPlugin extends Plugin {
     return resolved;
   }
 
+  private applyHiddenProbeStyles(element: HTMLElement): void {
+    element.addClass("canvas2html-hidden-probe");
+  }
+
   private readProbeTextColor(host: HTMLElement): string {
-    const paragraph = document.createElement("p");
-    paragraph.textContent = "probe";
+    const paragraph = createEl("p");
+    paragraph.textContent = "Probe";
     host.appendChild(paragraph);
     const resolved = this.normalizeCalloutColor(getComputedStyle(paragraph).color);
     paragraph.remove();
@@ -354,13 +339,14 @@ export default class Canvas2HtmlPlugin extends Plugin {
   }
 
   private getThemeStyleScope(): HTMLElement {
-    return document.querySelector(".app-container") instanceof HTMLElement
-      ? document.querySelector(".app-container") as HTMLElement
-      : document.body;
+    const appContainer = activeDocument.querySelector(".app-container");
+    return appContainer instanceof HTMLElement
+      ? appContainer
+      : activeDocument.body;
   }
 
   private async loadSettings(): Promise<void> {
-    const saved = await this.loadData();
+    const saved: unknown = await this.loadData();
     this.settings = normalizePluginSettings(saved);
   }
 

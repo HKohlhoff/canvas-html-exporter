@@ -271,7 +271,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
   const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
   const minimapHtml = showMinimap
-    ? `<aside id="minimap-panel" class="minimap" aria-label="Canvas-Minimap" hidden>
+    ? `<aside id="minimap-panel" class="minimap" aria-label="Canvas minimap" hidden>
     <div id="minimap-drag-handle" class="minimap-header" title="Move minimap">
       <div class="minimap-header-copy">
         <strong>Minimap</strong>
@@ -1316,6 +1316,20 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       let searchHighlightTimer = null;
       let activeSearchIndex = -1;
 
+      function setCssProps(element, props) {
+        if (!element) return;
+        const declarations = Object.entries(props)
+          .map(([name, value]) => name + ": " + value + ";")
+          .join(" ");
+        element.setAttribute("style", (element.getAttribute("style") || "") + " " + declarations);
+      }
+
+      function clearChildren(element) {
+        while (element.firstChild) {
+          element.removeChild(element.firstChild);
+        }
+      }
+
       function resolveEdgeColor(color) {
         const normalized = String(color || "").trim();
         if (!normalized) return edgeColor;
@@ -1325,8 +1339,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       }
 
       function getAnchor(el, side) {
-        const left = parseFloat(el.style.left || "0");
-        const top = parseFloat(el.style.top || "0");
+        const left = parseFloat(el.getAttribute("data-canvas-left") || "0");
+        const top = parseFloat(el.getAttribute("data-canvas-top") || "0");
         const width = el.offsetWidth;
         const height = el.offsetHeight;
 
@@ -1399,7 +1413,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       }
 
       function drawEdges() {
-        edgeLayer.innerHTML = "";
+        clearChildren(edgeLayer);
         const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         edgeLayer.appendChild(defs);
         const seenMarkers = new Set();
@@ -1538,8 +1552,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function focusNode(nodeId) {
         const target = document.getElementById("node-" + nodeId);
         if (!target) return;
-        const left = parseFloat(target.style.left || "0");
-        const top = parseFloat(target.style.top || "0");
+        const left = parseFloat(target.getAttribute("data-canvas-left") || "0");
+        const top = parseFloat(target.getAttribute("data-canvas-top") || "0");
         const width = target.offsetWidth / Math.max(currentScale, 0.0001);
         const height = target.offsetHeight / Math.max(currentScale, 0.0001);
         scrollViewportToCanvasPoint(left + width / 2, top + height / 2, "smooth");
@@ -1570,14 +1584,31 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       }
 
       function escapeRegExp(value) {
-        return String(value || "").replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+        return String(value || "").replace(/[.*+?^()|[\x5d{}$\\]/g, "\\$&");
       }
 
-      function highlightMatch(text, query) {
-        const safeText = escapeHtml(text);
-        if (!query) return safeText;
-        const pattern = new RegExp("(" + escapeRegExp(query) + ")", "ig");
-        return safeText.replace(pattern, "<mark>$1</mark>");
+      function appendHighlightedText(parent, text, query) {
+        const value = String(text || "");
+        if (!query) {
+          parent.textContent = value;
+          return;
+        }
+        const pattern = new RegExp(escapeRegExp(query), "ig");
+        let lastIndex = 0;
+        let match = pattern.exec(value);
+        while (match) {
+          if (match.index > lastIndex) {
+            parent.appendChild(document.createTextNode(value.slice(lastIndex, match.index)));
+          }
+          const mark = document.createElement("mark");
+          mark.textContent = match[0];
+          parent.appendChild(mark);
+          lastIndex = match.index + match[0].length;
+          match = pattern.exec(value);
+        }
+        if (lastIndex < value.length) {
+          parent.appendChild(document.createTextNode(value.slice(lastIndex)));
+        }
       }
 
       function appendSearchQueryToHref(href, query) {
@@ -1597,14 +1628,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         return base + separator + "q=" + encodeURIComponent(query) + hash;
       }
 
-      function buildLinkAttrs(href, query) {
-        if (!href) return "";
+      function applyLinkAttrs(link, href, query) {
         if (String(href).startsWith("#page-")) {
-          const pageId = parseInlinePageIdFromHref(href);
-          const pageHref = appendSearchQueryToHref(href, query);
-          return ' href="' + escapeHtml(pageHref) + '" data-inline-page="' + escapeHtml(pageId) + '"';
+          link.setAttribute("href", appendSearchQueryToHref(href, query));
+          link.setAttribute("data-inline-page", parseInlinePageIdFromHref(href));
+          return;
         }
-        return ' href="' + escapeHtml(appendSearchQueryToHref(href, query)) + '"';
+        link.setAttribute("href", appendSearchQueryToHref(href, query));
       }
 
       function renderSearchResults(matches, query) {
@@ -1612,26 +1642,43 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         activeSearchIndex = matches.length ? 0 : -1;
         if (!query.trim()) {
           searchSummary.textContent = "Enter a search term to find matching nodes.";
-          searchResults.innerHTML = "";
+          clearChildren(searchResults);
           return;
         }
           searchSummary.textContent = matches.length
           ? matches.length + " results · Press Enter to jump to the active result"
           : "No results found for this search term.";
-        searchResults.innerHTML = matches.map((entry) => {
-          const titleContent = highlightMatch(entry.title, query);
-          const title = entry.openHref
-            ? '<a class="search-result-title search-result-title-link"' + buildLinkAttrs(entry.openHref, query) + ' data-search-open="true">' + titleContent + '</a>'
-            : '<span class="search-result-title">' + titleContent + '</span>';
-          const snippet = highlightMatch(entry.snippet, query);
-          const meta = escapeHtml(entry.kindLabel + " · " + entry.positionLabel);
-          return '<li class="search-result-item">' +
-            title +
-            '<button type="button" class="search-result" data-node-id="' + escapeHtml(entry.id) + '">' +
-            '<span class="search-result-meta">' + meta + '</span>' +
-            '<span class="search-result-snippet">' + snippet + '</span>' +
-          '</button></li>';
-        }).join("");
+        clearChildren(searchResults);
+        for (const entry of matches) {
+          const item = document.createElement("li");
+          item.className = "search-result-item";
+          if (entry.openHref) {
+            const title = document.createElement("a");
+            title.className = "search-result-title search-result-title-link";
+            applyLinkAttrs(title, entry.openHref, query);
+            title.setAttribute("data-search-open", "true");
+            appendHighlightedText(title, entry.title, query);
+            item.appendChild(title);
+          } else {
+            const title = document.createElement("span");
+            title.className = "search-result-title";
+            appendHighlightedText(title, entry.title, query);
+            item.appendChild(title);
+          }
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "search-result";
+          button.setAttribute("data-node-id", entry.id);
+          const metaEl = document.createElement("span");
+          metaEl.className = "search-result-meta";
+          metaEl.textContent = entry.kindLabel + " · " + entry.positionLabel;
+          const snippetEl = document.createElement("span");
+          snippetEl.className = "search-result-snippet";
+          appendHighlightedText(snippetEl, entry.snippet, query);
+          button.append(metaEl, snippetEl);
+          item.appendChild(button);
+          searchResults.appendChild(item);
+        }
         updateActiveSearchResult();
       }
 
@@ -1761,10 +1808,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function applyMinimapPosition(left, top) {
         if (!minimapPanel) return;
         const next = clampMinimapPosition(left, top);
-        minimapPanel.style.left = next.left + "px";
-        minimapPanel.style.top = next.top + "px";
-        minimapPanel.style.right = "auto";
-        minimapPanel.style.bottom = "auto";
+        setCssProps(minimapPanel, {
+          left: next.left + "px",
+          top: next.top + "px",
+          right: "auto",
+          bottom: "auto",
+        });
       }
 
       function placeMinimapUnderToolbar() {
@@ -1791,7 +1840,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function decodeHashComponent(value) {
         try {
           return decodeURIComponent(value);
-        } catch (error) {
+        } catch {
           return value;
         }
       }
@@ -1846,7 +1895,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         clearSearchHighlights(root);
         const normalized = String(query || "").trim();
         if (!normalized) return;
-        const pattern = new RegExp(normalized.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, "\\\\$&"), "ig");
+        const pattern = new RegExp(normalized.replace(/[.*+?^()|[\\]{}$\\\\]/g, "\\\\$&"), "ig");
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
           acceptNode(node) {
             const parent = node.parentElement;
@@ -1913,7 +1962,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         }
         const template = embeddedPageTemplates.find((item) => item.dataset.pageId === pageId);
         if (!template) return false;
-        singlePageBody.innerHTML = template.innerHTML;
+        clearChildren(singlePageBody);
+        singlePageBody.appendChild(template.content.cloneNode(true));
         materializeInlineAssets(singlePageBody);
         applySearchHighlights(singlePageBody, parsePageSearchQuery(window.location.hash));
         canvasShell.hidden = true;
@@ -1955,7 +2005,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             bytes = new TextEncoder().encode(decoded);
           }
           blobUrl = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
-        } catch (error) {
+        } catch {
           blobUrl = dataUrl;
         }
         inlineBlobCache.set(dataUrl, blobUrl);
@@ -2041,7 +2091,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
       window.zoomBy = function(factor) {
         currentScale = Math.max(0.2, Math.min(4, currentScale * factor));
-        canvas.style.transform = "scale(" + currentScale + ")";
+        setCssProps(canvas, { transform: "scale(" + currentScale + ")" });
         drawEdges();
         updateMinimapViewport();
       };
@@ -2055,7 +2105,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const scaleX = availableWidth / baseWidth;
         const scaleY = availableHeight / baseHeight;
         currentScale = Math.min(scaleX, scaleY, 1);
-        canvas.style.transform = "scale(" + currentScale + ")";
+        setCssProps(canvas, { transform: "scale(" + currentScale + ")" });
         viewport.scrollTo({ left: 0, top: 0, behavior: "auto" });
         drawEdges();
         updateMinimapViewport();
@@ -2404,7 +2454,7 @@ export function buildMarkdownDocumentHtml(
       function decodeHashComponent(value) {
         try {
           return decodeURIComponent(value);
-        } catch (error) {
+        } catch {
           return value;
         }
       }
@@ -2425,7 +2475,7 @@ export function buildMarkdownDocumentHtml(
 
       if (!query) return;
 
-      const pattern = new RegExp(query.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, "\\\\$&"), "ig");
+      const pattern = new RegExp(query.replace(/[.*+?^()|[\\]{}$\\\\]/g, "\\\\$&"), "ig");
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
           const parent = node.parentElement;
@@ -2505,6 +2555,8 @@ async function renderNode(
   return `<div
     id="node-${escapeAttribute(node.id)}"
     class="${classes}"
+    data-canvas-left="${frame.left}"
+    data-canvas-top="${frame.top}"
     style="left:${frame.left}px;top:${frame.top}px;width:${frame.width}px;height:${frame.height}px;background:${colors.background};border-color:${colors.border};--node-border-color:${colors.border};"
   >${title}<div class="node-content">${content}</div></div>`;
 }
@@ -2582,7 +2634,7 @@ function humanizeNodeKind(node: CanvasNode): string {
 function normalizeSearchText(value: string | undefined): string {
   return String(value || "")
     .replace(/\r\n?/g, "\n")
-    .replace(/[#>*`_\[\]()!|-]+/g, " ")
+    .replace(/[#>*`_\x5b\x5d()!|-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -2850,7 +2902,7 @@ export async function markdownToHtml(
         i += 1;
       }
       const firstLine = quoteLines[0] ?? "";
-      const calloutMatch = firstLine.match(/^\[!([\w-]+)\]([+-])?(?:\s+(.*))?$/i);
+      const calloutMatch = firstLine.match(/^\x5b!([\w-]+)\x5d([+-])?(?:\s+(.*))?$/i);
       if (calloutMatch) {
         const type = calloutMatch[1].toLowerCase();
         const indicator = calloutMatch[2];
@@ -3113,13 +3165,13 @@ function splitTableRow(row: string): string[] {
 
 function renderInline(text: string): string {
   const codeStore: string[] = [];
-  const withCodePlaceholders = text.replace(/`([^`]+)`/g, (_match, content) => {
+  const withCodePlaceholders = text.replace(/`([^`]+)`/g, (_match: string, content: string) => {
     codeStore.push(`<code>${escapeHtml(content)}</code>`);
     return `@@CODE_${codeStore.length - 1}@@`;
   });
 
   const escapedCharStore: string[] = [];
-  const withEscapedCharPlaceholders = withCodePlaceholders.replace(/\\([!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~])/g, (_match, char) => {
+  const withEscapedCharPlaceholders = withCodePlaceholders.replace(/\\([!"#$%&'()*+,.\-/:;<=>?@[\\\]^_`{|}~])/g, (_match: string, char: string) => {
     escapedCharStore.push(escapeHtml(char));
     return `@@ESC_${escapedCharStore.length - 1}@@`;
   });
@@ -3130,7 +3182,7 @@ function renderInline(text: string): string {
   const mathStore: string[] = [];
   const withMathPlaceholders = withMediaPlaceholders.replace(
     /(?<!\$)\$(?!\$)([^$\n]+?)(?<!\$)\$(?!\$)/g,
-    (_match, content) => {
+    (_match: string, content: string) => {
       mathStore.push(renderMath(content.trim(), false));
       return `@@MATH_${mathStore.length - 1}@@`;
     },
@@ -3138,29 +3190,29 @@ function renderInline(text: string): string {
 
   let html = escapeHtml(withMathPlaceholders);
   html = html.replace(
-    /(^|[\s(>])((?:https?:\/\/|mailto:|file:)[^\s<]*[^\s<.,:;"')\]\}])/g,
+    /(^|[\s(>])((?:https?:\/\/|mailto:|file:)[^\s<]*[^\s<.,:;"')\]}])/g,
     '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>',
   );
-  html = html.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "[[$1|$2]]");
-  html = html.replace(/\[\[([^\]]+)\]\]/g, "[[$1]]");
+  html = html.replace(/\x5b\x5b([^\x5d|]+)\|([^\x5d]+)\x5d\x5d/g, "[[$1|$2]]");
+  html = html.replace(/\x5b\x5b([^\x5d]+)\x5d\x5d/g, "[[$1]]");
   html = html.replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>');
   html = html.replace(/___([^_\n]+)___/g, '<strong><em>$1</em></strong>');
   html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
-  html = html.replace(/(^|[\s(\[{>])\*([^*\n]+)\*(?=$|[\s)\]}<.,!?;:])/g, '$1<em>$2</em>');
-  html = html.replace(/(^|[\s(\[{>])_([^_\n]+)_(?=$|[\s)\]}<.,!?;:])/g, '$1<em>$2</em>');
+  html = html.replace(/(^|[\s([{>])\*([^*\n]+)\*(?=$|[\s)\]}<.,!?;:])/g, '$1<em>$2</em>');
+  html = html.replace(/(^|[\s([{>])_([^_\n]+)_(?=$|[\s)\]}<.,!?;:])/g, '$1<em>$2</em>');
   html = html.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
   if (codeStore.length > 0) {
-    html = html.replace(/@@CODE_(\d+)@@/g, (_m, idx) => codeStore[parseInt(idx, 10)] ?? "");
+    html = html.replace(/@@CODE_(\d+)@@/g, (_m: string, idx: string) => codeStore[parseInt(idx, 10)] ?? "");
   }
   if (mediaStore.length > 0) {
-    html = html.replace(/@@MEDIA_(\d+)@@/g, (_m, idx) => mediaStore[parseInt(idx, 10)] ?? "");
+    html = html.replace(/@@MEDIA_(\d+)@@/g, (_m: string, idx: string) => mediaStore[parseInt(idx, 10)] ?? "");
   }
   if (escapedCharStore.length > 0) {
-    html = html.replace(/@@ESC_(\d+)@@/g, (_m, idx) => escapedCharStore[parseInt(idx, 10)] ?? "");
+    html = html.replace(/@@ESC_(\d+)@@/g, (_m: string, idx: string) => escapedCharStore[parseInt(idx, 10)] ?? "");
   }
   if (mathStore.length > 0) {
-    html = html.replace(/@@MATH_(\d+)@@/g, (_m, idx) => mathStore[parseInt(idx, 10)] ?? "");
+    html = html.replace(/@@MATH_(\d+)@@/g, (_m: string, idx: string) => mathStore[parseInt(idx, 10)] ?? "");
   }
   return html;
 }
@@ -3289,22 +3341,6 @@ export function buildBlockAnchorId(value: string): string {
   const raw = String(value || "").trim().replace(/^#?\^/, "");
   const normalized = raw.replace(/[^A-Za-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^[-]+|[-]+$/g, "");
   return normalized ? `block-${normalized}` : "";
-}
-
-function getNodePalette(color: string | undefined, darkMode: boolean): NodePalette {
-  const normalized = (color || "").trim();
-
-  if (normalized && OBSIDIAN_COLORS[normalized]) {
-    return OBSIDIAN_COLORS[normalized];
-  }
-
-  if (normalized.startsWith("#")) {
-    return { background: `${normalized}22`, border: normalized };
-  }
-
-  return darkMode
-    ? { background: "#2b2f36", border: "#4a5565" }
-    : { background: "#ffffff", border: "#c8d0da" };
 }
 
 function getNodeFrame(node: CanvasNode, offsetX: number, offsetY: number): { left: number; top: number; width: number; height: number } {
@@ -3640,7 +3676,7 @@ function escapeHtml(text: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 

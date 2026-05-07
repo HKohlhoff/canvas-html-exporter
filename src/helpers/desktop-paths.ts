@@ -1,5 +1,6 @@
 type NodeFsModule = typeof import("node:fs/promises");
 type NodePathModule = typeof import("node:path");
+type ObsidianPlatform = { isMobile?: boolean };
 
 declare const require: ((id: string) => unknown) | undefined;
 declare const module: { require?: (id: string) => unknown } | undefined;
@@ -7,13 +8,12 @@ declare const module: { require?: (id: string) => unknown } | undefined;
 export function isAbsoluteFilesystemPath(value: string): boolean {
   const normalized = String(value || "").trim();
   if (!normalized) return false;
-  return /^([A-Za-z]:[\\/]|\/)/.test(normalized);
+  return /^([A-Za-z]:[/\\]|\/)/.test(normalized);
 }
 
 export function isMobileRuntime(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const agent = String(navigator.userAgent || navigator.vendor || "");
-  return /iPhone|iPad|iPod|Android/i.test(agent);
+  const Platform = getObsidianPlatform();
+  return Platform?.isMobile === true;
 }
 
 export function normalizeStoredOutputPathValue(raw: string): string {
@@ -63,7 +63,7 @@ export function requireDesktopNodeApis(): { fs: NodeFsModule; path: NodePathModu
   return { fs, path };
 }
 
-function getRuntimeRequire(): ((id: string) => unknown) | null {
+export function getRuntimeRequire(): ((id: string) => unknown) | null {
   if (typeof require === "function") {
     return require;
   }
@@ -71,4 +71,15 @@ function getRuntimeRequire(): ((id: string) => unknown) | null {
     return module.require.bind(module);
   }
   return null;
+}
+
+function getObsidianPlatform(): ObsidianPlatform | null {
+  try {
+    const requireFn = getRuntimeRequire();
+    if (!requireFn) return null;
+    const obsidianApi = requireFn("obsidian") as { Platform?: ObsidianPlatform };
+    return obsidianApi.Platform ?? null;
+  } catch {
+    return null;
+  }
 }

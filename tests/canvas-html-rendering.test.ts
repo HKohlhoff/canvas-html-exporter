@@ -608,7 +608,7 @@ await test("renders minimap markup and viewport sync when enabled", async () => 
   };
 
   const html = await convertCanvasToHtml(data, baseOptions);
-  assert.match(html, /id="minimap-panel" class="minimap" aria-label="Canvas-Minimap" hidden/);
+  assert.match(html, /id="minimap-panel" class="minimap" aria-label="Canvas minimap" hidden/);
   assert.match(html, /id="minimap-drag-handle" class="minimap-header"/);
   assert.match(html, /id="minimap-toolbar-button" type="button" onclick="toggleMinimap\(\)"/);
   assert.doesNotMatch(html, />Navigation</);
@@ -673,9 +673,10 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /event\.key === "\/"/);
   assert.match(html, /"title":"Alpha Beta Gamma"/);
   assert.match(html, /"openHref":"assets\/files\/suche-notiz\.html"|\"openHref\":\"assets\/files\//);
-  assert.match(html, /data-search-open="true"/);
+  assert.match(html, /title\.setAttribute\("data-search-open", "true"\)/);
   assert.match(html, /search-result-title-link/);
-  assert.match(html, /href="' \+ escapeHtml\(appendSearchQueryToHref\(href, query\)\) \+ '"/);
+  assert.match(html, /function applyLinkAttrs\(link, href, query\)/);
+  assert.match(html, /link\.setAttribute\("href", appendSearchQueryToHref\(href, query\)\)/);
   assert.match(html, /"kindLabel":"Markdown"/);
 });
 

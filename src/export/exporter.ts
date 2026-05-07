@@ -92,10 +92,6 @@ function normalizeExportHref(href: string): string {
   return normalizePath(href).replace(/^\/+/, "");
 }
 
-function buildHtmlDataUrl(html: string): string {
-  return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-}
-
 function buildBinaryDataUrl(data: ArrayBuffer, mimeType: string): string {
   const bytes = new Uint8Array(data);
   const base64 = bytesToBase64(bytes);
@@ -180,7 +176,8 @@ export async function exportCanvasPackage(
   try {
     parsed = JSON.parse(rawContent);
   } catch (error) {
-    throw new Error(`Invalid canvas JSON in ${canvasFile.path}`);
+    const detail = error instanceof Error ? `: ${error.message}` : "";
+    throw new Error(`Invalid canvas JSON in ${canvasFile.path}${detail}`);
   }
 
   const outputMode = isAbsoluteFilesystemPath(settings.outputDir) ? "filesystem" : "vault";
@@ -425,7 +422,7 @@ async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promi
   const outputPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, outputName);
   const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
   const canvasHref = normalizeExportHref(getHrefForMarkdownPage(rel, "index.html"));
-  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.calloutColors, ctx.highlightingTheme, canvasHref);
+  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme, canvasHref);
   await writeTextFile(ctx.app, outputPath, html, ctx.outputMode);
   return rel;
 }
@@ -688,7 +685,7 @@ async function rewriteWikiLinks(
 ): Promise<string> {
   let result = html;
 
-  const embedMatches = [...result.matchAll(/!\[\[([^\]]+)\]\]/g)];
+  const embedMatches = [...result.matchAll(/!\x5b\x5b([^\x5d]+)\x5d\x5d/g)];
   for (const match of embedMatches) {
     const original = match[0];
     const raw = match[1] || "";
@@ -736,7 +733,7 @@ async function rewriteWikiLinks(
 
   result = cleanupMarkdownEmbedBlocks(result);
 
-  const wikiMatches = [...result.matchAll(/\[\[([^\]]+)\]\]/g)];
+  const wikiMatches = [...result.matchAll(/\x5b\x5b([^\x5d]+)\x5d\x5d/g)];
   for (const match of wikiMatches) {
     const original = match[0];
     const raw = match[1] || "";
@@ -852,8 +849,8 @@ async function resolveObsidianTarget(
   sourceFile: TFile,
   rawTarget: string,
   expectImage: boolean,
-  allowMarkdownEmbed: boolean,
-  mode: "page" | "inline",
+  _allowMarkdownEmbed: boolean,
+  _mode: "page" | "inline",
   linkBase: LinkBase,
 ): Promise<ResolvedInternalTarget | null> {
   const parsedTarget = parseWikiReference(rawTarget.trim());
@@ -1073,7 +1070,6 @@ function buildLinkDocumentHtml(
   url: string,
   darkMode: boolean,
   canvasColors?: Record<string, string>,
-  calloutColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
   canvasHref?: string,
 ): string {
@@ -1290,13 +1286,11 @@ function buildLinkDocumentHtml(
 
       const query = (new URLSearchParams(window.location.search).get("q") || "").trim();
       if (query && status) {
-        const safeQuery = query
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#39;");
-        status.innerHTML = 'Search term: <mark class="search-highlight">' + safeQuery + '</mark>';
+        status.textContent = "Search term: ";
+        const mark = document.createElement("mark");
+        mark.className = "search-highlight";
+        mark.textContent = query;
+        status.appendChild(mark);
         status.classList.add("is-visible");
       }
     })();

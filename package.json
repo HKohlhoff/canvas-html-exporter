@@ -4,6 +4,8 @@
   "description": "Export canvas files as interactive html-package or standalone page.",
   "main": "main.js",
   "scripts": {
+    "lint": "npm run lint:obsidian",
+    "lint:obsidian": "eslint src package.json --max-warnings=0",
     "build": "node build.mjs",
     "build:deploy": "node build.mjs --deploy",
     "test": "npm run test:math && npm run test:markdown && npm run test:export && npm run test:canvas-html && npm run test:links && npm run test:paths && npm run test:preview && npm run test:export-files && npm run test:integration",
@@ -34,7 +36,11 @@
   "devDependencies": {
     "@types/katex": "^0.16.0",
     "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.2",
+    "@typescript-eslint/parser": "^8.59.2",
     "esbuild": "^0.28.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-obsidianmd": "^0.2.9",
     "obsidian": "^1.12.3",
     "typescript": "^5.0.0"
   },

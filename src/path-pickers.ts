@@ -1,5 +1,5 @@
 import { App, FuzzySuggestModal, Notice, TFolder } from "obsidian";
-import { isMobileRuntime, normalizeAbsoluteFolderPath, normalizeStoredOutputPathValue } from "./helpers/desktop-paths";
+import { getRuntimeRequire, isMobileRuntime, normalizeAbsoluteFolderPath, normalizeStoredOutputPathValue } from "./helpers/desktop-paths";
 
 export async function pickFolderPath(): Promise<string | null> {
   if (isMobileRuntime()) {
@@ -8,7 +8,10 @@ export async function pickFolderPath(): Promise<string | null> {
   }
 
   try {
-    const requireFn = (0, eval)("require") as (id: string) => unknown;
+    const requireFn = getRuntimeRequire();
+    if (!requireFn) {
+      throw new Error("Runtime require is unavailable.");
+    }
     const electron = requireFn("electron") as { remote?: { dialog?: { showOpenDialog?: (options: unknown) => Promise<unknown> } } };
     const dialog = (
       electron?.remote?.dialog ||
@@ -24,15 +27,17 @@ export async function pickFolderPath(): Promise<string | null> {
       const selected = result?.filePaths?.[0];
       return selected ? normalizeAbsoluteFolderPath(String(selected)) : null;
     }
-  } catch {}
+  } catch (error) {
+    console.debug("[canvas2html] Electron folder picker unavailable", error);
+  }
 
-  if (typeof document === "undefined") {
+  if (typeof activeDocument === "undefined") {
     new Notice("System folder selection is available on desktop only.", 5000);
     return null;
   }
 
   return await new Promise((resolve) => {
-    const input = document.createElement("input");
+    const input = createEl("input");
     input.type = "file";
     (input as HTMLInputElement & { webkitdirectory?: boolean; directory?: boolean }).webkitdirectory = true;
     (input as HTMLInputElement & { webkitdirectory?: boolean; directory?: boolean }).directory = true;
@@ -46,7 +51,7 @@ export async function pickFolderPath(): Promise<string | null> {
         const anyFile = files[0] as { path?: string };
         const selectedPath = typeof anyFile?.path === "string" ? anyFile.path : "";
         if (!selectedPath) return resolve(null);
-        resolve(normalizeAbsoluteFolderPath(selectedPath.replace(/[\\/][^\\/]+$/, "")));
+        resolve(normalizeAbsoluteFolderPath(selectedPath.replace(/[/\\][^/\\]+$/, "")));
       },
       { once: true },
     );
