@@ -8,7 +8,7 @@ To use it:
 2. Open `examples/demo-vault` as a vault in Obsidian.
 3. Install and enable **Canvas to HTML**:
    - from Obsidian Community Plugins once published, or
-   - manually by copying `manifest.json` and `main.js` into `.obsidian/plugins/canvas2html/`.
+   - manually by copying `manifest.json` and `main.js` into `.obsidian/plugins/canvas-to-html/`.
 4. Open the plugin settings and choose the export format and output folder.
 5. Open `documentation/Canvas to HTML - Documentation.canvas`.
 6. Run `Export active canvas as HTML`.

@@ -8,7 +8,7 @@ const deployMode = process.argv.includes("--deploy");
 
 const RELEASE_DIR = "release";
 const ENTRY = "src/main.ts";
-const PLUGIN_ID = "canvas2html";
+const PLUGIN_ID = "canvas-to-html";
 
 const OBSIDIAN_PLUGINS_DIR = process.env.OBSIDIAN_PLUGINS_DIR || "";
 

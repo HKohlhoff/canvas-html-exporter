@@ -28,7 +28,7 @@ export default class Canvas2HtmlPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "export-current-canvas-to-html",
+      id: "export-active-canvas",
       name: "Export active canvas as HTML",
       callback: () => {
         void this.exportCurrentCanvas();

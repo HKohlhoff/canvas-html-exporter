@@ -1,6 +1,6 @@
 {
-  "name": "canvas2html",
-  "version": "1.0.1",
+  "name": "canvas-to-html",
+  "version": "1.0.2",
   "description": "Export canvas files as interactive html-package or standalone page.",
   "main": "main.js",
   "scripts": {
