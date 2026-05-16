@@ -1,9 +1,33 @@
 import katex from "katex";
-import { getSingletonHighlighter } from "shiki/bundle/web";
-import type { BundledTheme, Highlighter } from "shiki/bundle/web";
+import { createHighlighterCore } from "shiki/core";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import bashLanguage from "shiki/langs/bash.mjs";
 import csharpLanguage from "shiki/langs/csharp.mjs";
+import cssLanguage from "shiki/langs/css.mjs";
+import htmlLanguage from "shiki/langs/html.mjs";
+import javaLanguage from "shiki/langs/java.mjs";
+import javascriptLanguage from "shiki/langs/javascript.mjs";
+import jsonLanguage from "shiki/langs/json.mjs";
 import latexLanguage from "shiki/langs/latex.mjs";
+import markdownLanguage from "shiki/langs/markdown.mjs";
+import phpLanguage from "shiki/langs/php.mjs";
+import powershellLanguage from "shiki/langs/powershell.mjs";
+import pythonLanguage from "shiki/langs/python.mjs";
+import sqlLanguage from "shiki/langs/sql.mjs";
 import texLanguage from "shiki/langs/tex.mjs";
+import typescriptLanguage from "shiki/langs/typescript.mjs";
+import yamlLanguage from "shiki/langs/yaml.mjs";
+import catppuccinLatteTheme from "shiki/themes/catppuccin-latte.mjs";
+import catppuccinMochaTheme from "shiki/themes/catppuccin-mocha.mjs";
+import darkPlusTheme from "shiki/themes/dark-plus.mjs";
+import githubDarkTheme from "shiki/themes/github-dark-default.mjs";
+import githubLightTheme from "shiki/themes/github-light-default.mjs";
+import lightPlusTheme from "shiki/themes/light-plus.mjs";
+import materialTheme from "shiki/themes/material-theme.mjs";
+import materialLightTheme from "shiki/themes/material-theme-lighter.mjs";
+import oneDarkTheme from "shiki/themes/one-dark-pro.mjs";
+import oneLightTheme from "shiki/themes/one-light.mjs";
+import type { HighlighterCore, LanguageInput, ThemeInput } from "shiki/core";
 
 export interface CanvasNode {
   id: string;
@@ -125,7 +149,7 @@ const OBSIDIAN_COLORS: Record<string, NodePalette> = {
   "6": { background: "#9c6bae22", border: "#9c6bae" },
 };
 
-const SHIKI_THEMES: Record<HighlightingThemeChoice, { dark: BundledTheme; light: BundledTheme }> = {
+const SHIKI_THEMES: Record<HighlightingThemeChoice, { dark: string; light: string }> = {
   shiki: {
     dark: "one-dark-pro",
     light: "one-light",
@@ -148,22 +172,45 @@ const SHIKI_THEMES: Record<HighlightingThemeChoice, { dark: BundledTheme; light:
   },
 };
 const SHIKI_FALLBACK_LANGUAGE = "text";
-const shikiLanguageModules: Record<string, unknown> = {
+const shikiThemeModules: ThemeInput[] = [
+  oneDarkTheme,
+  oneLightTheme,
+  githubDarkTheme,
+  githubLightTheme,
+  darkPlusTheme,
+  lightPlusTheme,
+  catppuccinMochaTheme,
+  catppuccinLatteTheme,
+  materialTheme,
+  materialLightTheme,
+];
+const shikiLanguageModules: Record<string, LanguageInput> = {
+  bash: bashLanguage,
+  css: cssLanguage,
   csharp: csharpLanguage,
+  html: htmlLanguage,
+  java: javaLanguage,
+  javascript: javascriptLanguage,
+  json: jsonLanguage,
   latex: latexLanguage,
+  markdown: markdownLanguage,
+  php: phpLanguage,
+  powershell: powershellLanguage,
+  python: pythonLanguage,
+  sql: sqlLanguage,
   tex: texLanguage,
+  typescript: typescriptLanguage,
+  yaml: yamlLanguage,
 };
-let shikiHighlighterPromise: Promise<Highlighter> | null = null;
+let shikiHighlighterPromise: Promise<HighlighterCore> | null = null;
 
-async function getShikiHighlighter(): Promise<Highlighter> {
+async function getShikiHighlighter(): Promise<HighlighterCore> {
   if (!shikiHighlighterPromise) {
     shikiHighlighterPromise = (async () => {
-      return getSingletonHighlighter({
-        themes: Array.from(
-          new Set(
-            Object.values(SHIKI_THEMES).flatMap((pair) => [pair.dark, pair.light]),
-          ),
-        ),
+      return createHighlighterCore({
+        themes: shikiThemeModules,
+        langs: Object.values(shikiLanguageModules),
+        engine: createJavaScriptRegexEngine(),
       });
     })();
   }
@@ -194,7 +241,7 @@ function normalizeCodeLanguage(lang: string): string {
   return aliases[normalized] ?? normalized;
 }
 
-function resolveHighlightingTheme(choice: HighlightingThemeChoice | undefined, darkMode: boolean): BundledTheme {
+function resolveHighlightingTheme(choice: HighlightingThemeChoice | undefined, darkMode: boolean): string {
   const selected = SHIKI_THEMES[choice || "shiki"] || SHIKI_THEMES.shiki;
   return darkMode ? selected.dark : selected.light;
 }
@@ -214,7 +261,7 @@ async function renderCodeBlock(
     if (!loaded.has(normalizedLang)) {
       const languageModule = shikiLanguageModules[normalizedLang];
       if (languageModule) {
-        await highlighter.loadLanguage(languageModule as never);
+        await highlighter.loadLanguage(languageModule);
       } else {
         await highlighter.loadLanguage(normalizedLang as never);
       }
