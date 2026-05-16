@@ -1,6 +1,6 @@
 {
   "name": "canvas-html-exporter",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Export canvas files as interactive html-package or standalone page.",
   "main": "main.js",
   "scripts": {

@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js
@@ -21,14 +23,21 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build:prod
-      - name: Create draft release
+      - name: Generate artifact attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            release/main.js
+            release/manifest.json
+            release/styles.css
+      - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
           gh release create "$tag" \
             --title="$tag" \
-            --draft \
+            --notes="Release $tag for Canvas HTML Exporter." \
             release/main.js \
             release/manifest.json \
             release/styles.css
