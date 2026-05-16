@@ -28,7 +28,7 @@ export async function pickFolderPath(): Promise<string | null> {
       return selected ? normalizeAbsoluteFolderPath(String(selected)) : null;
     }
   } catch (error) {
-    console.debug("[canvas-to-html] Electron folder picker unavailable", error);
+    console.debug("[canvas-html-exporter] Electron folder picker unavailable", error);
   }
 
   if (typeof activeDocument === "undefined") {

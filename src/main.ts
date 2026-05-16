@@ -2,7 +2,7 @@ import { Notice, Plugin, TFile } from "obsidian";
 import { convertCanvasToHtml } from "./render/converter";
 import { isAbsoluteFilesystemPath, requireDesktopNodeApis } from "./helpers/desktop-paths";
 import { exportCanvasPackage } from "./export/exporter";
-import { Canvas2HtmlSettingTab, DEFAULT_SETTINGS, normalizePluginSettings, PluginSettings } from "./settings";
+import { CanvasHtmlExporterSettingTab, DEFAULT_SETTINGS, normalizePluginSettings, PluginSettings } from "./settings";
 
 type CanvasColorMap = Record<string, string>;
 type CalloutColorMap = Record<string, string>;
@@ -17,7 +17,7 @@ const FALLBACK_HEADING_COLORS: HeadingColorMap = {
   h6: "#9c6bae",
 };
 
-export default class Canvas2HtmlPlugin extends Plugin {
+export default class CanvasHtmlExporterPlugin extends Plugin {
   settings: PluginSettings = DEFAULT_SETTINGS;
 
   async onload(): Promise<void> {
@@ -35,7 +35,7 @@ export default class Canvas2HtmlPlugin extends Plugin {
       },
     });
 
-    this.addSettingTab(new Canvas2HtmlSettingTab(this.app, this));
+    this.addSettingTab(new CanvasHtmlExporterSettingTab(this.app, this));
   }
 
   async exportCurrentCanvas(): Promise<void> {
@@ -56,7 +56,7 @@ export default class Canvas2HtmlPlugin extends Plugin {
       const label = result.outputKind === "file" ? "Self-contained canvas HTML exported" : "Canvas package exported";
       new Notice(`${label}: ${result.outputPath}`, 6000);
     } catch (error) {
-      console.error("[canvas-to-html] Export failed", error);
+      console.error("[canvas-html-exporter] Export failed", error);
       const message = error instanceof Error ? error.message : "Unknown error";
       new Notice(`Canvas export failed: ${message}`, 7000);
     }
@@ -295,8 +295,8 @@ export default class Canvas2HtmlPlugin extends Plugin {
 
     const probe = createDiv();
     this.applyHiddenProbeStyles(probe);
-    probe.addClass("canvas-to-html-color-probe");
-    probe.setCssProps({ "--canvas-to-html-probe-bg": `var(${cssVar})` });
+    probe.addClass("canvas-html-exporter-color-probe");
+    probe.setCssProps({ "--canvas-html-exporter-probe-bg": `var(${cssVar})` });
 
     styleScope.appendChild(probe);
     const resolved = getComputedStyle(probe).backgroundColor.trim();
@@ -310,7 +310,7 @@ export default class Canvas2HtmlPlugin extends Plugin {
   }
 
   private applyHiddenProbeStyles(element: HTMLElement): void {
-    element.addClass("canvas-to-html-hidden-probe");
+    element.addClass("canvas-html-exporter-hidden-probe");
   }
 
   private readProbeTextColor(host: HTMLElement): string {

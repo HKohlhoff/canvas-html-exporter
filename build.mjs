@@ -8,7 +8,7 @@ const deployMode = process.argv.includes("--deploy");
 
 const RELEASE_DIR = "release";
 const ENTRY = "src/main.ts";
-const PLUGIN_ID = "canvas-to-html";
+const PLUGIN_ID = "canvas-html-exporter";
 
 const OBSIDIAN_PLUGINS_DIR = process.env.OBSIDIAN_PLUGINS_DIR || "";
 
@@ -56,8 +56,17 @@ function ensureReleaseDir() {
   ensureDir(RELEASE_DIR);
 }
 
+function removeStaleReleaseSourcemap() {
+  if (!isProd) return;
+  const sourcemapPath = path.join(RELEASE_DIR, "main.js.map");
+  if (removeIfExists(sourcemapPath)) {
+    console.log("[static] removed stale production sourcemap");
+  }
+}
+
 function copyStaticToRelease() {
   ensureReleaseDir();
+  removeStaleReleaseSourcemap();
 
   const copiedManifest = safeCopy(
     "manifest.json",

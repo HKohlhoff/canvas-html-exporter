@@ -312,7 +312,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
           : normalizeExportHref(`assets/files/${exportHtmlPath.split("/").pop() || exportHtmlPath}`);
       }
     } catch (error) {
-      console.error(`[canvas-to-html] Markdown page export failed for ${file.path}`, error);
+      console.error(`[canvas-html-exporter] Markdown page export failed for ${file.path}`, error);
     }
 
     try {
@@ -320,7 +320,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       previewText = preview.text;
       previewHtml = preview.html;
     } catch (error) {
-      console.error(`[canvas-to-html] Markdown preview generation failed for ${file.path}`, error);
+      console.error(`[canvas-html-exporter] Markdown preview generation failed for ${file.path}`, error);
     }
 
     if (exportHtmlPath) {
@@ -361,7 +361,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="${EXPORTER_SIGNATURE}">
-  <meta name="canvas-to-html-build" content="${EXPORTER_VERSION}-${ctx.highlightingTheme || "shiki"}">
+  <meta name="canvas-html-exporter-build" content="${EXPORTER_VERSION}-${ctx.highlightingTheme || "shiki"}">
   <title>${escapeHtmlAttr(file.basename)}</title>
   <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>
@@ -713,7 +713,7 @@ async function rewriteWikiLinks(
           replacement = `<div class="md-embed-block">${replacement}</div>`;
         }
       } catch (error) {
-        console.error(`[canvas-to-html] Markdown embed export failed for ${targetFile.path}`, error);
+        console.error(`[canvas-html-exporter] Markdown embed export failed for ${targetFile.path}`, error);
         replacement = `<span class="unresolved-link">Unresolved embed: ${escapeHtmlAttr(target)}</span>`;
       }
     } else if (isImageExt(targetFile.extension.toLowerCase())) {
@@ -912,7 +912,7 @@ async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<
   try {
     html = await rewriteMarkdownHtmlAssets(ctx, file, html, "inline", "canvas");
   } catch (error) {
-    console.error(`[canvas-to-html] Preview rendering failed for ${file.path}`, error);
+    console.error(`[canvas-html-exporter] Preview rendering failed for ${file.path}`, error);
     html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode, highlightingTheme: ctx.highlightingTheme });
   }
 
@@ -1084,7 +1084,7 @@ function buildLinkDocumentHtml(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="${EXPORTER_SIGNATURE}">
-  <meta name="canvas-to-html-build" content="${EXPORTER_VERSION}-${highlightingTheme || "shiki"}">
+  <meta name="canvas-html-exporter-build" content="${EXPORTER_VERSION}-${highlightingTheme || "shiki"}">
   <title>${safeTitle}</title>
   <!-- Exported by ${EXPORTER_SIGNATURE} -->
   <style>

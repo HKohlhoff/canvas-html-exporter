@@ -1,6 +1,6 @@
 {
-  "name": "canvas-to-html",
-  "version": "1.0.3",
+  "name": "canvas-html-exporter",
+  "version": "1.0.4",
   "description": "Export canvas files as interactive html-package or standalone page.",
   "main": "main.js",
   "scripts": {
@@ -46,10 +46,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HKohlhoff/canvas-to-html.git"
+    "url": "git+https://github.com/HKohlhoff/canvas-html-exporter.git"
   },
   "bugs": {
-    "url": "https://github.com/HKohlhoff/canvas-to-html/issues"
+    "url": "https://github.com/HKohlhoff/canvas-html-exporter/issues"
   },
-  "homepage": "https://github.com/HKohlhoff/canvas-to-html#readme"
+  "homepage": "https://github.com/HKohlhoff/canvas-html-exporter#readme"
 }

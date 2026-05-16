@@ -68,7 +68,7 @@ export interface EmbeddedPage {
 }
 
 export const EXPORTER_VERSION = "1.0.1";
-export const EXPORTER_SIGNATURE = `canvas-to-html v${EXPORTER_VERSION}`;
+export const EXPORTER_SIGNATURE = `canvas-html-exporter v${EXPORTER_VERSION}`;
 export type HighlightingThemeChoice = "shiki" | "github" | "vscode" | "catppuccin" | "material";
 const CALLOUT_FALLBACK_COLORS: Record<string, string> = {
   note: "#4a9eff",
@@ -315,7 +315,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="${EXPORTER_SIGNATURE}">
-  <meta name="canvas-to-html-build" content="${buildExporterBuildMeta(options.highlightingTheme)}">
+  <meta name="canvas-html-exporter-build" content="${buildExporterBuildMeta(options.highlightingTheme)}">
   <base href="./">
   <title>${escapeHtml(options.title)}</title>
   <!-- Exported by ${EXPORTER_SIGNATURE} -->
@@ -2282,7 +2282,7 @@ export function buildMarkdownDocumentHtml(
   const calloutCss = buildCalloutCss(calloutColors);
   const headingCss = buildHeadingColorCss("", headingColors);
   const inlineStyleCss = buildInlineStyleCss("", inlineStyleColors);
-  return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="generator" content="${EXPORTER_SIGNATURE}">\n  <meta name="canvas-to-html-build" content="${buildExporterBuildMeta(highlightingTheme)}">\n  <title>${escapeHtml(title)}</title>\n  <!-- Exported by ${EXPORTER_SIGNATURE} -->\n  <style>\n    :root { ${buildCanvasColorVariables(canvasColors)} }\n    html, body { margin: 0; padding: 0; }
+  return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="generator" content="${EXPORTER_SIGNATURE}">\n  <meta name="canvas-html-exporter-build" content="${buildExporterBuildMeta(highlightingTheme)}">\n  <title>${escapeHtml(title)}</title>\n  <!-- Exported by ${EXPORTER_SIGNATURE} -->\n  <style>\n    :root { ${buildCanvasColorVariables(canvasColors)} }\n    html, body { margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: ${theme.bodyBackground};

@@ -64,7 +64,7 @@ type SettingsHost = {
   saveSettings(): Promise<void>;
 };
 
-export class Canvas2HtmlSettingTab extends PluginSettingTab {
+export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
   plugin: SettingsHost;
   private outputDirText: TextComponent | null = null;
 
@@ -82,7 +82,7 @@ export class Canvas2HtmlSettingTab extends PluginSettingTab {
     const introEl = containerEl.createEl("p", {
       text: "Exports the active canvas either as a portable package folder or as a single self-contained HTML file.",
     });
-    introEl.addClass("canvas-to-html-settings-intro");
+    introEl.addClass("canvas-html-exporter-settings-intro");
 
     new Setting(containerEl)
       .setName("Export format")
@@ -201,24 +201,24 @@ export class Canvas2HtmlSettingTab extends PluginSettingTab {
     const controlEl = (setting as unknown as { controlEl?: HTMLElement }).controlEl;
     if (!controlEl) return;
 
-    controlEl.addClass("canvas-to-html-output-control");
+    controlEl.addClass("canvas-html-exporter-output-control");
 
     const textInput = this.outputDirText?.inputEl;
     const textWrapper = textInput?.parentElement as HTMLElement | null;
     if (textWrapper) {
-      textWrapper.addClass("canvas-to-html-output-text-wrapper");
+      textWrapper.addClass("canvas-html-exporter-output-text-wrapper");
     }
     if (textInput) {
-      textInput.addClass("canvas-to-html-output-input");
+      textInput.addClass("canvas-html-exporter-output-input");
     }
 
-    const buttonRow = createDiv({ cls: "canvas-to-html-output-button-row" });
+    const buttonRow = createDiv({ cls: "canvas-html-exporter-output-button-row" });
 
     const buttonWrappers = Array.from(controlEl.children)
       .filter((child) => child !== textWrapper) as HTMLElement[];
 
     for (const wrapper of buttonWrappers) {
-      wrapper.addClass("canvas-to-html-output-button-wrapper");
+      wrapper.addClass("canvas-html-exporter-output-button-wrapper");
       buttonRow.appendChild(wrapper);
     }
 

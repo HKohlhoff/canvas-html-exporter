@@ -329,7 +329,7 @@ await test("renders highlighted code blocks on the canvas page", async () => {
   assert.match(html, /class="shiki/);
   assert.match(html, /style="color:#[0-9A-Fa-f]{6}/);
   assert.match(html, /&#x3C;\?|&#x3C;<\/span><span[^>]*>\?/);
-  assert.match(html, /meta name="canvas-to-html-build" content="[0-9]+\.[0-9]+\.[0-9]+-[a-z]+"/);
+  assert.match(html, /meta name="canvas-html-exporter-build" content="[0-9]+\.[0-9]+\.[0-9]+-[a-z]+"/);
 });
 
 await test("renders standalone markdown documents with wrapper and title", () => {

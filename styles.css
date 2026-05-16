@@ -1,36 +1,36 @@
-.canvas-to-html-settings-intro {
+.canvas-html-exporter-settings-intro {
   margin-left: var(--size-4-4);
 }
 
-.canvas-to-html-output-control {
+.canvas-html-exporter-output-control {
   display: block;
   width: 100%;
 }
 
-.canvas-to-html-output-text-wrapper {
+.canvas-html-exporter-output-text-wrapper {
   display: block;
   margin-bottom: 8px;
   width: 100%;
 }
 
-.canvas-to-html-output-input {
+.canvas-html-exporter-output-input {
   box-sizing: border-box;
   max-width: 100%;
   width: 100%;
 }
 
-.canvas-to-html-output-button-row {
+.canvas-html-exporter-output-button-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-start;
 }
 
-.canvas-to-html-output-button-wrapper {
+.canvas-html-exporter-output-button-wrapper {
   margin-top: 0;
 }
 
-.canvas-to-html-hidden-probe {
+.canvas-html-exporter-hidden-probe {
   height: 1px;
   left: -9999px;
   opacity: 0;
@@ -40,6 +40,6 @@
   width: 1px;
 }
 
-.canvas-to-html-color-probe {
-  background-color: var(--canvas-to-html-probe-bg);
+.canvas-html-exporter-color-probe {
+  background-color: var(--canvas-html-exporter-probe-bg);
 }
