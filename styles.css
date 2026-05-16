@@ -1,36 +1,36 @@
-.canvas2html-settings-intro {
+.canvas-to-html-settings-intro {
   margin-left: var(--size-4-4);
 }
 
-.canvas2html-output-control {
+.canvas-to-html-output-control {
   display: block;
   width: 100%;
 }
 
-.canvas2html-output-text-wrapper {
+.canvas-to-html-output-text-wrapper {
   display: block;
   margin-bottom: 8px;
   width: 100%;
 }
 
-.canvas2html-output-input {
+.canvas-to-html-output-input {
   box-sizing: border-box;
   max-width: 100%;
   width: 100%;
 }
 
-.canvas2html-output-button-row {
+.canvas-to-html-output-button-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-start;
 }
 
-.canvas2html-output-button-wrapper {
+.canvas-to-html-output-button-wrapper {
   margin-top: 0;
 }
 
-.canvas2html-hidden-probe {
+.canvas-to-html-hidden-probe {
   height: 1px;
   left: -9999px;
   opacity: 0;
@@ -40,6 +40,6 @@
   width: 1px;
 }
 
-.canvas2html-color-probe {
-  background-color: var(--canvas2html-probe-bg);
+.canvas-to-html-color-probe {
+  background-color: var(--canvas-to-html-probe-bg);
 }
