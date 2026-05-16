@@ -1,6 +1,6 @@
 {
   "name": "canvas-to-html",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Export canvas files as interactive html-package or standalone page.",
   "main": "main.js",
   "scripts": {
@@ -40,16 +40,16 @@
     "@typescript-eslint/parser": "^8.59.2",
     "esbuild": "^0.28.0",
     "eslint": "^9.39.4",
-    "eslint-plugin-obsidianmd": "^0.2.9",
+    "eslint-plugin-obsidianmd": "^0.3.0",
     "obsidian": "^1.12.3",
     "typescript": "^5.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HKohlhoff/canvas2html.git"
+    "url": "git+https://github.com/HKohlhoff/canvas-to-html.git"
   },
   "bugs": {
-    "url": "https://github.com/HKohlhoff/canvas2html/issues"
+    "url": "https://github.com/HKohlhoff/canvas-to-html/issues"
   },
-  "homepage": "https://github.com/HKohlhoff/canvas2html#readme"
+  "homepage": "https://github.com/HKohlhoff/canvas-to-html#readme"
 }
