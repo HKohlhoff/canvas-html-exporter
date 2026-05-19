@@ -10,7 +10,7 @@ $$
 $$
 ^a1a814
 
-The result follows directly without any calculation due to the odd symmetry on the function $\sin(x^3)$ and the interval being symmetric around the origin.
+The result follows directly without any calculation due to the odd symmetry of the function $\sin(x^3)$ and the interval being symmetric around the origin.
 
 ```md 
 block-mode

@@ -1,13 +1,13 @@
 Here are some extras which can be used in Obsidian as usual and are transferred to html...
-## Quote-Bocks
-> Read this is a quote...
+## Quote Blocks
+> Read this as a quote...
 > 
 > **"Be yourself; everyone else is already taken."**
 >  _Oscar Wilde_
 >  
 ## Lines
-Line can be used a usual to divide or separate parts within a note for better visual design.
-They are archived by three minus-signs (\- signs) which **must** have a blank line before:
+Lines can be used as usual to divide or separate parts within a note for better visual design.
+They are created by three minus signs (\- signs) which **must** have a blank line before:
 
 ---
 ## Tables

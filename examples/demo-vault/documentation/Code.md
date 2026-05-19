@@ -1,4 +1,4 @@
-This note shows some examples of code-blocks...
+This note shows some examples of code blocks...
 ### sql
 ```sql
 Select * from Personen
@@ -8,8 +8,8 @@ limit 5;
 
 ### markdown
 ```markdown
-Some typical md-formatted text:
-**bold** can be used as can _italics_ and others.
+Some typical Markdown-formatted text:
+**bold** can be used as can _italic text_ and other formatting.
 ```
 
 ### C\#
@@ -32,10 +32,10 @@ namespace HelloWorldApp // namespace as a group of assets
 ```tex
 With the following definitions 
 $f(z(t)):=u+\im\,v$ and $dz:= (x'+\im\,y')\,dt$ 
-and with $a$ und $b$ as given starting and
+and with $a$ and $b$ as given starting and
 end-point of the path $\gamma$ 
 the complex integral can be split into its
-real- und imaginary-part, which themselves
+real and imaginary parts, which themselves
 are real-valued integrals 
 $$
 \int_\gamma f(z)\dz = \int_a^b f(z(t))\,z'(t)\,\dt = 
@@ -51,7 +51,7 @@ i = 10
 if i > 15:
     print("10 is less than 15")
     
-print("I am Not in if")
+print("I am not in the if block")
 ```
 
 ### java

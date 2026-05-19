@@ -1,16 +1,16 @@
-On this page all callouts with a corresponding html-representation are listed:
+On this page all callouts with a corresponding HTML representation are listed:
 
-A **note-callout** without extra title, not collapsable
+A **note-callout** without extra title, not collapsible
 >[!NOTE]
 >Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam aliquet libero
 >quis lectus elementum fermentum.
 
-A note-callout without extra title, collapsable open as default
+A note-callout without extra title, collapsible, open by default
 >[!NOTE]+
 >Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam aliquet libero
 >quis lectus elementum fermentum.
 
-A note-callout without extra title, collapsable closed as default
+A note-callout without extra title, collapsible, closed by default
 >[!NOTE]-
 >Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam aliquet libero
 >quis lectus elementum fermentum.
@@ -61,7 +61,7 @@ A **todo**-callout
 
 An **award**-callout
 > [!award]+ You got it!
-> All is settled and done.
+> Everything is settled and done.
 > The plugin is finally ready for publication.
 
 A **check**-callout
@@ -69,4 +69,3 @@ A **check**-callout
 > Try the plugin with simple canvas-files first. 
 > Then do the more complicated stuff.
 > Enjoy playing around with it.
-
