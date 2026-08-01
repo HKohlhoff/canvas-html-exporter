@@ -93,8 +93,7 @@ function normalizeExportHref(href: string): string {
 }
 
 function buildBinaryDataUrl(data: ArrayBuffer, mimeType: string): string {
-  const bytes = new Uint8Array(data);
-  const base64 = bytesToBase64(bytes);
+  const base64 = bytesToBase64(new Uint8Array(data));
   return `data:${mimeType};base64,${base64}`;
 }
 
@@ -154,15 +153,11 @@ function isVideoExt(ext: string): boolean {
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(bytes).toString("base64");
+  const chunks: string[] = [];
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    chunks.push(String.fromCharCode(...bytes.subarray(offset, offset + 0x8000)));
   }
-
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-  return btoa(binary);
+  return btoa(chunks.join(""));
 }
 
 export async function exportCanvasPackage(

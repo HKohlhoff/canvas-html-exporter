@@ -7,6 +7,7 @@ const watchMode = process.argv.includes("--watch");
 const deployMode = process.argv.includes("--deploy");
 
 const RELEASE_DIR = "release";
+const BUILD_OUTPUT = "main.js";
 const ENTRY = "src/main.ts";
 const PLUGIN_ID = "canvas-html-exporter";
 
@@ -58,9 +59,15 @@ function ensureReleaseDir() {
 
 function removeStaleReleaseSourcemap() {
   if (!isProd) return;
-  const sourcemapPath = path.join(RELEASE_DIR, "main.js.map");
-  if (removeIfExists(sourcemapPath)) {
-    console.log("[static] removed stale production sourcemap");
+  const sourcemapPaths = [
+    `${BUILD_OUTPUT}.map`,
+    path.join(RELEASE_DIR, "main.js.map"),
+  ];
+  const removedAny = sourcemapPaths
+    .map((sourcemapPath) => removeIfExists(sourcemapPath))
+    .some(Boolean);
+  if (removedAny) {
+    console.log("[static] removed stale sourcemap from production output");
   }
 }
 
@@ -68,6 +75,10 @@ function copyStaticToRelease() {
   ensureReleaseDir();
   removeStaleReleaseSourcemap();
 
+  const copiedMain = safeCopy(
+    BUILD_OUTPUT,
+    path.join(RELEASE_DIR, "main.js")
+  );
   const copiedManifest = safeCopy(
     "manifest.json",
     path.join(RELEASE_DIR, "manifest.json")
@@ -83,7 +94,7 @@ function copyStaticToRelease() {
       );
 
   console.log(
-    `[static] release sync: manifest=${
+    `[static] release sync: main=${copiedMain ? "copied" : "missing"}, manifest=${
       copiedManifest ? "copied" : "missing"
     }, styles=${copiedStyles ? "copied" : removedStyles ? "removed" : "missing"}`
   );
@@ -172,7 +183,7 @@ if (deployMode && !OBSIDIAN_PLUGINS_DIR) {
 
 const common = {
   entryPoints: [ENTRY],
-  outfile: path.join(RELEASE_DIR, "main.js"),
+  outfile: BUILD_OUTPUT,
   bundle: true,
   format: "cjs",
   platform: "node",
@@ -202,7 +213,7 @@ const common = {
 if (!watchMode) {
   await esbuild.build(common);
   console.log(
-    `✅ Build finished — release/main.js created${
+    `✅ Build finished — main.js and release/main.js created${
       isProd ? " (production)" : ""
     }.`
   );
@@ -215,7 +226,7 @@ await ctx.watch();
 console.log(
   `👀 Watch mode active${
     isProd ? " (production)" : ""
-  } — building to release/${deployMode ? ", then deploying to the vault plugin folder." : "."}`
+  } — building main.js and syncing release/${deployMode ? ", then deploying to the vault plugin folder." : "."}`
 );
 
 const staticWatchers = [
