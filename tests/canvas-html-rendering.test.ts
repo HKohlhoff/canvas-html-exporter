@@ -512,6 +512,38 @@ await test("injects custom canvas color variables into the document", async () =
   assert.match(html, /var\(--canvas-color-4-bg, /);
 });
 
+await test("preserves Obsidian 1.13 OKLCH theme colors", async () => {
+  const data: CanvasData = {
+    name: "Modern colors",
+    nodes: [
+      {
+        id: "color-oklch",
+        type: "text",
+        x: 0,
+        y: 0,
+        width: 220,
+        height: 100,
+        text: "# Modern color\n> [!note] Callout",
+        color: "4",
+      },
+    ],
+    edges: [],
+  };
+
+  const html = await convertCanvasToHtml(data, {
+    ...baseOptions,
+    canvasColors: { "4": "oklch(62% 0.2 145)" },
+    calloutColors: { note: "oklch(70% 0.16 245)" },
+    headingColors: { h1: "oklch(65% 0.18 25)" },
+  });
+
+  assert.match(html, /--canvas-color-4: oklch\(62% 0\.2 145\);/);
+  assert.match(html, /--canvas-color-4-bg: color-mix\(in srgb, oklch\(62% 0\.2 145\) 18%, transparent\);/);
+  assert.match(html, /\.callout-note \{ border-color: oklch\(70% 0\.16 245\); \}/);
+  assert.match(html, /background: color-mix\(in srgb, oklch\(70% 0\.16 245\) 18%, transparent\);/);
+  assert.match(html, /\.node-content h1 \{ color: oklch\(65% 0\.18 25\); \}/);
+});
+
 await test("applies canvas colors to group nodes", async () => {
   const data: CanvasData = {
     name: "Colored Group",

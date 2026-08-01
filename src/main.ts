@@ -3,6 +3,7 @@ import { convertCanvasToHtml } from "./render/converter";
 import { isAbsoluteFilesystemPath, requireDesktopNodeApis } from "./helpers/desktop-paths";
 import { exportCanvasPackage } from "./export/exporter";
 import { CanvasHtmlExporterSettingTab, DEFAULT_SETTINGS, normalizePluginSettings, PluginSettings } from "./settings";
+import { normalizeThemeColor } from "./helpers/color-helpers";
 
 type CanvasColorMap = Record<string, string>;
 type CalloutColorMap = Record<string, string>;
@@ -165,7 +166,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
         const calloutStyles = getComputedStyle(callout);
         const titleStyles = getComputedStyle(title);
         const cssVar = calloutStyles.getPropertyValue("--callout-color").trim();
-        const resolved = this.normalizeCalloutColor(cssVar) || this.normalizeCalloutColor(titleStyles.color) || this.normalizeCalloutColor(calloutStyles.borderColor);
+        const resolved = this.normalizeThemeColor(cssVar) || this.normalizeThemeColor(titleStyles.color) || this.normalizeThemeColor(calloutStyles.borderColor);
         if (resolved) {
           result[type] = resolved;
         }
@@ -192,14 +193,14 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     styleScope.appendChild(host);
 
     try {
-      const textColor = this.readProbeTextColor(host) || this.normalizeCalloutColor(getComputedStyle(styleScope).color) || this.resolveCssVariable("--text-normal");
+      const textColor = this.readProbeTextColor(host) || this.normalizeThemeColor(getComputedStyle(styleScope).color) || this.resolveCssVariable("--text-normal");
       const sampledColors: HeadingColorMap = {};
 
       for (const level of ["h1", "h2", "h3", "h4", "h5", "h6"]) {
         const heading = createEl(level as keyof HTMLElementTagNameMap);
         heading.textContent = level.toUpperCase();
         host.appendChild(heading);
-        const resolved = this.normalizeCalloutColor(getComputedStyle(heading).color);
+        const resolved = this.normalizeThemeColor(getComputedStyle(heading).color);
         if (resolved) {
           sampledColors[level] = resolved;
         }
@@ -242,7 +243,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
       paragraph.append(strong, em, del);
       host.appendChild(paragraph);
       const result: InlineStyleColorMap = {};
-      const textColor = this.normalizeCalloutColor(getComputedStyle(paragraph).color) || this.resolveCssVariable("--text-normal");
+      const textColor = this.normalizeThemeColor(getComputedStyle(paragraph).color) || this.resolveCssVariable("--text-normal");
       const probes: Array<[keyof InlineStyleColorMap, string]> = [
         ["strong", "strong"],
         ["em", "em"],
@@ -252,7 +253,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
       for (const [key, selector] of probes) {
         const element = paragraph.querySelector(selector);
         if (!(element instanceof HTMLElement)) continue;
-        const color = this.normalizeCalloutColor(getComputedStyle(element).color);
+        const color = this.normalizeThemeColor(getComputedStyle(element).color);
         if (color && !this.sameCssColor(color, textColor)) {
           result[key] = color;
         }
@@ -264,13 +265,12 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     }
   }
 
-  private normalizeCalloutColor(raw: string): string {
-    const value = String(raw || "").trim();
-    if (!value) return "";
-    const rgbTriplet = value.match(/^(\d+)\s*,\s*(\d+)\s*,\s*(\d+)$/);
-    if (rgbTriplet) return `rgb(${value})`;
-    if (/^(rgb|#)/i.test(value) || /^rgba?\(/i.test(value)) return value;
-    return "";
+  private normalizeThemeColor(raw: string): string {
+    const css = activeDocument.defaultView?.CSS;
+    return normalizeThemeColor(
+      raw,
+      css ? (value) => css.supports("color", value) : undefined,
+    );
   }
 
   private resolveCssVariable(cssVar: string): string {
@@ -317,7 +317,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     const paragraph = createEl("p");
     paragraph.textContent = "Probe";
     host.appendChild(paragraph);
-    const resolved = this.normalizeCalloutColor(getComputedStyle(paragraph).color);
+    const resolved = this.normalizeThemeColor(getComputedStyle(paragraph).color);
     paragraph.remove();
     return resolved;
   }

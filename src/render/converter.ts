@@ -3591,7 +3591,7 @@ function clampColor(value: string): number {
 
 function toSoftBackground(color: string): string {
   const rgba = colorToRgba(color);
-  if (!rgba) return color;
+  if (!rgba) return `color-mix(in srgb, ${color} 18%, transparent)`;
   return `rgba(${rgba.r}, ${rgba.g}, ${rgba.b}, 0.18)`;
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "canvas-html-exporter",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "Export canvas files as interactive html-package or standalone page.",
   "main": "main.js",
   "scripts": {
@@ -8,7 +8,8 @@
     "lint:obsidian": "eslint src package.json --max-warnings=0",
     "build": "node build.mjs",
     "build:deploy": "node build.mjs --deploy",
-    "test": "npm run test:math && npm run test:markdown && npm run test:export && npm run test:canvas-html && npm run test:links && npm run test:paths && npm run test:preview && npm run test:export-files && npm run test:integration",
+    "test": "npm run test:colors && npm run test:math && npm run test:markdown && npm run test:export && npm run test:canvas-html && npm run test:links && npm run test:paths && npm run test:preview && npm run test:export-files && npm run test:integration",
+    "test:colors": "tsc -p tsconfig.tests.json && node .test-build/tests/color-helpers.test.js",
     "test:canvas-html": "tsc -p tsconfig.tests.json && node .test-build/tests/canvas-html-rendering.test.js",
     "test:export": "tsc -p tsconfig.tests.json && node .test-build/tests/exporter-helpers.test.js",
     "test:export-files": "tsc -p tsconfig.tests.json && node .test-build/tests/export-file-helpers.test.js",
@@ -41,7 +42,7 @@
     "esbuild": "^0.28.0",
     "eslint": "^9.39.4",
     "eslint-plugin-obsidianmd": "^0.3.0",
-    "obsidian": "^1.12.3",
+    "obsidian": "https://codeload.github.com/obsidianmd/obsidian-api/tar.gz/cc1744324150c632416857c98964f87b1574a5fc",
     "typescript": "^5.0.0"
   },
   "repository": {

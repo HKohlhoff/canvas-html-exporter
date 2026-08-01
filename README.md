@@ -2,6 +2,8 @@
 
 Export your Obsidian canvas as an interactive HTML page that can be opened in any modern browser.
 
+Requires Obsidian 1.13.0 or later.
+
 The canvas showing the documentation of this plugin, seen in Obsidian...
 ![Canvas in Obsidian view](images/canvas_in_obsidian.png)
 
@@ -96,7 +98,7 @@ To use it:
 2. Open `examples/demo-vault` as a vault in Obsidian.
 3. Install and enable **Canvas HTML Exporter**:
    - from Obsidian Community Plugins once published, or
-   - manually by copying `manifest.json` and `main.js` into `.obsidian/plugins/canvas-html-exporter/`.
+   - manually by copying `manifest.json`, `main.js`, and `styles.css` into `.obsidian/plugins/canvas-html-exporter/`.
 4. Open the plugin settings and choose the export format and output folder.
 5. Open `documentation/Canvas HTML Exporter - Documentation.canvas`.
 6. Run `Export active canvas as HTML`.
@@ -112,7 +114,9 @@ Install from Obsidian Community Plugins once published, or copy manifest.json, m
 - `Show minimap`: include a minimap on the exported canvas page
 - `Show search`: include a search overlay on the exported canvas page
 - `Syntax highlighting`: choose the Shiki theme family for code blocks
-- `Output folder`: choose a folder inside the vault or an absolute filesystem folder on desktop
+- `Output folder`: enter a folder inside the vault or an absolute filesystem folder on desktop
+- `Choose vault folder`: browse for a folder inside the current vault
+- `Choose system folder`: browse for an absolute filesystem folder
 
 ## Notes and Limitations
 
