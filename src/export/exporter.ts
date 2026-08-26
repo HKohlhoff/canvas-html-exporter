@@ -19,6 +19,7 @@ import { embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTarg
 import { getHrefForMarkdownPage } from "../helpers/path-helpers";
 import { buildPreviewText } from "../helpers/preview-helpers";
 import type { ExportFormatChoice } from "../settings";
+import type { CanvasFoldState } from "../folding/types";
 
 export type ExportSettings = {
   darkMode: boolean;
@@ -31,6 +32,7 @@ export type ExportSettings = {
   highlightingTheme?: HighlightingThemeChoice;
   showMinimap?: boolean;
   showSearch?: boolean;
+  initialFoldState?: CanvasFoldState;
 };
 
 export type ExportResult = {
@@ -244,6 +246,7 @@ export async function exportCanvasPackage(
       inlineStyleColors: settings.inlineStyleColors,
       exportFormat,
       embeddedPages: ctx.singleHtmlPages,
+      initialFoldState: settings.initialFoldState,
     },
   };
 }

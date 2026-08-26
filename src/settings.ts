@@ -1,5 +1,6 @@
 import { App, Plugin, PluginSettingTab, SettingDefinitionItem } from "obsidian";
 import type { HighlightingThemeChoice } from "./render/converter";
+import type { FoldingInitialStateChoice } from "./folding/types";
 import { isAbsoluteFilesystemPath, isMobileRuntime } from "./helpers/desktop-paths";
 import { normalizeStoredOutputPath, openVaultFolderPicker, pickFolderPath } from "./path-pickers";
 
@@ -9,6 +10,7 @@ export type PluginSettings = {
   darkMode: boolean;
   outputDir: string;
   exportFormat: ExportFormatChoice;
+  foldingInitialState: FoldingInitialStateChoice;
   highlightingTheme: HighlightingThemeChoice;
   showMinimap: boolean;
   showSearch: boolean;
@@ -18,6 +20,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   darkMode: false,
   outputDir: "Canvas-Exports",
   exportFormat: "package",
+  foldingInitialState: "expanded",
   highlightingTheme: "shiki",
   showMinimap: true,
   showSearch: true,
@@ -36,7 +39,13 @@ const HIGHLIGHTING_THEME_LABELS: Record<HighlightingThemeChoice, string> = {
   material: "Material",
 };
 
+const FOLDING_INITIAL_STATE_LABELS: Record<FoldingInitialStateChoice, string> = {
+  expanded: "Fully expanded",
+  current: "Current Canvas Folding state",
+};
+
 const VALID_EXPORT_FORMATS = new Set<ExportFormatChoice>(Object.keys(EXPORT_FORMAT_LABELS) as ExportFormatChoice[]);
+const VALID_FOLDING_INITIAL_STATES = new Set<FoldingInitialStateChoice>(Object.keys(FOLDING_INITIAL_STATE_LABELS) as FoldingInitialStateChoice[]);
 const VALID_HIGHLIGHTING_THEMES = new Set<HighlightingThemeChoice>(Object.keys(HIGHLIGHTING_THEME_LABELS) as HighlightingThemeChoice[]);
 const DEFAULT_OUTPUT_PLACEHOLDER = DEFAULT_SETTINGS.outputDir;
 
@@ -44,6 +53,7 @@ export function normalizePluginSettings(saved: unknown): PluginSettings {
   const data = saved && typeof saved === "object" ? (saved as Record<string, unknown>) : {};
   const exportFormat = (typeof data.exportFormat === "string" ? data.exportFormat.trim() : "") as ExportFormatChoice;
   const highlightingTheme = (typeof data.highlightingTheme === "string" ? data.highlightingTheme.trim() : "") as HighlightingThemeChoice;
+  const foldingInitialState = (typeof data.foldingInitialState === "string" ? data.foldingInitialState.trim() : "") as FoldingInitialStateChoice;
   let normalizedOutputDir = normalizeStoredOutputPath(typeof data.outputDir === "string" ? data.outputDir : "");
   if (isMobileRuntime() && isAbsoluteFilesystemPath(normalizedOutputDir)) {
     normalizedOutputDir = DEFAULT_SETTINGS.outputDir;
@@ -53,6 +63,7 @@ export function normalizePluginSettings(saved: unknown): PluginSettings {
     darkMode: typeof data.darkMode === "boolean" ? data.darkMode : DEFAULT_SETTINGS.darkMode,
     outputDir: normalizedOutputDir || DEFAULT_SETTINGS.outputDir,
     exportFormat: VALID_EXPORT_FORMATS.has(exportFormat) ? exportFormat : DEFAULT_SETTINGS.exportFormat,
+    foldingInitialState: VALID_FOLDING_INITIAL_STATES.has(foldingInitialState) ? foldingInitialState : DEFAULT_SETTINGS.foldingInitialState,
     highlightingTheme: VALID_HIGHLIGHTING_THEMES.has(highlightingTheme) ? highlightingTheme : DEFAULT_SETTINGS.highlightingTheme,
     showMinimap: typeof data.showMinimap === "boolean" ? data.showMinimap : DEFAULT_SETTINGS.showMinimap,
     showSearch: typeof data.showSearch === "boolean" ? data.showSearch : DEFAULT_SETTINGS.showSearch,
@@ -160,6 +171,17 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
             },
           },
           {
+            name: "Initial folding state",
+            desc: "Start fully expanded or import the current state from the optional Canvas Folding plugin.",
+            aliases: ["canvas folding", "tree", "collapsed branches"],
+            control: {
+              type: "dropdown",
+              key: "foldingInitialState",
+              defaultValue: DEFAULT_SETTINGS.foldingInitialState,
+              options: FOLDING_INITIAL_STATE_LABELS,
+            },
+          },
+          {
             name: "Syntax highlighting",
             desc: "Choose the color theme for fenced code blocks.",
             aliases: ["code", "highlighting theme"],
@@ -200,6 +222,13 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
         this.plugin.settings.highlightingTheme = VALID_HIGHLIGHTING_THEMES.has(selected)
           ? selected
           : DEFAULT_SETTINGS.highlightingTheme;
+        break;
+      }
+      case "foldingInitialState": {
+        const selected = value as FoldingInitialStateChoice;
+        this.plugin.settings.foldingInitialState = VALID_FOLDING_INITIAL_STATES.has(selected)
+          ? selected
+          : DEFAULT_SETTINGS.foldingInitialState;
         break;
       }
       case "darkMode":

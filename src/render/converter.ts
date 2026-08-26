@@ -28,6 +28,7 @@ import materialLightTheme from "shiki/themes/material-theme-lighter.mjs";
 import oneDarkTheme from "shiki/themes/one-dark-pro.mjs";
 import oneLightTheme from "shiki/themes/one-light.mjs";
 import type { HighlighterCore, LanguageInput, ThemeInput } from "shiki/core";
+import type { CanvasFoldState } from "../folding/types";
 
 export interface CanvasNode {
   id: string;
@@ -82,6 +83,7 @@ export interface ExportOptions {
   showSearch?: boolean;
   exportFormat?: "package" | "single-html";
   embeddedPages?: EmbeddedPage[];
+  initialFoldState?: CanvasFoldState;
 }
 
 export interface EmbeddedPage {

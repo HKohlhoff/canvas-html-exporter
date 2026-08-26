@@ -4,6 +4,7 @@ import { isAbsoluteFilesystemPath, requireDesktopNodeApis } from "./helpers/desk
 import { exportCanvasPackage } from "./export/exporter";
 import { CanvasHtmlExporterSettingTab, DEFAULT_SETTINGS, normalizePluginSettings, PluginSettings } from "./settings";
 import { normalizeThemeColor } from "./helpers/color-helpers";
+import { resolveInitialCanvasFoldState } from "./integrations/canvas-folding";
 
 type CanvasColorMap = Record<string, string>;
 type CalloutColorMap = Record<string, string>;
@@ -51,7 +52,19 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
       const calloutColors = this.readCalloutColors();
       const headingColors = this.readHeadingColors(canvasColors);
       const inlineStyleColors = this.readInlineStyleColors();
-      const result = await exportCanvasPackage(this.app, file, { ...this.settings, canvasColors, calloutColors, headingColors, inlineStyleColors });
+      const initialFoldState = await resolveInitialCanvasFoldState(
+        this.app,
+        file.path,
+        this.settings.foldingInitialState,
+      );
+      const result = await exportCanvasPackage(this.app, file, {
+        ...this.settings,
+        canvasColors,
+        calloutColors,
+        headingColors,
+        inlineStyleColors,
+        initialFoldState: initialFoldState ?? undefined,
+      });
       const html = await convertCanvasToHtml(result.data, result.options);
       await this.writeOutput(result.outputPath, result.outputKind, html);
       const label = result.outputKind === "file" ? "Self-contained canvas HTML exported" : "Canvas package exported";

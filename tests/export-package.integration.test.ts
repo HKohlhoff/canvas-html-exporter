@@ -195,6 +195,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const result = await exportCanvasPackage(app as never, canvasFile as never, {
       darkMode: true,
       outputDir: "Canvas-Exports",
+      initialFoldState: {
+        hiddenEdgeIds: ["edge-package"],
+        hiddenNodeIds: ["img"],
+        source: "active-leaf",
+      },
       inlineStyleColors: {
         strong: "rgb(210, 80, 90)",
         em: "rgb(90, 130, 210)",
@@ -205,6 +210,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.equal(result.outputPath, "Canvas-Exports/demo");
     assert.equal(result.data.nodes.length, 2);
     assert.equal(result.data.edges.length, 1);
+    assert.deepEqual(result.options.initialFoldState, {
+      hiddenEdgeIds: ["edge-package"],
+      hiddenNodeIds: ["img"],
+      source: "active-leaf",
+    });
 
     const markdownNode = result.data.nodes.find((node) => node.id === "md");
     const imageNode = result.data.nodes.find((node) => node.id === "img");
@@ -769,10 +779,20 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       darkMode: false,
       outputDir: "Canvas-Exports",
       exportFormat: "single-html",
+      initialFoldState: {
+        hiddenEdgeIds: [],
+        hiddenNodeIds: ["link"],
+        source: "persisted",
+      },
     });
 
     assert.equal(result.outputKind, "file");
     assert.equal(result.outputPath, "Canvas-Exports/single.html");
+    assert.deepEqual(result.options.initialFoldState, {
+      hiddenEdgeIds: [],
+      hiddenNodeIds: ["link"],
+      source: "persisted",
+    });
 
     const markdownNode = result.data.nodes.find((node) => node.id === "md");
     const linkNode = result.data.nodes.find((node) => node.id === "link");
