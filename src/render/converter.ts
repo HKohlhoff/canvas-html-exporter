@@ -291,6 +291,17 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     initialFoldState
     && (initialFoldState.hiddenNodeIds.length > 0 || initialFoldState.hiddenEdgeIds.length > 0),
   );
+  const groupNodeIds = nodes
+    .filter((node) => node.type.toLowerCase() === "group")
+    .map((node) => node.id);
+  const contentNodeCount = nodes.length - groupNodeIds.length;
+  const canvasCountSummary = [
+    `${contentNodeCount} ${contentNodeCount === 1 ? "node" : "nodes"}`,
+    ...(groupNodeIds.length > 0
+      ? [`${groupNodeIds.length} ${groupNodeIds.length === 1 ? "group" : "groups"}`]
+      : []),
+    `${edges.length} ${edges.length === 1 ? "connection" : "connections"}`,
+  ].join(" · ");
 
   const bounds = getBounds(nodes);
   const foldingGraph = buildCanvasFoldingGraph(nodes, edges);
@@ -1450,7 +1461,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>
-    <p>${nodes.length} nodes · ${edges.length} connections<span id="hidden-node-summary" hidden></span></p>
+    <p>${canvasCountSummary}<span id="hidden-node-summary" hidden></span></p>
   </div>
   <div class="viewport">
     <div id="canvas">
@@ -1500,6 +1511,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const edges = ${JSON.stringify(edgesData)};
       const searchEntries = ${JSON.stringify(searchEntries)};
       const foldingGraph = ${JSON.stringify(foldingGraph)};
+      const groupNodeIds = new Set(${JSON.stringify(groupNodeIds)});
       const descendantsCache = new Map();
       const importedHiddenNodeIds = new Set(${JSON.stringify(initialFoldState?.hiddenNodeIds ?? [])});
       const importedHiddenEdgeIds = new Set(${JSON.stringify(initialFoldState?.hiddenEdgeIds ?? [])});
@@ -2466,11 +2478,24 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           foldingFocusExitButton.disabled = focusedBranchNodeId === null;
         }
         if (hiddenNodeSummary) {
-          const hiddenCount = hiddenNodeIds.size;
-          hiddenNodeSummary.hidden = hiddenCount === 0;
-          hiddenNodeSummary.textContent = hiddenCount === 1
-            ? " · 1 hidden node"
-            : " · " + hiddenCount + " hidden nodes";
+          const hiddenGroupCount = [...hiddenNodeIds]
+            .filter((nodeId) => groupNodeIds.has(nodeId)).length;
+          const hiddenNodeCount = hiddenNodeIds.size - hiddenGroupCount;
+          const hiddenParts = [];
+          if (hiddenNodeCount > 0) {
+            hiddenParts.push(hiddenNodeCount === 1
+              ? "1 hidden node"
+              : hiddenNodeCount + " hidden nodes");
+          }
+          if (hiddenGroupCount > 0) {
+            hiddenParts.push(hiddenGroupCount === 1
+              ? "1 hidden group"
+              : hiddenGroupCount + " hidden groups");
+          }
+          hiddenNodeSummary.hidden = hiddenParts.length === 0;
+          hiddenNodeSummary.textContent = hiddenParts.length > 0
+            ? " · " + hiddenParts.join(" · ")
+            : "";
         }
         drawEdges();
         updateMinimapViewport();

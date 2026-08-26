@@ -586,6 +586,7 @@ await test("renders page header counts for nodes and edges", async () => {
     nodes: [
       { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
       { id: "b", type: "text", x: 260, y: 0, width: 200, height: 100, text: "B" },
+      { id: "group", type: "group", x: -20, y: -20, width: 500, height: 140, label: "Group" },
     ],
     edges: [
       { fromNode: "a", toNode: "b", label: "verbindet" },
@@ -594,11 +595,16 @@ await test("renders page header counts for nodes and edges", async () => {
 
   const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /<h1>Test Canvas<\/h1>/);
-  assert.match(html, /2 nodes · 1 connections/);
+  assert.match(html, /2 nodes · 1 group · 1 connection/);
   assert.match(html, /<span id="hidden-node-summary" hidden><\/span>/);
-  assert.match(html, /hiddenNodeSummary\.hidden = hiddenCount === 0/);
-  assert.match(html, /" · 1 hidden node"/);
-  assert.match(html, /" · " \+ hiddenCount \+ " hidden nodes"/);
+  assert.match(html, /const groupNodeIds = new Set\(\["group"\]\)/);
+  assert.match(html, /const hiddenGroupCount = \[\.\.\.hiddenNodeIds\]/);
+  assert.match(html, /const hiddenNodeCount = hiddenNodeIds\.size - hiddenGroupCount/);
+  assert.match(html, /"1 hidden node"/);
+  assert.match(html, /hiddenNodeCount \+ " hidden nodes"/);
+  assert.match(html, /"1 hidden group"/);
+  assert.match(html, /hiddenGroupCount \+ " hidden groups"/);
+  assert.match(html, /hiddenNodeSummary\.hidden = hiddenParts\.length === 0/);
 });
 
 await test("renders edge marker and line style metadata into canvas script", async () => {
