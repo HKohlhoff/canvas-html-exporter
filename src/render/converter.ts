@@ -300,6 +300,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const hasRootedBranches = foldingGraph.rootNodeIds.some(
     (nodeId) => getCanvasDescendants(foldingGraph, nodeId).length > 0,
   );
+  const hasFoldingControls = hasBranchGraph || hasImportedFolding;
   const hasLevelView = foldingGraph.maxLevel > 0;
   const foldingLevelOptions = Array.from(
     { length: foldingGraph.maxLevel + 1 },
@@ -798,7 +799,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       background: linear-gradient(to bottom, ${theme.bodyBackground}, transparent);
     }
     .toolbar button,
-    .toolbar select {
+    .toolbar select,
+    .toolbar-menu > summary {
       border: 1px solid ${theme.canvasBorder};
       background: ${theme.nodeBackground};
       color: ${theme.text};
@@ -807,7 +809,46 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       cursor: pointer;
     }
     .toolbar button:hover,
-    .toolbar select:hover { background: ${theme.chipBackground}; }
+    .toolbar select:hover,
+    .toolbar-menu > summary:hover { background: ${theme.chipBackground}; }
+    .toolbar-menu {
+      position: relative;
+    }
+    .toolbar-menu > summary {
+      list-style: none;
+      user-select: none;
+    }
+    .toolbar-menu > summary::-webkit-details-marker {
+      display: none;
+    }
+    .toolbar-menu > summary::after {
+      content: "▾";
+      margin-left: 7px;
+    }
+    .toolbar-menu[open] > summary::after {
+      content: "▴";
+    }
+    .toolbar-menu-content {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 180px;
+      padding: 8px;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 10px;
+      background: ${theme.nodeBackground};
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    .toolbar-menu-content button,
+    .toolbar-menu-content select {
+      width: 100%;
+      text-align: left;
+      white-space: nowrap;
+    }
     .folding-action-control[hidden] {
       display: none;
     }
@@ -1381,11 +1422,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     <button type="button" onclick="zoomBy(1 / 1.15)">Zoom −</button>
     <button type="button" onclick="zoomBy(1.15)">Zoom +</button>
     <button type="button" onclick="resetZoom()">Reset</button>
-    ${hasBranchGraph || hasImportedFolding ? `<button id="folding-mode-button" type="button" onclick="toggleFoldingMode()" aria-pressed="false">No folding</button>` : ""}
-    ${hasBranchGraph || hasImportedFolding ? `<button id="folding-expand-all-button" class="folding-action-control" type="button" onclick="expandAllBranches()">Expand all</button>` : ""}
-    ${hasRootedBranches ? `<button id="folding-collapse-all-button" class="folding-action-control" type="button" onclick="collapseAllBranches()">Collapse all</button>` : ""}
-    ${hasLevelView ? `<select id="folding-level-select" class="folding-action-control" aria-label="Visible canvas levels" title="Visible canvas levels" onchange="setVisibleLevel(this.value)"><option value="all">All levels</option>${foldingLevelOptions}</select>` : ""}
-    ${hasImportedFolding ? `<button id="folding-toolbar-button" class="folding-action-control" type="button" onclick="restoreImportedFolding()" hidden>Restore folding</button>` : ""}
+    ${hasFoldingControls ? `<details id="folding-menu" class="toolbar-menu"><summary>Folding</summary><div class="toolbar-menu-content">
+      <button id="folding-mode-button" type="button" onclick="toggleFoldingMode()" aria-pressed="false">No folding</button>
+      <button id="folding-expand-all-button" class="folding-action-control" type="button" onclick="expandAllBranches()">Expand all</button>
+      ${hasRootedBranches ? `<button id="folding-collapse-all-button" class="folding-action-control" type="button" onclick="collapseAllBranches()">Collapse all</button>` : ""}
+      ${hasLevelView ? `<select id="folding-level-select" class="folding-action-control" aria-label="Visible canvas levels" title="Visible canvas levels" onchange="setVisibleLevel(this.value)"><option value="all">All levels</option>${foldingLevelOptions}</select>` : ""}
+      <button id="folding-toolbar-button" type="button" onclick="restoreImportedFolding()">Restore folding</button>
+    </div></details>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
   </div>
@@ -1419,7 +1462,6 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
       const foldingModeButton = document.getElementById("folding-mode-button");
-      const foldingToolbarButton = document.getElementById("folding-toolbar-button");
       const foldingLevelSelect = document.getElementById("folding-level-select");
       const hiddenNodeSummary = document.getElementById("hidden-node-summary");
       const searchToolbarButton = document.getElementById("search-toolbar-button");
@@ -2357,9 +2399,6 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         document.querySelectorAll(".folding-action-control").forEach((control) => {
           control.hidden = !foldingControlsEnabled;
         });
-        if (foldingToolbarButton) {
-          foldingToolbarButton.hidden = !foldingControlsEnabled || exactImportedState;
-        }
         if (foldingModeButton) {
           foldingModeButton.textContent = foldingControlsEnabled
             ? "No folding"
@@ -2438,7 +2477,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       };
 
       window.restoreImportedFolding = function() {
-        applyImportedFolding(true);
+        foldingControlsEnabled = true;
+        applyImportedFolding(${JSON.stringify(hasImportedFolding)});
       };
 
       window.toggleFoldingMode = function() {

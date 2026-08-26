@@ -701,12 +701,14 @@ await test("applies an imported Canvas Folding state in both export modes", asyn
       },
     });
 
+    assert.match(html, /id="folding-menu" class="toolbar-menu"><summary>Folding<\/summary><div class="toolbar-menu-content">/);
     assert.match(html, /id="folding-expand-all-button"[^>]+onclick="expandAllBranches\(\)"[^>]*>Expand all<\/button>/);
     assert.match(html, /id="folding-mode-button"[^>]+onclick="toggleFoldingMode\(\)"[^>]*>No folding<\/button>/);
     assert.match(html, /id="folding-collapse-all-button"[^>]+onclick="collapseAllBranches\(\)"[^>]*>Collapse all<\/button>/);
     assert.match(html, /id="folding-level-select"[^>]+onchange="setVisibleLevel\(this\.value\)"/);
     assert.match(html, /<option value="all">All levels<\/option><option value="0">Level 0<\/option><option value="1">Level 1<\/option>/);
-    assert.match(html, /id="folding-toolbar-button"[^>]+onclick="restoreImportedFolding\(\)" hidden>Restore folding<\/button>/);
+    assert.match(html, /id="folding-toolbar-button"[^>]+onclick="restoreImportedFolding\(\)"[^>]*>Restore folding<\/button>/);
+    assert.doesNotMatch(html, /foldingToolbarButton\.hidden/);
     assert.match(html, /id="node-b"[\s\S]+data-node-id="b"/);
     assert.match(html, /class="minimap-node" data-node-id="b"/);
     assert.match(html, /const importedHiddenNodeIds = new Set\(\["b"\]\)/);
@@ -776,6 +778,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /function toggleBranch\(nodeId\)/);
     assert.match(html, /id="folding-expand-all-button"[^>]*>Expand all<\/button>/);
     assert.match(html, /id="folding-collapse-all-button"[^>]*>Collapse all<\/button>/);
+    assert.match(html, /id="folding-menu" class="toolbar-menu"><summary>Folding<\/summary><div class="toolbar-menu-content">/);
     assert.match(html, /id="folding-mode-button"[^>]+onclick="toggleFoldingMode\(\)"[^>]*>No folding<\/button>/);
     assert.match(html, /id="folding-level-select"[^>]*>[\s\S]*<option value="2">Level 2<\/option><\/select>/);
     assert.match(html, /"levelByNode":\{"root":0,"child":1,"leaf":2\}/);
@@ -786,6 +789,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /let foldingControlsEnabled = true/);
     assert.match(html, /control\.hidden = !foldingControlsEnabled/);
     assert.match(html, /window\.toggleFoldingMode = function\(\)/);
+    assert.match(html, /window\.restoreImportedFolding = function\(\) \{\s+foldingControlsEnabled = true;\s+applyImportedFolding\(false\)/);
     assert.match(html, /foldingModeButton\.textContent = foldingControlsEnabled\s+\? "No folding"\s+: "Enable folding"/);
     assert.match(html, /collapsedNodeIds\.has\(edge\.fromId\)/);
     assert.match(html, /hasVisibleAlternativeParent/);
