@@ -469,6 +469,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     .node.is-folding-hidden {
       display: none;
     }
+    .node.is-focus-muted {
+      opacity: 0.2;
+    }
     .branch-control,
     .branch-focus-control {
       position: absolute;
@@ -1260,6 +1263,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     .minimap-node.is-folding-hidden {
       display: none;
     }
+    .minimap-node.is-focus-muted {
+      opacity: 0.2;
+    }
     .minimap-viewport {
       fill: rgba(25, 103, 210, 0.12);
       stroke: ${theme.link};
@@ -1519,6 +1525,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       let workingImportedHiddenNodeIds = new Set();
       let hiddenNodeIds = new Set();
       let hiddenEdgeIds = new Set();
+      let focusMutedNodeIds = new Set();
       let importedBaseEnabled = false;
       let importedStateModified = false;
       let foldingControlsEnabled = true;
@@ -1664,6 +1671,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const color = resolveEdgeColor(edge.color);
           const strokeWidth = Math.max(1, Number(edge.width) || 2);
           const dashArray = dashArrayFor(edge.lineStyle, strokeWidth);
+          const focusMuted = focusMutedNodeIds.has(edge.fromId)
+            || focusMutedNodeIds.has(edge.toId);
 
           if (edge.fromEnd && edge.fromEnd !== "none") {
             const startMarkerId = markerIdFor(color, edge.fromEnd);
@@ -1686,6 +1695,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           path.setAttribute("fill", "none");
           path.setAttribute("stroke", color);
           path.setAttribute("stroke-width", String(strokeWidth));
+          if (focusMuted) path.setAttribute("opacity", "0.2");
           if (dashArray) {
             path.setAttribute("stroke-dasharray", dashArray);
           }
@@ -1705,6 +1715,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             label.setAttribute("text-anchor", "middle");
             label.setAttribute("class", "edge-label");
             label.setAttribute("fill", textColor);
+            if (focusMuted) label.setAttribute("opacity", "0.2");
             label.textContent = edge.label;
             edgeLayer.appendChild(label);
 
@@ -1717,6 +1728,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             bg.setAttribute("rx", "6");
             bg.setAttribute("ry", "6");
             bg.setAttribute("class", "edge-label-background");
+            if (focusMuted) bg.setAttribute("opacity", "0.2");
             edgeLayer.insertBefore(bg, label);
           }
         }
@@ -1772,6 +1784,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function focusNode(nodeId) {
         const target = document.getElementById("node-" + nodeId);
         if (!target) return;
+        if (focusedBranchNodeId !== null && focusMutedNodeIds.has(nodeId)) {
+          focusedBranchNodeId = null;
+          updateFoldingVisibility();
+        }
         if (hiddenNodeIds.has(nodeId)) {
           if (focusedBranchNodeId !== null) {
             focusedBranchNodeId = null;
@@ -2368,7 +2384,6 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const exactImportedState = importedBaseEnabled
           && !importedStateModified
           && collapsedNodeIds.size === 0
-          && focusedBranchNodeId === null
           && visibleLevelLimit === null;
         const baseHiddenNodeIds = importedBaseEnabled
           ? new Set(workingImportedHiddenNodeIds)
@@ -2394,6 +2409,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           }
         }
 
+        focusMutedNodeIds = new Set();
         if (focusedBranchNodeId !== null) {
           const focusedNodeIds = new Set([
             focusedBranchNodeId,
@@ -2405,7 +2421,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             }
           }
           for (const nodeId of Object.keys(foldingGraph.childrenByNode)) {
-            if (!focusedNodeIds.has(nodeId)) hiddenNodeIds.add(nodeId);
+            if (!focusedNodeIds.has(nodeId)) focusMutedNodeIds.add(nodeId);
           }
         }
 
@@ -2428,6 +2444,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         document.querySelectorAll(".node[data-node-id]").forEach((node) => {
           const nodeId = node.getAttribute("data-node-id") || "";
           node.classList.toggle("is-folding-hidden", hiddenNodeIds.has(nodeId));
+          node.classList.toggle("is-focus-muted", focusMutedNodeIds.has(nodeId));
         });
         document.querySelectorAll(".branch-control[data-branch-node-id]").forEach((control) => {
           const nodeId = control.getAttribute("data-branch-node-id") || "";
@@ -2462,6 +2479,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         document.querySelectorAll(".minimap-node[data-node-id]").forEach((node) => {
           const nodeId = node.getAttribute("data-node-id") || "";
           node.classList.toggle("is-folding-hidden", hiddenNodeIds.has(nodeId));
+          node.classList.toggle("is-focus-muted", focusMutedNodeIds.has(nodeId));
         });
 
         document.querySelectorAll(".folding-action-control").forEach((control) => {

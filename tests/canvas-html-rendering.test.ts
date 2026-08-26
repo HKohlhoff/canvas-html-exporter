@@ -799,10 +799,18 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /for \(const nodeId of foldingGraph\.rootNodeIds\)/);
     assert.match(html, /let foldingControlsEnabled = true/);
     assert.match(html, /let focusedBranchNodeId = null/);
+    assert.match(html, /let focusMutedNodeIds = new Set\(\)/);
     assert.match(html, /control\.hidden = !foldingControlsEnabled/);
     assert.match(html, /function focusBranch\(nodeId\)/);
     assert.match(html, /focusedBranchNodeId = focusedBranchNodeId === nodeId \? null : nodeId/);
     assert.match(html, /focusedNodeIds = new Set\(\[\s+focusedBranchNodeId,\s+\.\.\.getDescendants\(focusedBranchNodeId\)/);
+    assert.match(html, /if \(!focusedNodeIds\.has\(nodeId\)\) focusMutedNodeIds\.add\(nodeId\)/);
+    assert.match(html, /\.node\.is-focus-muted \{\s+opacity: 0\.2;/);
+    assert.match(html, /\.minimap-node\.is-focus-muted \{\s+opacity: 0\.2;/);
+    assert.match(html, /if \(focusMuted\) path\.setAttribute\("opacity", "0\.2"\)/);
+    assert.match(html, /if \(focusMuted\) label\.setAttribute\("opacity", "0\.2"\)/);
+    assert.match(html, /if \(focusMuted\) bg\.setAttribute\("opacity", "0\.2"\)/);
+    assert.match(html, /focusedBranchNodeId !== null && focusMutedNodeIds\.has\(nodeId\)/);
     assert.match(html, /window\.focusBranch = focusBranch/);
     assert.match(html, /window\.exitBranchFocus = function\(\) \{\s+focusedBranchNodeId = null;\s+updateFoldingVisibility\(\)/);
     assert.match(html, /foldingFocusExitButton\.disabled = focusedBranchNodeId === null/);
