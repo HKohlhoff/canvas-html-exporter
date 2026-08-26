@@ -1787,6 +1787,53 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         window.requestAnimationFrame(updateMinimapViewport);
       }
 
+      function getFitNodeBounds() {
+        const activeNodes = Array.from(document.querySelectorAll(".node[data-node-id]"))
+          .filter((node) => {
+            const nodeId = node.getAttribute("data-node-id") || "";
+            return !hiddenNodeIds.has(nodeId)
+              && (focusedBranchNodeId === null || !focusMutedNodeIds.has(nodeId));
+          });
+        if (activeNodes.length === 0) {
+          return {
+            left: 0,
+            top: 0,
+            width: ${JSON.stringify(bounds.width)},
+            height: ${JSON.stringify(bounds.height)},
+          };
+        }
+
+        let left = Infinity;
+        let top = Infinity;
+        let right = -Infinity;
+        let bottom = -Infinity;
+        for (const node of activeNodes) {
+          const nodeLeft = parseFloat(node.getAttribute("data-canvas-left") || "0");
+          const nodeTop = parseFloat(node.getAttribute("data-canvas-top") || "0");
+          const nodeWidth = parseFloat(node.getAttribute("data-canvas-width") || "0");
+          const nodeHeight = parseFloat(node.getAttribute("data-canvas-height") || "0");
+          if (![nodeLeft, nodeTop, nodeWidth, nodeHeight].every(Number.isFinite)) continue;
+          left = Math.min(left, nodeLeft);
+          top = Math.min(top, nodeTop);
+          right = Math.max(right, nodeLeft + nodeWidth);
+          bottom = Math.max(bottom, nodeTop + nodeHeight);
+        }
+        if (![left, top, right, bottom].every(Number.isFinite)) {
+          return {
+            left: 0,
+            top: 0,
+            width: ${JSON.stringify(bounds.width)},
+            height: ${JSON.stringify(bounds.height)},
+          };
+        }
+        return {
+          left,
+          top,
+          width: Math.max(1, right - left),
+          height: Math.max(1, bottom - top),
+        };
+      }
+
       function focusNode(nodeId) {
         const target = document.getElementById("node-" + nodeId);
         if (!target) return;
@@ -1803,8 +1850,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         }
         const left = parseFloat(target.getAttribute("data-canvas-left") || "0");
         const top = parseFloat(target.getAttribute("data-canvas-top") || "0");
-        const width = target.offsetWidth / Math.max(currentScale, 0.0001);
-        const height = target.offsetHeight / Math.max(currentScale, 0.0001);
+        const width = parseFloat(target.getAttribute("data-canvas-width") || "0");
+        const height = parseFloat(target.getAttribute("data-canvas-height") || "0");
         scrollViewportToCanvasPoint(left + width / 2, top + height / 2, "smooth");
         if (highlightedNodeId) {
           const prev = document.getElementById("node-" + highlightedNodeId);
@@ -2652,18 +2699,20 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       };
 
       window.resetZoom = function() {
-        const padding = 24;
-        const availableWidth = Math.max(100, viewport.clientWidth - padding * 2);
-        const availableHeight = Math.max(100, viewport.clientHeight - padding * 2);
-        const baseWidth = ${JSON.stringify(bounds.width)};
-        const baseHeight = ${JSON.stringify(bounds.height)};
-        const scaleX = availableWidth / baseWidth;
-        const scaleY = availableHeight / baseHeight;
+        const fitPadding = 48;
+        const fitBounds = getFitNodeBounds();
+        const availableWidth = Math.max(100, viewport.clientWidth);
+        const availableHeight = Math.max(100, viewport.clientHeight);
+        const scaleX = availableWidth / (fitBounds.width + fitPadding * 2);
+        const scaleY = availableHeight / (fitBounds.height + fitPadding * 2);
         currentScale = Math.min(scaleX, scaleY, 1);
         setCssProps(canvas, { transform: "scale(" + currentScale + ")" });
-        viewport.scrollTo({ left: 0, top: 0, behavior: "auto" });
         drawEdges();
-        updateMinimapViewport();
+        scrollViewportToCanvasPoint(
+          fitBounds.left + fitBounds.width / 2,
+          fitBounds.top + fitBounds.height / 2,
+          "auto",
+        );
       };
 
       function syncLinkOfflineState() {
@@ -3136,6 +3185,8 @@ async function renderNode(
     data-node-id="${escapeAttribute(node.id)}"
     data-canvas-left="${frame.left}"
     data-canvas-top="${frame.top}"
+    data-canvas-width="${frame.width}"
+    data-canvas-height="${frame.height}"
     style="left:${frame.left}px;top:${frame.top}px;width:${frame.width}px;height:${frame.height}px;background:${colors.background};border-color:${colors.border};--node-border-color:${colors.border};"
   >${branchControl}${title}<div class="node-content">${content}</div></div>`;
 }

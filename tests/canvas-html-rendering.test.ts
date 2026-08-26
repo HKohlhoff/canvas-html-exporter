@@ -780,6 +780,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /data-focus-node-id="root"[^>]+title="Focus branch · 2 descendants"><svg class="branch-focus-icon"/);
     assert.match(html, /data-focus-node-id="child"[^>]+title="Focus branch · 1 descendants"><svg class="branch-focus-icon"/);
     assert.doesNotMatch(html, /data-focus-node-id="leaf"/);
+    assert.match(html, /id="node-root"[\s\S]+data-canvas-width="200"[\s\S]+data-canvas-height="100"/);
     assert.match(html, /<circle cx="12" cy="12" r="3"><\/circle>/);
     assert.match(html, /<path d="M3 7V5a2 2 0 0 1 2-2h2"><\/path>/);
     assert.doesNotMatch(html, />◎<\/button>/);
@@ -815,6 +816,12 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /if \(focusMuted\) label\.setAttribute\("opacity", "0\.2"\)/);
     assert.match(html, /if \(focusMuted\) bg\.setAttribute\("opacity", "0\.2"\)/);
     assert.match(html, /focusedBranchNodeId !== null && focusMutedNodeIds\.has\(nodeId\)/);
+    assert.match(html, /function getFitNodeBounds\(\)/);
+    assert.match(html, /!hiddenNodeIds\.has\(nodeId\)[\s\S]+&& \(focusedBranchNodeId === null \|\| !focusMutedNodeIds\.has\(nodeId\)\)/);
+    assert.match(html, /const fitBounds = getFitNodeBounds\(\)/);
+    assert.match(html, /scrollViewportToCanvasPoint\([\s\S]+fitBounds\.left \+ fitBounds\.width \/ 2,[\s\S]+fitBounds\.top \+ fitBounds\.height \/ 2/);
+    assert.match(html, /const width = parseFloat\(target\.getAttribute\("data-canvas-width"\) \|\| "0"\)/);
+    assert.doesNotMatch(html, /target\.offsetWidth \/ Math\.max\(currentScale/);
     assert.match(html, /window\.focusBranch = focusBranch/);
     assert.match(html, /window\.exitBranchFocus = function\(\) \{\s+focusedBranchNodeId = null;\s+updateFoldingVisibility\(\)/);
     assert.match(html, /foldingFocusExitButton\.disabled = focusedBranchNodeId === null/);
