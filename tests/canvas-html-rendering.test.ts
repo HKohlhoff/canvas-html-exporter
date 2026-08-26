@@ -595,6 +595,10 @@ await test("renders page header counts for nodes and edges", async () => {
   const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /<h1>Test Canvas<\/h1>/);
   assert.match(html, /2 nodes · 1 connections/);
+  assert.match(html, /<span id="hidden-node-summary" hidden><\/span>/);
+  assert.match(html, /hiddenNodeSummary\.hidden = hiddenCount === 0/);
+  assert.match(html, /" · 1 hidden node"/);
+  assert.match(html, /" · " \+ hiddenCount \+ " hidden nodes"/);
 });
 
 await test("renders edge marker and line style metadata into canvas script", async () => {

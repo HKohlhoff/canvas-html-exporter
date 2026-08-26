@@ -1369,7 +1369,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>
-    <p>${nodes.length} nodes · ${edges.length} connections</p>
+    <p>${nodes.length} nodes · ${edges.length} connections<span id="hidden-node-summary" hidden></span></p>
   </div>
   <div class="viewport">
     <div id="canvas">
@@ -1397,6 +1397,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
       const foldingToolbarButton = document.getElementById("folding-toolbar-button");
+      const hiddenNodeSummary = document.getElementById("hidden-node-summary");
       const searchToolbarButton = document.getElementById("search-toolbar-button");
       const minimapSvg = document.getElementById("minimap-svg");
       const minimapViewport = document.getElementById("minimap-viewport");
@@ -2312,6 +2313,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             : "Restore folding";
           foldingToolbarButton.classList.toggle("is-active", exactImportedState);
           foldingToolbarButton.setAttribute("aria-pressed", String(exactImportedState));
+        }
+        if (hiddenNodeSummary) {
+          const hiddenCount = hiddenNodeIds.size;
+          hiddenNodeSummary.hidden = hiddenCount === 0;
+          hiddenNodeSummary.textContent = hiddenCount === 1
+            ? " · 1 hidden node"
+            : " · " + hiddenCount + " hidden nodes";
         }
         drawEdges();
         updateMinimapViewport();
