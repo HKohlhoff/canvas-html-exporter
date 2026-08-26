@@ -20,6 +20,7 @@ import { getHrefForMarkdownPage } from "../helpers/path-helpers";
 import { buildPreviewText } from "../helpers/preview-helpers";
 import type { ExportFormatChoice } from "../settings";
 import type { CanvasFoldState } from "../folding/types";
+import { filterCanvasFoldState } from "../folding/export-state";
 
 export type ExportSettings = {
   darkMode: boolean;
@@ -230,6 +231,13 @@ export async function exportCanvasPackage(
 
   const nodeIds = new Set(preparedNodes.map((node) => node.id));
   const preparedEdges = edges.filter((edge) => nodeIds.has(edge.fromNode) && nodeIds.has(edge.toNode));
+  const initialFoldState = settings.initialFoldState
+    ? filterCanvasFoldState(
+      settings.initialFoldState,
+      nodeIds,
+      preparedEdges.flatMap((edge) => edge.id ? [edge.id] : []),
+    )
+    : undefined;
 
   return {
     outputPath: useSingleHtml ? singleHtmlPath : exportFolder,
@@ -246,7 +254,7 @@ export async function exportCanvasPackage(
       inlineStyleColors: settings.inlineStyleColors,
       exportFormat,
       embeddedPages: ctx.singleHtmlPages,
-      initialFoldState: settings.initialFoldState,
+      initialFoldState,
     },
   };
 }

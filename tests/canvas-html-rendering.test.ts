@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import vm from "node:vm";
 import { buildMarkdownDocumentHtml, CanvasData, convertCanvasToHtml } from "../src/converter";
 
 function test(name: string, fn: () => Promise<void> | void): Promise<void> | void {
@@ -671,6 +672,63 @@ await test("renders minimap markup and viewport sync when enabled", async () => 
   assert.doesNotMatch(html, /minimap-hide-button/);
   assert.doesNotMatch(html, /minimap-toggle-button/);
   assert.doesNotMatch(html, /@media print/);
+});
+
+await test("applies an imported Canvas Folding state in both export modes", async () => {
+  const data: CanvasData = {
+    name: "Folding",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+      { id: "b", type: "text", x: 300, y: 0, width: 200, height: 100, text: "B" },
+    ],
+    edges: [
+      { id: "edge-ab", fromNode: "a", toNode: "b", label: "child" },
+    ],
+  };
+
+  for (const exportFormat of ["package", "single-html"] as const) {
+    const html = await convertCanvasToHtml(data, {
+      ...baseOptions,
+      exportFormat,
+      initialFoldState: {
+        hiddenEdgeIds: ["edge-ab"],
+        hiddenNodeIds: ["b"],
+        source: "active-leaf",
+      },
+    });
+
+    assert.match(html, /id="folding-toolbar-button"[^>]+onclick="toggleImportedFolding\(\)"[^>]*>Expand all<\/button>/);
+    assert.match(html, /id="node-b"[\s\S]+data-node-id="b"/);
+    assert.match(html, /class="minimap-node" data-node-id="b"/);
+    assert.match(html, /const importedHiddenNodeIds = new Set\(\["b"\]\)/);
+    assert.match(html, /const importedHiddenEdgeIds = new Set\(\["edge-ab"\]\)/);
+    assert.match(html, /hiddenEdgeIds\.has\(edge\.id\)/);
+    assert.match(html, /hiddenNodeIds\.has\(edge\.fromId\)/);
+    assert.match(html, /hiddenNodeIds\.has\(edge\.toId\)/);
+    assert.match(html, /function applyImportedFolding\(applied\)/);
+    assert.match(html, /window\.toggleImportedFolding = function\(\)/);
+    assert.match(html, /applyImportedFolding\(true\)/);
+    assert.match(html, /if \(hiddenNodeIds\.has\(nodeId\)\) \{\s+applyImportedFolding\(false\)/);
+    assert.match(html, /\.node\.is-folding-hidden \{\s+display: none;/);
+    assert.match(html, /\.minimap-node\.is-folding-hidden \{\s+display: none;/);
+    const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
+    assert.ok(runtime);
+    assert.doesNotThrow(() => new vm.Script(runtime));
+  }
+});
+
+await test("keeps the folding control absent for a fully expanded export", async () => {
+  const html = await convertCanvasToHtml(
+    {
+      name: "Expanded",
+      nodes: [{ id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" }],
+      edges: [],
+    },
+    baseOptions,
+  );
+
+  assert.doesNotMatch(html, /id="folding-toolbar-button"/);
+  assert.match(html, /applyImportedFolding\(false\)/);
 });
 
 await test("renders search overlay and toolbar button when enabled", async () => {

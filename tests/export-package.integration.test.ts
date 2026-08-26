@@ -181,7 +181,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         { id: "md", type: "file", x: 0, y: 0, width: 320, height: 180, file: "notes/main.md", label: "Canvas Titel" },
         { id: "img", type: "file", x: 360, y: 0, width: 240, height: 180, file: "assets/picture.png" },
       ],
-      edges: [{ fromNode: "md", toNode: "img", label: "zeigt" }],
+      edges: [{ id: "edge-package", fromNode: "md", toNode: "img", label: "zeigt" }],
     });
 
     const { app, files } = createMockApp([

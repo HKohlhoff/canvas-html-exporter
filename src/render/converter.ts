@@ -285,6 +285,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const showSearch = options.showSearch !== false;
   const exportFormat = options.exportFormat || "package";
   const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
+  const initialFoldState = options.initialFoldState;
+  const hasImportedFolding = Boolean(
+    initialFoldState
+    && (initialFoldState.hiddenNodeIds.length > 0 || initialFoldState.hiddenEdgeIds.length > 0),
+  );
 
   const bounds = getBounds(nodes);
   const theme = getTheme(options.darkMode);
@@ -303,6 +308,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   )).join("\n");
 
   const edgesData = edges.map((edge) => ({
+    id: edge.id ?? "",
     fromId: edge.fromNode,
     toId: edge.toNode,
     fromSide: normalizeSide(edge.fromSide),
@@ -425,6 +431,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       overflow: hidden;
       display: flex;
       flex-direction: column;
+    }
+    .node.is-folding-hidden {
+      display: none;
     }
     .node.group {
       background: ${theme.groupBackground};
@@ -1121,6 +1130,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     .minimap-node.group {
       opacity: 0.75;
     }
+    .minimap-node.is-folding-hidden {
+      display: none;
+    }
     .minimap-viewport {
       fill: rgba(25, 103, 210, 0.12);
       stroke: ${theme.link};
@@ -1309,6 +1321,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     <button type="button" onclick="zoomBy(1 / 1.15)">Zoom −</button>
     <button type="button" onclick="zoomBy(1.15)">Zoom +</button>
     <button type="button" onclick="resetZoom()">Reset</button>
+    ${hasImportedFolding ? `<button id="folding-toolbar-button" type="button" onclick="toggleImportedFolding()" aria-pressed="true">Expand all</button>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
   </div>
@@ -1341,6 +1354,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const minimapPanel = document.getElementById("minimap-panel");
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
+      const foldingToolbarButton = document.getElementById("folding-toolbar-button");
       const searchToolbarButton = document.getElementById("search-toolbar-button");
       const minimapSvg = document.getElementById("minimap-svg");
       const minimapViewport = document.getElementById("minimap-viewport");
@@ -1358,6 +1372,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       )};
       const edges = ${JSON.stringify(edgesData)};
       const searchEntries = ${JSON.stringify(searchEntries)};
+      const importedHiddenNodeIds = new Set(${JSON.stringify(initialFoldState?.hiddenNodeIds ?? [])});
+      const importedHiddenEdgeIds = new Set(${JSON.stringify(initialFoldState?.hiddenEdgeIds ?? [])});
+      let hiddenNodeIds = new Set();
+      let hiddenEdgeIds = new Set();
+      let importedFoldingApplied = false;
       let currentScale = 1;
       let minimapDrag = null;
       let minimapPan = null;
@@ -1468,6 +1487,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const seenMarkers = new Set();
 
         for (const edge of edges) {
+          if (
+            hiddenEdgeIds.has(edge.id)
+            || hiddenNodeIds.has(edge.fromId)
+            || hiddenNodeIds.has(edge.toId)
+          ) continue;
           const fromEl = document.getElementById("node-" + edge.fromId);
           const toEl = document.getElementById("node-" + edge.toId);
           if (!fromEl || !toEl) continue;
@@ -1601,6 +1625,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function focusNode(nodeId) {
         const target = document.getElementById("node-" + nodeId);
         if (!target) return;
+        if (hiddenNodeIds.has(nodeId)) {
+          applyImportedFolding(false);
+        }
         const left = parseFloat(target.getAttribute("data-canvas-left") || "0");
         const top = parseFloat(target.getAttribute("data-canvas-top") || "0");
         const width = target.offsetWidth / Math.max(currentScale, 0.0001);
@@ -2111,6 +2138,41 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         }
       };
 
+      function applyImportedFolding(applied) {
+        importedFoldingApplied = Boolean(applied) && (
+          importedHiddenNodeIds.size > 0 || importedHiddenEdgeIds.size > 0
+        );
+        hiddenNodeIds = importedFoldingApplied
+          ? new Set(importedHiddenNodeIds)
+          : new Set();
+        hiddenEdgeIds = importedFoldingApplied
+          ? new Set(importedHiddenEdgeIds)
+          : new Set();
+
+        document.querySelectorAll(".node[data-node-id]").forEach((node) => {
+          const nodeId = node.getAttribute("data-node-id") || "";
+          node.classList.toggle("is-folding-hidden", hiddenNodeIds.has(nodeId));
+        });
+        document.querySelectorAll(".minimap-node[data-node-id]").forEach((node) => {
+          const nodeId = node.getAttribute("data-node-id") || "";
+          node.classList.toggle("is-folding-hidden", hiddenNodeIds.has(nodeId));
+        });
+
+        if (foldingToolbarButton) {
+          foldingToolbarButton.textContent = importedFoldingApplied
+            ? "Expand all"
+            : "Restore folding";
+          foldingToolbarButton.classList.toggle("is-active", importedFoldingApplied);
+          foldingToolbarButton.setAttribute("aria-pressed", String(importedFoldingApplied));
+        }
+        drawEdges();
+        updateMinimapViewport();
+      }
+
+      window.toggleImportedFolding = function() {
+        applyImportedFolding(!importedFoldingApplied);
+      };
+
       function startMinimapDrag(event) {
         if (!minimapPanel || !minimapDragHandle) return;
         const rect = minimapPanel.getBoundingClientRect();
@@ -2187,7 +2249,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         });
       }
 
-      drawEdges();
+      applyImportedFolding(${JSON.stringify(hasImportedFolding)});
       syncLinkOfflineState();
       window.resetZoom();
       window.addEventListener("resize", () => {
@@ -2604,6 +2666,7 @@ async function renderNode(
   return `<div
     id="node-${escapeAttribute(node.id)}"
     class="${classes}"
+    data-node-id="${escapeAttribute(node.id)}"
     data-canvas-left="${frame.left}"
     data-canvas-top="${frame.top}"
     style="left:${frame.left}px;top:${frame.top}px;width:${frame.width}px;height:${frame.height}px;background:${colors.background};border-color:${colors.border};--node-border-color:${colors.border};"
@@ -2623,7 +2686,7 @@ function renderMinimapNode(
   const classes = ["minimap-node", type === "group" ? "group" : ""].filter(Boolean).join(" ");
   const radius = type === "group" ? 14 : 10;
 
-  return `<rect class="${classes}" x="${frame.left}" y="${frame.top}" width="${frame.width}" height="${frame.height}" rx="${radius}" ry="${radius}" fill="${escapeAttribute(colors.minimapFill)}" stroke="${escapeAttribute(colors.minimapStroke)}"></rect>`;
+  return `<rect class="${classes}" data-node-id="${escapeAttribute(node.id)}" x="${frame.left}" y="${frame.top}" width="${frame.width}" height="${frame.height}" rx="${radius}" ry="${radius}" fill="${escapeAttribute(colors.minimapFill)}" stroke="${escapeAttribute(colors.minimapStroke)}"></rect>`;
 }
 
 function buildSearchEntry(
