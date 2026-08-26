@@ -1102,8 +1102,35 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       background: ${theme.canvasBackground};
     }
     .node.search-hit {
-      box-shadow: 0 0 0 4px rgba(25, 103, 210, 0.22), 0 8px 24px rgba(0,0,0,0.16);
-      transition: box-shadow 0.2s ease;
+      z-index: 7;
+      outline: 4px solid #ffd43b;
+      outline-offset: 5px;
+      box-shadow:
+        0 0 0 10px rgba(255, 212, 59, 0.32),
+        0 0 32px 12px rgba(255, 193, 7, 0.58),
+        0 10px 30px rgba(0, 0, 0, 0.24);
+      animation: search-hit-pulse 550ms ease-in-out 4 alternate;
+    }
+    @keyframes search-hit-pulse {
+      from {
+        outline-color: #ffd43b;
+        box-shadow:
+          0 0 0 7px rgba(255, 212, 59, 0.26),
+          0 0 22px 8px rgba(255, 193, 7, 0.46),
+          0 8px 24px rgba(0, 0, 0, 0.2);
+      }
+      to {
+        outline-color: #fff3bf;
+        box-shadow:
+          0 0 0 12px rgba(255, 212, 59, 0.4),
+          0 0 38px 16px rgba(255, 193, 7, 0.72),
+          0 12px 34px rgba(0, 0, 0, 0.28);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .node.search-hit {
+        animation: none;
+      }
     }
     .search-overlay {
       position: fixed;
@@ -1875,6 +1902,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const prev = document.getElementById("node-" + highlightedNodeId);
           if (prev) prev.classList.remove("search-hit");
         }
+        // Force a style flush so selecting the same result restarts the pulse.
+        target.getBoundingClientRect();
         target.classList.add("search-hit");
         highlightedNodeId = nodeId;
         if (searchHighlightTimer) {

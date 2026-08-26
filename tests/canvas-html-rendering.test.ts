@@ -866,6 +866,10 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /function openSearch\(\)/);
   assert.match(html, /function closeSearch\(\)/);
   assert.match(html, /function focusNode\(nodeId\)/);
+  assert.match(html, /\.node\.search-hit \{\s+z-index: 7;\s+outline: 4px solid #ffd43b;\s+outline-offset: 5px;[\s\S]+animation: search-hit-pulse 550ms ease-in-out 4 alternate;/);
+  assert.match(html, /@keyframes search-hit-pulse \{/);
+  assert.match(html, /@media \(prefers-reduced-motion: reduce\) \{\s+\.node\.search-hit \{\s+animation: none;/);
+  assert.match(html, /target\.getBoundingClientRect\(\);\s+target\.classList\.add\("search-hit"\)/);
   assert.match(html, /function appendSearchQueryToHref\(href, query\)/);
   assert.match(html, /function updateActiveSearchResult\(\)/);
   assert.match(html, /function moveActiveSearchResult\(direction\)/);
