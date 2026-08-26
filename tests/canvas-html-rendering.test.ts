@@ -727,7 +727,7 @@ await test("applies an imported Canvas Folding state in both export modes", asyn
     assert.match(html, /window\.setVisibleLevel = function\(value\)/);
     assert.match(html, /window\.restoreImportedFolding = function\(\)/);
     assert.match(html, /applyImportedFolding\(true\)/);
-    assert.match(html, /if \(hiddenNodeIds\.has\(nodeId\)\) \{\s+expandAllBranches\(\)/);
+    assert.match(html, /if \(hiddenNodeIds\.has\(nodeId\)\) \{\s+if \(focusedBranchNodeId !== null\)[\s\S]+if \(hiddenNodeIds\.has\(nodeId\)\) expandAllBranches\(\)/);
     assert.match(html, /\.node\.is-folding-hidden \{\s+display: none;/);
     assert.match(html, /\.minimap-node\.is-folding-hidden \{\s+display: none;/);
     const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
@@ -771,6 +771,9 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /data-branch-node-id="root"[^>]+title="Collapse branch · 2 descendants">−<\/button>/);
     assert.match(html, /data-branch-node-id="child"[^>]+title="Collapse branch · 1 descendants">−<\/button>/);
     assert.doesNotMatch(html, /data-branch-node-id="leaf"/);
+    assert.match(html, /data-focus-node-id="root"[^>]+title="Focus branch · 2 descendants">◎<\/button>/);
+    assert.match(html, /data-focus-node-id="child"[^>]+title="Focus branch · 1 descendants">◎<\/button>/);
+    assert.doesNotMatch(html, /data-focus-node-id="leaf"/);
     assert.match(html, /"childrenByNode":\{"child":\["leaf"\],"leaf":\[\],"root":\["child"\]\}/);
     assert.doesNotMatch(html, /"descendantsByNode"/);
     assert.match(html, /function getDescendants\(nodeId\)/);
@@ -780,6 +783,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /id="folding-expand-all-button"[^>]*>Expand all<\/button>/);
     assert.match(html, /id="folding-collapse-all-button"[^>]*>Collapse all<\/button>/);
     assert.match(html, /id="folding-menu" class="toolbar-menu"><summary>Folding<\/summary><div class="toolbar-menu-content">/);
+    assert.match(html, /id="folding-focus-exit-button"[^>]+onclick="exitBranchFocus\(\)" disabled>Exit focus<\/button>/);
     assert.match(html, /id="folding-mode-button"[^>]+onclick="toggleFoldingMode\(\)"[^>]*>No folding<\/button>/);
     assert.match(html, /id="folding-level-select"[^>]*>[\s\S]*<option value="2">Level 2<\/option><\/select>/);
     assert.match(html, /"levelByNode":\{"root":0,"child":1,"leaf":2\}/);
@@ -788,7 +792,15 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /level > visibleLevelLimit/);
     assert.match(html, /for \(const nodeId of foldingGraph\.rootNodeIds\)/);
     assert.match(html, /let foldingControlsEnabled = true/);
+    assert.match(html, /let focusedBranchNodeId = null/);
     assert.match(html, /control\.hidden = !foldingControlsEnabled/);
+    assert.match(html, /function focusBranch\(nodeId\)/);
+    assert.match(html, /focusedBranchNodeId = focusedBranchNodeId === nodeId \? null : nodeId/);
+    assert.match(html, /focusedNodeIds = new Set\(\[\s+focusedBranchNodeId,\s+\.\.\.getDescendants\(focusedBranchNodeId\)/);
+    assert.match(html, /window\.focusBranch = focusBranch/);
+    assert.match(html, /window\.exitBranchFocus = function\(\) \{\s+focusedBranchNodeId = null;\s+updateFoldingVisibility\(\)/);
+    assert.match(html, /foldingFocusExitButton\.disabled = focusedBranchNodeId === null/);
+    assert.match(html, /document\.querySelectorAll\("\.branch-focus-control\[data-focus-node-id\]"\)[\s\S]+control\.hidden = !foldingControlsEnabled/);
     assert.match(html, /window\.toggleFoldingMode = function\(\)/);
     assert.match(html, /window\.restoreImportedFolding = function\(\) \{\s+foldingControlsEnabled = true;\s+applyImportedFolding\(false\)/);
     assert.match(html, /foldingMenu\.addEventListener\("mouseleave", \(\) => \{\s+foldingMenu\.removeAttribute\("open"\)/);
@@ -797,6 +809,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /hasVisibleAlternativeParent/);
     assert.match(html, /control\.hidden = !foldingControlsEnabled/);
     assert.match(html, /control\.addEventListener\("click"/);
+    assert.match(html, /document\.querySelectorAll\("\.branch-focus-control\[data-focus-node-id\]"\)/);
     const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
     assert.doesNotThrow(() => new vm.Script(runtime));
   }

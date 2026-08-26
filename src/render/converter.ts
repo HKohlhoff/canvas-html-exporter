@@ -458,7 +458,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     .node.is-folding-hidden {
       display: none;
     }
-    .branch-control {
+    .branch-control,
+    .branch-focus-control {
       position: absolute;
       top: 6px;
       right: 6px;
@@ -480,13 +481,21 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       cursor: pointer;
       box-shadow: 0 1px 5px rgba(0,0,0,0.16);
     }
+    .branch-focus-control {
+      right: 36px;
+      font-size: 14px;
+    }
     .branch-control:hover,
-    .branch-control:focus-visible {
+    .branch-control:focus-visible,
+    .branch-focus-control:hover,
+    .branch-focus-control:focus-visible,
+    .branch-focus-control.is-active {
       border-color: ${theme.link};
       background: ${theme.chipBackground};
       outline: none;
     }
-    .branch-control[hidden] {
+    .branch-control[hidden],
+    .branch-focus-control[hidden] {
       display: none;
     }
     .node.group {
@@ -858,6 +867,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       border-color: ${theme.link};
       background: ${theme.chipBackground};
       box-shadow: 0 0 0 3px rgba(25, 103, 210, 0.14);
+    }
+    .toolbar button:disabled {
+      opacity: 0.5;
+      cursor: default;
     }
     .single-page-view {
       max-width: 960px;
@@ -1429,6 +1442,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       <button id="folding-expand-all-button" class="folding-action-control" type="button" onclick="expandAllBranches()">Expand all</button>
       ${hasRootedBranches ? `<button id="folding-collapse-all-button" class="folding-action-control" type="button" onclick="collapseAllBranches()">Collapse all</button>` : ""}
       ${hasLevelView ? `<select id="folding-level-select" class="folding-action-control" aria-label="Visible canvas levels" title="Visible canvas levels" onchange="setVisibleLevel(this.value)"><option value="all">All levels</option>${foldingLevelOptions}</select>` : ""}
+      <button id="folding-focus-exit-button" class="folding-action-control" type="button" onclick="exitBranchFocus()" disabled>Exit focus</button>
       <button id="folding-toolbar-button" type="button" onclick="restoreImportedFolding()">Restore folding</button>
     </div></details>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
@@ -1464,6 +1478,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
       const foldingMenu = document.getElementById("folding-menu");
+      const foldingFocusExitButton = document.getElementById("folding-focus-exit-button");
       const foldingModeButton = document.getElementById("folding-mode-button");
       const foldingLevelSelect = document.getElementById("folding-level-select");
       const hiddenNodeSummary = document.getElementById("hidden-node-summary");
@@ -1495,6 +1510,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       let importedBaseEnabled = false;
       let importedStateModified = false;
       let foldingControlsEnabled = true;
+      let focusedBranchNodeId = null;
       let visibleLevelLimit = null;
       let currentScale = 1;
       let minimapDrag = null;
@@ -1745,7 +1761,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const target = document.getElementById("node-" + nodeId);
         if (!target) return;
         if (hiddenNodeIds.has(nodeId)) {
-          expandAllBranches();
+          if (focusedBranchNodeId !== null) {
+            focusedBranchNodeId = null;
+            updateFoldingVisibility();
+          }
+          if (hiddenNodeIds.has(nodeId)) expandAllBranches();
         }
         const left = parseFloat(target.getAttribute("data-canvas-left") || "0");
         const top = parseFloat(target.getAttribute("data-canvas-top") || "0");
@@ -2259,6 +2279,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
       function applyImportedFolding(applied) {
         collapsedNodeIds.clear();
+        focusedBranchNodeId = null;
         visibleLevelLimit = null;
         importedBaseEnabled = Boolean(applied) && (
           importedHiddenNodeIds.size > 0 || importedHiddenEdgeIds.size > 0
@@ -2335,6 +2356,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const exactImportedState = importedBaseEnabled
           && !importedStateModified
           && collapsedNodeIds.size === 0
+          && focusedBranchNodeId === null
           && visibleLevelLimit === null;
         const baseHiddenNodeIds = importedBaseEnabled
           ? new Set(workingImportedHiddenNodeIds)
@@ -2357,6 +2379,21 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             if (memberIds.length > 0 && memberIds.every((memberId) => hiddenNodeIds.has(memberId))) {
               hiddenNodeIds.add(groupId);
             }
+          }
+        }
+
+        if (focusedBranchNodeId !== null) {
+          const focusedNodeIds = new Set([
+            focusedBranchNodeId,
+            ...getDescendants(focusedBranchNodeId),
+          ]);
+          for (const [groupId, memberIds] of Object.entries(foldingGraph.groupMembersByNode)) {
+            if (memberIds.some((memberId) => focusedNodeIds.has(memberId))) {
+              focusedNodeIds.add(groupId);
+            }
+          }
+          for (const nodeId of Object.keys(foldingGraph.childrenByNode)) {
+            if (!focusedNodeIds.has(nodeId)) hiddenNodeIds.add(nodeId);
           }
         }
 
@@ -2394,6 +2431,22 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
               + " · " + descendantCount + " descendants",
           );
         });
+        document.querySelectorAll(".branch-focus-control[data-focus-node-id]").forEach((control) => {
+          const nodeId = control.getAttribute("data-focus-node-id") || "";
+          const isFocused = nodeId === focusedBranchNodeId;
+          control.hidden = !foldingControlsEnabled;
+          control.classList.toggle("is-active", isFocused);
+          control.setAttribute("aria-pressed", String(isFocused));
+          control.setAttribute(
+            "aria-label",
+            isFocused ? "Exit branch focus" : "Focus branch",
+          );
+          control.setAttribute(
+            "title",
+            (isFocused ? "Exit branch focus" : "Focus branch")
+              + " · " + getDescendants(nodeId).length + " descendants",
+          );
+        });
         document.querySelectorAll(".minimap-node[data-node-id]").forEach((node) => {
           const nodeId = node.getAttribute("data-node-id") || "";
           node.classList.toggle("is-folding-hidden", hiddenNodeIds.has(nodeId));
@@ -2408,6 +2461,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             : "Enable folding";
           foldingModeButton.classList.toggle("is-active", !foldingControlsEnabled);
           foldingModeButton.setAttribute("aria-pressed", String(!foldingControlsEnabled));
+        }
+        if (foldingFocusExitButton) {
+          foldingFocusExitButton.disabled = focusedBranchNodeId === null;
         }
         if (hiddenNodeSummary) {
           const hiddenCount = hiddenNodeIds.size;
@@ -2452,6 +2508,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       window.expandAllBranches = function() {
         clearImportedFoldingBase();
         collapsedNodeIds.clear();
+        focusedBranchNodeId = null;
         visibleLevelLimit = null;
         syncFoldingLevelSelect();
         updateFoldingVisibility();
@@ -2460,6 +2517,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       window.collapseAllBranches = function() {
         clearImportedFoldingBase();
         collapsedNodeIds.clear();
+        focusedBranchNodeId = null;
         visibleLevelLimit = null;
         for (const nodeId of foldingGraph.rootNodeIds) {
           if (getDescendants(nodeId).length > 0) collapsedNodeIds.add(nodeId);
@@ -2471,6 +2529,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       window.setVisibleLevel = function(value) {
         clearImportedFoldingBase();
         collapsedNodeIds.clear();
+        focusedBranchNodeId = null;
         const parsedLevel = Number(value);
         visibleLevelLimit = value === "all" || !Number.isFinite(parsedLevel)
           ? null
@@ -2484,11 +2543,25 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         applyImportedFolding(${JSON.stringify(hasImportedFolding)});
       };
 
+      function focusBranch(nodeId) {
+        if (!nodeId || getDescendants(nodeId).length === 0) return;
+        focusedBranchNodeId = focusedBranchNodeId === nodeId ? null : nodeId;
+        updateFoldingVisibility();
+      }
+
+      window.focusBranch = focusBranch;
+
+      window.exitBranchFocus = function() {
+        focusedBranchNodeId = null;
+        updateFoldingVisibility();
+      };
+
       window.toggleFoldingMode = function() {
         foldingControlsEnabled = !foldingControlsEnabled;
         if (!foldingControlsEnabled) {
           clearImportedFoldingBase();
           collapsedNodeIds.clear();
+          focusedBranchNodeId = null;
           visibleLevelLimit = null;
           syncFoldingLevelSelect();
         }
@@ -2600,6 +2673,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           event.preventDefault();
           event.stopPropagation();
           toggleBranch(control.getAttribute("data-branch-node-id") || "");
+        });
+      });
+      document.querySelectorAll(".branch-focus-control[data-focus-node-id]").forEach((control) => {
+        control.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          focusBranch(control.getAttribute("data-focus-node-id") || "");
         });
       });
       window.addEventListener("pointermove", moveMinimap, { passive: true });
@@ -2998,7 +3078,7 @@ async function renderNode(
 
   const content = type === "group" ? "" : await renderNodeContent(node, darkMode, highlightingTheme);
   const branchControl = descendantCount > 0
-    ? `<button class="branch-control" type="button" data-branch-node-id="${escapeAttribute(node.id)}" aria-expanded="true" title="Collapse branch · ${descendantCount} descendants">−</button>`
+    ? `<button class="branch-focus-control" type="button" data-focus-node-id="${escapeAttribute(node.id)}" aria-label="Focus branch" aria-pressed="false" title="Focus branch · ${descendantCount} descendants">◎</button><button class="branch-control" type="button" data-branch-node-id="${escapeAttribute(node.id)}" aria-expanded="true" title="Collapse branch · ${descendantCount} descendants">−</button>`
     : "";
 
   return `<div

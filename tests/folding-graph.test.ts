@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   buildCanvasFoldingGraph,
   deriveCollapsedVisibility,
+  getCanvasBranchNodeIds,
   getCanvasDescendants,
   getNodesBeyondLevel,
   toggleCollapsedBranch,
@@ -69,6 +70,8 @@ test("collapses a directed cycle finitely without hiding the selected node", () 
 
   assert.deepEqual([...visibility.hiddenNodeIds].sort(), ["b", "c"]);
   assert.deepEqual([...visibility.hiddenEdgeIds].sort(), ["a-b", "b-c", "c-a"]);
+  assert.deepEqual([...getCanvasBranchNodeIds(graph, "a")].sort(), ["a", "b", "c"]);
+  assert.deepEqual([...getCanvasBranchNodeIds(graph, "missing")], []);
 });
 
 test("hides a non-empty group only when all contained nodes are hidden", () => {

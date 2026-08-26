@@ -199,6 +199,14 @@ export function getCanvasDescendants(
   return collectDescendants(startId, graph.childrenByNode);
 }
 
+export function getCanvasBranchNodeIds(
+  graph: CanvasFoldingGraph,
+  startId: string,
+): ReadonlySet<string> {
+  if (!(startId in graph.childrenByNode)) return new Set();
+  return new Set([startId, ...getCanvasDescendants(graph, startId)]);
+}
+
 function collectDescendants(
   startId: string,
   childrenByNode: Readonly<Record<string, readonly string[]>>,
