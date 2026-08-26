@@ -706,6 +706,10 @@ await test("applies an imported Canvas Folding state in both export modes", asyn
     assert.match(html, /hiddenNodeIds\.has\(edge\.fromId\)/);
     assert.match(html, /hiddenNodeIds\.has\(edge\.toId\)/);
     assert.match(html, /function applyImportedFolding\(applied\)/);
+    assert.match(html, /workingImportedHiddenNodeIds\.delete\(descendantId\)/);
+    assert.match(html, /function branchHasHiddenContent\(nodeId, descendants\)/);
+    assert.match(html, /control\.hidden = false/);
+    assert.doesNotMatch(html, /if \(importedFoldingApplied \|\| descendants\.length === 0\) return/);
     assert.match(html, /window\.toggleImportedFolding = function\(\)/);
     assert.match(html, /applyImportedFolding\(true\)/);
     assert.match(html, /if \(hiddenNodeIds\.has\(nodeId\)\) \{\s+applyImportedFolding\(false\)/);
@@ -754,12 +758,12 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /"childrenByNode":\{"child":\["leaf"\],"leaf":\[\],"root":\["child"\]\}/);
     assert.doesNotMatch(html, /"descendantsByNode"/);
     assert.match(html, /function getDescendants\(nodeId\)/);
-    assert.match(html, /function deriveCollapsedVisibility\(\)/);
+    assert.match(html, /function deriveCollapsedVisibility\(baseHiddenNodeIds\)/);
     assert.match(html, /function updateFoldingVisibility\(\)/);
     assert.match(html, /function toggleBranch\(nodeId\)/);
     assert.match(html, /collapsedNodeIds\.has\(edge\.fromId\)/);
     assert.match(html, /hasVisibleAlternativeParent/);
-    assert.match(html, /control\.hidden = importedFoldingApplied/);
+    assert.match(html, /control\.hidden = false/);
     assert.match(html, /control\.addEventListener\("click"/);
     const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
     assert.doesNotThrow(() => new vm.Script(runtime));

@@ -1419,9 +1419,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const importedHiddenNodeIds = new Set(${JSON.stringify(initialFoldState?.hiddenNodeIds ?? [])});
       const importedHiddenEdgeIds = new Set(${JSON.stringify(initialFoldState?.hiddenEdgeIds ?? [])});
       const collapsedNodeIds = new Set();
+      let workingImportedHiddenNodeIds = new Set();
       let hiddenNodeIds = new Set();
       let hiddenEdgeIds = new Set();
-      let importedFoldingApplied = false;
+      let importedBaseEnabled = false;
+      let importedStateModified = false;
       let currentScale = 1;
       let minimapDrag = null;
       let minimapPan = null;
@@ -2185,9 +2187,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
       function applyImportedFolding(applied) {
         collapsedNodeIds.clear();
-        importedFoldingApplied = Boolean(applied) && (
+        importedBaseEnabled = Boolean(applied) && (
           importedHiddenNodeIds.size > 0 || importedHiddenEdgeIds.size > 0
         );
+        workingImportedHiddenNodeIds = importedBaseEnabled
+          ? new Set(importedHiddenNodeIds)
+          : new Set();
+        importedStateModified = !importedBaseEnabled;
         updateFoldingVisibility();
       }
 
@@ -2210,7 +2216,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         return descendants;
       }
 
-      function deriveCollapsedVisibility() {
+      function deriveCollapsedVisibility(baseHiddenNodeIds) {
         const dynamicHiddenNodeIds = new Set();
         for (const nodeId of [...collapsedNodeIds].sort()) {
           for (const descendantId of getDescendants(nodeId)) {
@@ -2224,7 +2230,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           for (const nodeId of [...dynamicHiddenNodeIds].sort()) {
             const parents = foldingGraph.parentsByNode[nodeId] || [];
             const hasVisibleAlternativeParent = parents.some((parentId) => (
-              !dynamicHiddenNodeIds.has(parentId) && !collapsedNodeIds.has(parentId)
+              !baseHiddenNodeIds.has(parentId)
+              && !dynamicHiddenNodeIds.has(parentId)
+              && !collapsedNodeIds.has(parentId)
             ));
             if (hasVisibleAlternativeParent) {
               dynamicHiddenNodeIds.delete(nodeId);
@@ -2233,34 +2241,46 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           }
         }
 
-        for (const [groupId, memberIds] of Object.entries(foldingGraph.groupMembersByNode)) {
-          if (memberIds.length > 0 && memberIds.every((memberId) => dynamicHiddenNodeIds.has(memberId))) {
-            dynamicHiddenNodeIds.add(groupId);
-          }
-        }
-
-        const dynamicHiddenEdgeIds = new Set();
-        for (const edge of edges) {
-          if (!edge.id) continue;
-          if (
-            collapsedNodeIds.has(edge.fromId)
-            || dynamicHiddenNodeIds.has(edge.fromId)
-            || dynamicHiddenNodeIds.has(edge.toId)
-          ) {
-            dynamicHiddenEdgeIds.add(edge.id);
-          }
-        }
-        return { hiddenEdgeIds: dynamicHiddenEdgeIds, hiddenNodeIds: dynamicHiddenNodeIds };
+        return dynamicHiddenNodeIds;
       }
 
       function updateFoldingVisibility() {
-        if (importedFoldingApplied) {
-          hiddenNodeIds = new Set(importedHiddenNodeIds);
+        const exactImportedState = importedBaseEnabled
+          && !importedStateModified
+          && collapsedNodeIds.size === 0;
+        const baseHiddenNodeIds = importedBaseEnabled
+          ? new Set(workingImportedHiddenNodeIds)
+          : new Set();
+        hiddenNodeIds = new Set(baseHiddenNodeIds);
+        for (const nodeId of deriveCollapsedVisibility(baseHiddenNodeIds)) {
+          hiddenNodeIds.add(nodeId);
+        }
+
+        if (!exactImportedState) {
+          for (const groupId of Object.keys(foldingGraph.groupMembersByNode)) {
+            hiddenNodeIds.delete(groupId);
+          }
+          for (const [groupId, memberIds] of Object.entries(foldingGraph.groupMembersByNode)) {
+            if (memberIds.length > 0 && memberIds.every((memberId) => hiddenNodeIds.has(memberId))) {
+              hiddenNodeIds.add(groupId);
+            }
+          }
+        }
+
+        if (exactImportedState) {
           hiddenEdgeIds = new Set(importedHiddenEdgeIds);
         } else {
-          const dynamicVisibility = deriveCollapsedVisibility();
-          hiddenNodeIds = dynamicVisibility.hiddenNodeIds;
-          hiddenEdgeIds = dynamicVisibility.hiddenEdgeIds;
+          hiddenEdgeIds = new Set();
+          for (const edge of edges) {
+            if (!edge.id) continue;
+            if (
+              collapsedNodeIds.has(edge.fromId)
+              || hiddenNodeIds.has(edge.fromId)
+              || hiddenNodeIds.has(edge.toId)
+            ) {
+              hiddenEdgeIds.add(edge.id);
+            }
+          }
         }
 
         document.querySelectorAll(".node[data-node-id]").forEach((node) => {
@@ -2271,9 +2291,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const nodeId = control.getAttribute("data-branch-node-id") || "";
           const descendants = getDescendants(nodeId);
           const descendantCount = descendants.length;
-          const hasHiddenBranch = collapsedNodeIds.has(nodeId)
-            || descendants.some((descendantId) => hiddenNodeIds.has(descendantId));
-          control.hidden = importedFoldingApplied;
+          const hasHiddenBranch = branchHasHiddenContent(nodeId, descendants);
+          control.hidden = false;
           control.textContent = hasHiddenBranch ? "+" : "−";
           control.setAttribute("aria-expanded", String(!hasHiddenBranch));
           control.setAttribute(
@@ -2288,32 +2307,48 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         });
 
         if (foldingToolbarButton) {
-          foldingToolbarButton.textContent = importedFoldingApplied
+          foldingToolbarButton.textContent = exactImportedState
             ? "Expand all"
             : "Restore folding";
-          foldingToolbarButton.classList.toggle("is-active", importedFoldingApplied);
-          foldingToolbarButton.setAttribute("aria-pressed", String(importedFoldingApplied));
+          foldingToolbarButton.classList.toggle("is-active", exactImportedState);
+          foldingToolbarButton.setAttribute("aria-pressed", String(exactImportedState));
         }
         drawEdges();
         updateMinimapViewport();
       }
 
+      function branchHasHiddenContent(nodeId, descendants) {
+        if (collapsedNodeIds.has(nodeId)) return true;
+        if (descendants.some((descendantId) => hiddenNodeIds.has(descendantId))) return true;
+        const branchSources = new Set([nodeId, ...descendants]);
+        const branchTargets = new Set(descendants);
+        return edges.some((edge) => (
+          hiddenEdgeIds.has(edge.id)
+          && branchSources.has(edge.fromId)
+          && branchTargets.has(edge.toId)
+        ));
+      }
+
       function toggleBranch(nodeId) {
         const descendants = getDescendants(nodeId);
-        if (importedFoldingApplied || descendants.length === 0) return;
-        const hasHiddenBranch = collapsedNodeIds.has(nodeId)
-          || descendants.some((descendantId) => hiddenNodeIds.has(descendantId));
+        if (descendants.length === 0) return;
+        const hasHiddenBranch = branchHasHiddenContent(nodeId, descendants);
         if (hasHiddenBranch) {
           collapsedNodeIds.delete(nodeId);
           descendants.forEach((descendantId) => collapsedNodeIds.delete(descendantId));
+          descendants.forEach((descendantId) => workingImportedHiddenNodeIds.delete(descendantId));
         } else {
           collapsedNodeIds.add(nodeId);
         }
+        if (importedBaseEnabled) importedStateModified = true;
         updateFoldingVisibility();
       }
 
       window.toggleImportedFolding = function() {
-        applyImportedFolding(!importedFoldingApplied);
+        const exactImportedState = importedBaseEnabled
+          && !importedStateModified
+          && collapsedNodeIds.size === 0;
+        applyImportedFolding(!exactImportedState);
       };
 
       function startMinimapDrag(event) {
