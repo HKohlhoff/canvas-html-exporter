@@ -808,6 +808,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     }
     .toolbar button:hover,
     .toolbar select:hover { background: ${theme.chipBackground}; }
+    .folding-action-control[hidden] {
+      display: none;
+    }
     .toolbar button.is-active {
       border-color: ${theme.link};
       background: ${theme.chipBackground};
@@ -1378,10 +1381,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     <button type="button" onclick="zoomBy(1 / 1.15)">Zoom −</button>
     <button type="button" onclick="zoomBy(1.15)">Zoom +</button>
     <button type="button" onclick="resetZoom()">Reset</button>
-    ${hasBranchGraph || hasImportedFolding ? `<button id="folding-expand-all-button" type="button" onclick="expandAllBranches()">Expand all</button>` : ""}
-    ${hasRootedBranches ? `<button id="folding-collapse-all-button" type="button" onclick="collapseAllBranches()">Collapse all</button>` : ""}
-    ${hasLevelView ? `<select id="folding-level-select" aria-label="Visible canvas levels" title="Visible canvas levels" onchange="setVisibleLevel(this.value)"><option value="all">All levels</option>${foldingLevelOptions}</select>` : ""}
-    ${hasImportedFolding ? `<button id="folding-toolbar-button" type="button" onclick="restoreImportedFolding()" hidden>Restore folding</button>` : ""}
+    ${hasBranchGraph || hasImportedFolding ? `<button id="folding-mode-button" type="button" onclick="toggleFoldingMode()" aria-pressed="false">No folding</button>` : ""}
+    ${hasBranchGraph || hasImportedFolding ? `<button id="folding-expand-all-button" class="folding-action-control" type="button" onclick="expandAllBranches()">Expand all</button>` : ""}
+    ${hasRootedBranches ? `<button id="folding-collapse-all-button" class="folding-action-control" type="button" onclick="collapseAllBranches()">Collapse all</button>` : ""}
+    ${hasLevelView ? `<select id="folding-level-select" class="folding-action-control" aria-label="Visible canvas levels" title="Visible canvas levels" onchange="setVisibleLevel(this.value)"><option value="all">All levels</option>${foldingLevelOptions}</select>` : ""}
+    ${hasImportedFolding ? `<button id="folding-toolbar-button" class="folding-action-control" type="button" onclick="restoreImportedFolding()" hidden>Restore folding</button>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
   </div>
@@ -1414,6 +1418,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const minimapPanel = document.getElementById("minimap-panel");
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
+      const foldingModeButton = document.getElementById("folding-mode-button");
       const foldingToolbarButton = document.getElementById("folding-toolbar-button");
       const foldingLevelSelect = document.getElementById("folding-level-select");
       const hiddenNodeSummary = document.getElementById("hidden-node-summary");
@@ -1444,6 +1449,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       let hiddenEdgeIds = new Set();
       let importedBaseEnabled = false;
       let importedStateModified = false;
+      let foldingControlsEnabled = true;
       let visibleLevelLimit = null;
       let currentScale = 1;
       let minimapDrag = null;
@@ -2334,7 +2340,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const descendants = getDescendants(nodeId);
           const descendantCount = descendants.length;
           const hasHiddenBranch = branchHasHiddenContent(nodeId, descendants);
-          control.hidden = false;
+          control.hidden = !foldingControlsEnabled;
           control.textContent = hasHiddenBranch ? "+" : "−";
           control.setAttribute("aria-expanded", String(!hasHiddenBranch));
           control.setAttribute(
@@ -2348,8 +2354,18 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           node.classList.toggle("is-folding-hidden", hiddenNodeIds.has(nodeId));
         });
 
+        document.querySelectorAll(".folding-action-control").forEach((control) => {
+          control.hidden = !foldingControlsEnabled;
+        });
         if (foldingToolbarButton) {
-          foldingToolbarButton.hidden = exactImportedState;
+          foldingToolbarButton.hidden = !foldingControlsEnabled || exactImportedState;
+        }
+        if (foldingModeButton) {
+          foldingModeButton.textContent = foldingControlsEnabled
+            ? "No folding"
+            : "Enable folding";
+          foldingModeButton.classList.toggle("is-active", !foldingControlsEnabled);
+          foldingModeButton.setAttribute("aria-pressed", String(!foldingControlsEnabled));
         }
         if (hiddenNodeSummary) {
           const hiddenCount = hiddenNodeIds.size;
@@ -2423,6 +2439,17 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
       window.restoreImportedFolding = function() {
         applyImportedFolding(true);
+      };
+
+      window.toggleFoldingMode = function() {
+        foldingControlsEnabled = !foldingControlsEnabled;
+        if (!foldingControlsEnabled) {
+          clearImportedFoldingBase();
+          collapsedNodeIds.clear();
+          visibleLevelLimit = null;
+          syncFoldingLevelSelect();
+        }
+        updateFoldingVisibility();
       };
 
       function startMinimapDrag(event) {

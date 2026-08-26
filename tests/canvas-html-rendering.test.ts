@@ -702,6 +702,7 @@ await test("applies an imported Canvas Folding state in both export modes", asyn
     });
 
     assert.match(html, /id="folding-expand-all-button"[^>]+onclick="expandAllBranches\(\)"[^>]*>Expand all<\/button>/);
+    assert.match(html, /id="folding-mode-button"[^>]+onclick="toggleFoldingMode\(\)"[^>]*>No folding<\/button>/);
     assert.match(html, /id="folding-collapse-all-button"[^>]+onclick="collapseAllBranches\(\)"[^>]*>Collapse all<\/button>/);
     assert.match(html, /id="folding-level-select"[^>]+onchange="setVisibleLevel\(this\.value\)"/);
     assert.match(html, /<option value="all">All levels<\/option><option value="0">Level 0<\/option><option value="1">Level 1<\/option>/);
@@ -716,7 +717,7 @@ await test("applies an imported Canvas Folding state in both export modes", asyn
     assert.match(html, /function applyImportedFolding\(applied\)/);
     assert.match(html, /workingImportedHiddenNodeIds\.delete\(descendantId\)/);
     assert.match(html, /function branchHasHiddenContent\(nodeId, descendants\)/);
-    assert.match(html, /control\.hidden = false/);
+    assert.match(html, /control\.hidden = !foldingControlsEnabled/);
     assert.doesNotMatch(html, /if \(importedFoldingApplied \|\| descendants\.length === 0\) return/);
     assert.match(html, /window\.expandAllBranches = function\(\)/);
     assert.match(html, /window\.collapseAllBranches = function\(\)/);
@@ -743,6 +744,7 @@ await test("keeps the folding control absent for a fully expanded export", async
   );
 
   assert.doesNotMatch(html, /id="folding-toolbar-button"/);
+  assert.doesNotMatch(html, /id="folding-mode-button"/);
   assert.match(html, /applyImportedFolding\(false\)/);
 });
 
@@ -774,15 +776,20 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /function toggleBranch\(nodeId\)/);
     assert.match(html, /id="folding-expand-all-button"[^>]*>Expand all<\/button>/);
     assert.match(html, /id="folding-collapse-all-button"[^>]*>Collapse all<\/button>/);
+    assert.match(html, /id="folding-mode-button"[^>]+onclick="toggleFoldingMode\(\)"[^>]*>No folding<\/button>/);
     assert.match(html, /id="folding-level-select"[^>]*>[\s\S]*<option value="2">Level 2<\/option><\/select>/);
     assert.match(html, /"levelByNode":\{"root":0,"child":1,"leaf":2\}/);
     assert.match(html, /"maxLevel":2/);
     assert.match(html, /"rootNodeIds":\["root"\]/);
     assert.match(html, /level > visibleLevelLimit/);
     assert.match(html, /for \(const nodeId of foldingGraph\.rootNodeIds\)/);
+    assert.match(html, /let foldingControlsEnabled = true/);
+    assert.match(html, /control\.hidden = !foldingControlsEnabled/);
+    assert.match(html, /window\.toggleFoldingMode = function\(\)/);
+    assert.match(html, /foldingModeButton\.textContent = foldingControlsEnabled\s+\? "No folding"\s+: "Enable folding"/);
     assert.match(html, /collapsedNodeIds\.has\(edge\.fromId\)/);
     assert.match(html, /hasVisibleAlternativeParent/);
-    assert.match(html, /control\.hidden = false/);
+    assert.match(html, /control\.hidden = !foldingControlsEnabled/);
     assert.match(html, /control\.addEventListener\("click"/);
     const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
     assert.doesNotThrow(() => new vm.Script(runtime));
