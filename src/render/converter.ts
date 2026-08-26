@@ -1465,8 +1465,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       <button id="folding-expand-all-button" class="folding-action-control" type="button" onclick="expandAllBranches()">Expand all</button>
       ${hasRootedBranches ? `<button id="folding-collapse-all-button" class="folding-action-control" type="button" onclick="collapseAllBranches()">Collapse all</button>` : ""}
       ${hasLevelView ? `<select id="folding-level-select" class="folding-action-control" aria-label="Visible canvas levels" title="Visible canvas levels" onchange="setVisibleLevel(this.value)"><option value="all">All levels</option>${foldingLevelOptions}</select>` : ""}
-      <button id="folding-focus-exit-button" class="folding-action-control" type="button" onclick="exitBranchFocus()" disabled>Exit focus</button>
       <button id="folding-toolbar-button" type="button" onclick="restoreImportedFolding()">Restore folding</button>
+      <button id="folding-focus-exit-button" class="folding-action-control" type="button" onclick="exitBranchFocus()" disabled>Exit focus</button>
     </div></details>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}

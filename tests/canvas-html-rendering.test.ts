@@ -793,6 +793,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /id="folding-collapse-all-button"[^>]*>Collapse all<\/button>/);
     assert.match(html, /id="folding-menu" class="toolbar-menu"><summary>Folding<\/summary><div class="toolbar-menu-content">/);
     assert.match(html, /id="folding-focus-exit-button"[^>]+onclick="exitBranchFocus\(\)" disabled>Exit focus<\/button>/);
+    assert.match(html, /<button id="folding-toolbar-button"[^>]*>Restore folding<\/button>\s+<button id="folding-focus-exit-button"[^>]*>Exit focus<\/button>\s+<\/div><\/details>/);
     assert.match(html, /id="folding-mode-button"[^>]+onclick="toggleFoldingMode\(\)"[^>]*>No folding<\/button>/);
     assert.match(html, /id="folding-level-select"[^>]*>[\s\S]*<option value="2">Level 2<\/option><\/select>/);
     assert.match(html, /"levelByNode":\{"root":0,"child":1,"leaf":2\}/);
