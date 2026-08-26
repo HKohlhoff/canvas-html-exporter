@@ -131,9 +131,10 @@ Install from Obsidian Community Plugins once published, or copy manifest.json, m
 ## Development
 Install dependencies and run the checks:
 ```bash
-npm install
+npm ci
 npm test
-npm run build
+npm run lint
+npm run build:prod
 ```
 
 Development workflows:
@@ -148,6 +149,11 @@ export OBSIDIAN_PLUGINS_DIR="/path/to/.obsidian/plugins"
 npm run build:deploy
 npm run dev:deploy
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the project structure and development
+expectations. Release preparation is documented in
+[docs/release-checklist.md](docs/release-checklist.md), and notable changes are
+listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 **Canvas HTML Exporter** is licensed under the GNU General Public License (GPL) v3.0 or later.
