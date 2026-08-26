@@ -248,7 +248,9 @@ process.on("SIGINT", async () => {
   for (const watcher of staticWatchers) {
     try {
       watcher.close();
-    } catch {}
+    } catch {
+      // Watcher cleanup is best effort during process shutdown.
+    }
   }
   await ctx.dispose();
   console.log("\n🛑 Watch mode stopped.");

@@ -9,8 +9,8 @@ function countDistinctHighlightColors(html: string): number {
 function test(name: string, fn: () => Promise<void> | void): Promise<void> | void {
   try {
     const result = fn();
-    if (result && typeof (result as Promise<void>).then === "function") {
-      return (result as Promise<void>).then(
+    if (result) {
+      return result.then(
         () => console.log(`PASS ${name}`),
         (error) => {
           console.error(`FAIL ${name}`);
@@ -225,4 +225,7 @@ await test("escapes special characters in markdown link hrefs", async () => {
   const html = await markdownToHtml('[Link](https://example.com?a=1&b=2"c")');
   assert.match(html, /href="https:\/\/example\.com\?a=1&amp;b=2&quot;c&quot;"/);
 });
-})();
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

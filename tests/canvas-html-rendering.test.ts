@@ -4,8 +4,8 @@ import { buildMarkdownDocumentHtml, CanvasData, convertCanvasToHtml } from "../s
 function test(name: string, fn: () => Promise<void> | void): Promise<void> | void {
   try {
     const result = fn();
-    if (result && typeof (result as Promise<void>).then === "function") {
-      return (result as Promise<void>).then(
+    if (result) {
+      return result.then(
         () => console.log(`PASS ${name}`),
         (error) => {
           console.error(`FAIL ${name}`);
@@ -342,7 +342,7 @@ await test("renders standalone markdown documents with wrapper and title", () =>
   assert.match(html, /table \{ border-collapse: collapse; width: auto; max-width: 100%; margin: 0\.8em 0; \}/);
   assert.match(html, /URLSearchParams\(window\.location\.search\)/);
   assert.match(html, /className = "search-highlight"/);
-  assert.match(html, /:target,\n    \.target-highlight \{/);
+  assert.match(html, /:target,\n {4}\.target-highlight \{/);
   assert.match(html, /const highlightTarget = target\.closest\("details\.heading-section"\) \|\| target;/);
   assert.match(html, /highlightTarget\.classList\.add\("target-highlight"\)/);
 });
@@ -704,7 +704,7 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /window\.openSearch = openSearch/);
   assert.match(html, /event\.key === "\/"/);
   assert.match(html, /"title":"Alpha Beta Gamma"/);
-  assert.match(html, /"openHref":"assets\/files\/suche-notiz\.html"|\"openHref\":\"assets\/files\//);
+  assert.match(html, /"openHref":"assets\/files\/suche-notiz\.html"|"openHref":"assets\/files\//);
   assert.match(html, /title\.setAttribute\("data-search-open", "true"\)/);
   assert.match(html, /search-result-title-link/);
   assert.match(html, /function applyLinkAttrs\(link, href, query\)/);
@@ -766,4 +766,7 @@ await test("omits search ui when disabled", async () => {
   assert.doesNotMatch(html, /id="search-overlay"/);
   assert.doesNotMatch(html, /id="search-input"/);
 });
-})();
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

@@ -97,7 +97,7 @@ To use it:
 1. Download this repository as a ZIP file from GitHub and extract it.
 2. Open `examples/demo-vault` as a vault in Obsidian.
 3. Install and enable **Canvas HTML Exporter**:
-   - from Obsidian Community Plugins once published, or
+   - from Obsidian Community Plugins, or
    - manually by copying `manifest.json`, `main.js`, and `styles.css` into `.obsidian/plugins/canvas-html-exporter/`.
 4. Open the plugin settings and choose the export format and output folder.
 5. Open `documentation/Canvas HTML Exporter - Documentation.canvas`.
@@ -105,7 +105,8 @@ To use it:
 
 ## Installation
 
-Install from Obsidian Community Plugins once published, or copy manifest.json, main.js, and styles.css into your vault plugin folder. 
+Install from Obsidian Community Plugins, or copy `manifest.json`, `main.js`, and
+`styles.css` into your Vault plugin folder.
 
 ## Plugin Settings
 
@@ -133,7 +134,6 @@ Install dependencies and run the checks:
 ```bash
 npm ci
 npm test
-npm run lint
 npm run build:prod
 ```
 
@@ -169,5 +169,5 @@ The bundled plugin code may contain static-analysis matches for `fetch()`, `requ
 ## Support
 Please report bugs via the GitHub repository. I will try to respond to confirmed bugs and issues as quickly as possible.
 
-If you enjoy the plugin and find it useful, you can support further development by buying me a coffee.
-<a href='https://ko-fi.com/R5R2151DS7' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi1.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+If you enjoy the plugin and find it useful, you can
+[support further development on Ko-fi](https://ko-fi.com/hokdev).

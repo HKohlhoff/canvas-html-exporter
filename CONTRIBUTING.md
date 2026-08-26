@@ -5,9 +5,11 @@
 ```bash
 npm ci
 npm test
-npm run lint
 npm run build:prod
 ```
+
+Development requires Node.js 22.13 or newer. CI verifies the project with the
+supported Node.js 22 and 24 LTS lines.
 
 For local Obsidian testing, set `OBSIDIAN_PLUGINS_DIR` to the parent directory
 that contains vault plugins and run:

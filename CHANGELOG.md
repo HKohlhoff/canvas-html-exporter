@@ -10,6 +10,10 @@ first.
 
 - Prepare the project structure, role-based review workflow, manual test matrix
   and release checklist for the optional Canvas Folding integration.
+- Update the supported development toolchain, Obsidian lint coverage, CI
+  runtimes and automated release-metadata checks.
+- Add Obsidian's standard funding metadata and refresh published-installation
+  wording.
 - Develop the integration on `feature/canvas-folding-integration`; no
   user-facing folding behavior has been released yet.
 

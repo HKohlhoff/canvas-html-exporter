@@ -26,7 +26,6 @@ Run from a clean install where practical:
 ```bash
 npm ci
 npm test
-npm run lint
 npm run build:prod
 ```
 

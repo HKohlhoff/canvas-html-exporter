@@ -4,8 +4,8 @@ import { markdownToHtml } from "../src/converter";
 function test(name: string, fn: () => Promise<void> | void): Promise<void> | void {
   try {
     const result = fn();
-    if (result && typeof (result as Promise<void>).then === "function") {
-      return (result as Promise<void>).then(
+    if (result) {
+      return result.then(
         () => console.log(`PASS ${name}`),
         (error) => {
           console.error(`FAIL ${name}`);
@@ -60,4 +60,7 @@ await test("degrades invalid latex without throwing", async () => {
   const html = await markdownToHtml("$\\notARealCommand{$");
   assert.match(html, /<code>\\notARealCommand\{<\/code>/);
 });
-})();
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

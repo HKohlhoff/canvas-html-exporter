@@ -1,44 +1,57 @@
-import tseslint from "@typescript-eslint/eslint-plugin";
-import tsparser from "@typescript-eslint/parser";
-import { defineConfig } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
+import globals from "globals";
+import tseslint from "typescript-eslint";
 
-export default defineConfig([
+export default defineConfig(
+  globalIgnores([
+    ".test-build/**",
+    "Canvas-HTML-Exporter_TestVault/**",
+    "documentation/**",
+    "examples/**",
+    "images/**",
+    "main.js",
+    "node_modules/**",
+    "release/**",
+  ]),
   {
-    ignores: [
-      ".test-build/**",
-      "documentation/**",
-      "examples/**",
-      "node_modules/**",
-      "release/**",
-      "tests/**",
-    ],
+    files: ["**/*.{js,mjs}"],
+    languageOptions: {
+      globals: globals.node,
+    },
   },
   ...obsidianmd.configs.recommended,
   {
-    files: ["package.json"],
-    rules: {
-      "obsidianmd/no-plugin-as-component": "off",
-    },
-  },
-  {
-    files: ["src/**/*.ts"],
-    plugins: {
-      "@typescript-eslint": tseslint,
-    },
+    files: ["src/**/*.ts", "tests/**/*.ts"],
     languageOptions: {
-      parser: tsparser,
+      globals: globals.browser,
+      parser: tseslint.parser,
       parserOptions: {
-        project: "./tsconfig.json",
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
+  },
+  {
+    files: ["build.mjs", "scripts/**/*.mjs", "version-bump.mjs"],
     rules: {
-      "@typescript-eslint/no-redundant-type-constituents": "error",
-      "@typescript-eslint/no-unsafe-assignment": "error",
-      "@typescript-eslint/no-unsafe-call": "error",
-      "@typescript-eslint/no-unsafe-member-access": "error",
-      "@typescript-eslint/no-unsafe-return": "error",
+      "obsidianmd/hardcoded-config-path": "off",
+      "obsidianmd/no-nodejs-modules": "off",
+      "obsidianmd/rule-custom-message": "off",
     },
   },
-]);
+  {
+    files: ["tests/**/*.ts"],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+    rules: {
+      "no-console": "off",
+      "obsidianmd/rule-custom-message": "off",
+      "obsidianmd/no-nodejs-modules": "off",
+    },
+  },
+);

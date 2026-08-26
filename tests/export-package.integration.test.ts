@@ -24,8 +24,8 @@ type MockFolder = {
 function test(name: string, fn: () => Promise<void> | void): Promise<void> | void {
   try {
     const result = fn();
-    if (result && typeof (result as Promise<void>).then === "function") {
-      return (result as Promise<void>).then(
+    if (result) {
+      return result.then(
         () => console.log(`PASS ${name}`),
         (error) => {
           console.error(`FAIL ${name}`);

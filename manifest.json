@@ -6,5 +6,6 @@
   "description": "Export canvas files as portable interactive HTML package or standalone page.",
   "author": "Holger Kohlhoff",
   "authorUrl": "https://github.com/HKohlhoff",
+  "fundingUrl": "https://ko-fi.com/hokdev",
   "isDesktopOnly": true
 }
