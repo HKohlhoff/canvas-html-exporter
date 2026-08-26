@@ -36,7 +36,7 @@ A **demo-vault** with the full documentation can be downloaded from the `example
 - Support link nodes with preview pages and offline/blocking fallbacks
 - Include zoom controls, visibility-aware reset/fit, an optional minimap, and an optional search overlay
 - Add interactive branch folding, level views, branch focus, and global folding actions to exported pages
-- Optionally import the effective hidden state from Canvas Folding through its public API v1
+- Optionally start the exported page with the current Canvas Folding state
 - Keep folding available in exported HTML even when Canvas Folding is not installed
 - Show hidden node and group counts separately in the exported page header
 - Highlight selected search results with a strong yellow pulse
@@ -97,14 +97,11 @@ hidden Canvas groups separately.
 companion plugin, not a dependency. In `Initial folding state`, choose:
 
 - `Fully expanded` to keep the established exporter behavior;
-- `Current Canvas Folding state` to request the effective hidden node and edge
-  IDs from the active Canvas through Canvas Folding's public, versioned API v1.
+- `Current Canvas Folding state` to start the exported page with the same
+  folded branches that are currently shown in Obsidian.
 
-The exporter discovers only the plugin ID `canvas-folding` and accepts only the
-documented API version. If Canvas Folding is missing, disabled, incompatible,
-returns invalid data, or reports an error, export continues normally with a
-fully usable HTML page. No private Canvas Folding classes, DOM elements, views,
-or persistent Canvas metadata are used.
+If Canvas Folding is not available, export continues normally and the page
+starts fully expanded.
 
 The generated page is self-contained: its folding controls work in a normal
 browser regardless of whether Canvas Folding is installed in the Obsidian
@@ -117,9 +114,8 @@ rendered `What's new` view once. It summarizes the new controls and how to use
 them. Closing the view removes it completely; no release-note file is created
 in the Vault.
 
-The Markdown source is embedded in the installed plugin code. The plugin stores
-only a small release-note identifier in its versioned plugin data so the view
-is not opened again on every Obsidian start.
+The update description is shown only once and does not reappear on every
+Obsidian start.
 
 ## Supported Content
 

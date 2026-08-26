@@ -8,8 +8,8 @@ first.
 
 ### Added
 
-- Add optional Canvas Folding API v1 integration with a fully expanded
-  fallback when the provider is missing, disabled, incompatible, or failing.
+- Add optional import of the current Canvas Folding state with a fully expanded
+  fallback when Canvas Folding is unavailable.
 - Add browser controls for individual branches, expand/collapse all, visible
   levels, imported-state restore, no-folding mode, and branch focus.
 - Add separate hidden-node and hidden-group counts to the exported page.

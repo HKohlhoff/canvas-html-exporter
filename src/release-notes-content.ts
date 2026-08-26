@@ -6,7 +6,7 @@ This update adds interactive tree and folding tools to exported Canvas HTML page
 
 ## Highlights
 
-- **Optional Canvas Folding integration:** choose **Current Canvas Folding state** in the exporter settings to use the effective hidden state supplied by Canvas Folding API v1 as the initial HTML view.
+- **Optional Canvas Folding integration:** choose **Current Canvas Folding state** to start the exported page with the same folded branches that are currently shown in Obsidian.
 - **No required dependency:** exports remain fully usable when Canvas Folding is not installed, disabled, incompatible, or unavailable.
 - **Branch controls:** expand or collapse individual directed branches directly on their nodes.
 - **Global folding menu:** use **Expand all**, **Collapse all**, a visible level, **Restore folding**, or **No folding**.
