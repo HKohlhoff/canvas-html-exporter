@@ -654,6 +654,10 @@ await test("renders minimap markup and viewport sync when enabled", async () => 
   assert.match(html, /id="minimap-panel" class="minimap" aria-label="Canvas minimap" hidden/);
   assert.match(html, /id="minimap-drag-handle" class="minimap-header"/);
   assert.match(html, /id="minimap-toolbar-button" type="button" onclick="toggleMinimap\(\)"/);
+  assert.match(html, /#canvas-shell \{\s+display: flex;\s+flex-direction: column;\s+height: 100vh;\s+height: 100dvh;\s+min-height: 0;/);
+  assert.match(html, /#canvas-shell\[hidden\] \{\s+display: none;/);
+  assert.match(html, /\.viewport \{\s+overflow: auto;\s+padding: 16px 24px 28px;\s+flex: 1 1 auto;\s+min-height: 0;/);
+  assert.doesNotMatch(html, /height: calc\(100vh - 132px\)/);
   assert.doesNotMatch(html, />Navigation</);
   assert.match(html, /id="minimap-svg"/);
   assert.match(html, /id="minimap-viewport"/);
@@ -664,6 +668,9 @@ await test("renders minimap markup and viewport sync when enabled", async () => 
   assert.match(html, /function applyMinimapPosition\(left, top\)/);
   assert.match(html, /function cubicPoint\(p0, p1, p2, p3, t\)/);
   assert.match(html, /function scrollViewportToCanvasPoint\(x, y, behavior\)/);
+  assert.match(html, /const canvasRect = canvas\.getBoundingClientRect\(\);\s+const viewportRect = viewport\.getBoundingClientRect\(\);\s+const canvasLeft = canvasRect\.left - viewportRect\.left \+ viewport\.scrollLeft;/);
+  assert.match(html, /const canvasTop = canvasRect\.top - viewportRect\.top \+ viewport\.scrollTop;/);
+  assert.doesNotMatch(html, /canvas\.offsetTop \+ y \* currentScale/);
   assert.match(html, /function startMinimapPan\(event\)/);
   assert.match(html, /function moveMinimapPan\(event\)/);
   assert.match(html, /function stopMinimapPan\(event\)/);

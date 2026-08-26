@@ -419,10 +419,22 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       color: ${theme.text};
       overflow: auto;
     }
+    #canvas-shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+    }
+    #canvas-shell[hidden] {
+      display: none;
+    }
     .page-header {
       max-width: 1200px;
+      width: 100%;
       margin: 0 auto;
       padding: 20px 24px 8px;
+      flex: 0 0 auto;
     }
     .page-header h1 {
       margin: 0 0 8px;
@@ -436,7 +448,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     .viewport {
       overflow: auto;
       padding: 16px 24px 28px;
-      height: calc(100vh - 132px);
+      flex: 1 1 auto;
+      min-height: 0;
     }
     #canvas {
       position: relative;
@@ -820,6 +833,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       top: 0;
       z-index: 10;
       display: flex;
+      flex: 0 0 auto;
       align-items: center;
       flex-wrap: wrap;
       gap: 8px;
@@ -1777,8 +1791,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       }
 
       function scrollViewportToCanvasPoint(x, y, behavior) {
-        const targetLeft = canvas.offsetLeft + x * currentScale - viewport.clientWidth / 2;
-        const targetTop = canvas.offsetTop + y * currentScale - viewport.clientHeight / 2;
+        const canvasRect = canvas.getBoundingClientRect();
+        const viewportRect = viewport.getBoundingClientRect();
+        const canvasLeft = canvasRect.left - viewportRect.left + viewport.scrollLeft;
+        const canvasTop = canvasRect.top - viewportRect.top + viewport.scrollTop;
+        const targetLeft = canvasLeft + x * currentScale - viewport.clientWidth / 2;
+        const targetTop = canvasTop + y * currentScale - viewport.clientHeight / 2;
         viewport.scrollTo({
           left: Math.max(0, targetLeft),
           top: Math.max(0, targetTop),
