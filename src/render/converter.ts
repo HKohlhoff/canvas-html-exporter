@@ -294,6 +294,17 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
   const bounds = getBounds(nodes);
   const foldingGraph = buildCanvasFoldingGraph(nodes, edges);
+  const hasBranchGraph = nodes.some(
+    (node) => getCanvasDescendants(foldingGraph, node.id).length > 0,
+  );
+  const hasRootedBranches = foldingGraph.rootNodeIds.some(
+    (nodeId) => getCanvasDescendants(foldingGraph, nodeId).length > 0,
+  );
+  const hasLevelView = foldingGraph.maxLevel > 0;
+  const foldingLevelOptions = Array.from(
+    { length: foldingGraph.maxLevel + 1 },
+    (_, level) => `<option value="${level}">Level ${level}</option>`,
+  ).join("");
   const theme = getTheme(options.darkMode);
   const calloutCss = buildCalloutCss(options.calloutColors);
   const headingCss = buildHeadingColorCss(".node-content ", options.headingColors);
@@ -779,12 +790,15 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       top: 0;
       z-index: 10;
       display: flex;
+      align-items: center;
+      flex-wrap: wrap;
       gap: 8px;
       justify-content: flex-end;
       padding: 10px 24px 0;
       background: linear-gradient(to bottom, ${theme.bodyBackground}, transparent);
     }
-    .toolbar button {
+    .toolbar button,
+    .toolbar select {
       border: 1px solid ${theme.canvasBorder};
       background: ${theme.nodeBackground};
       color: ${theme.text};
@@ -792,7 +806,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       padding: 6px 10px;
       cursor: pointer;
     }
-    .toolbar button:hover { background: ${theme.chipBackground}; }
+    .toolbar button:hover,
+    .toolbar select:hover { background: ${theme.chipBackground}; }
     .toolbar button.is-active {
       border-color: ${theme.link};
       background: ${theme.chipBackground};
@@ -1363,7 +1378,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     <button type="button" onclick="zoomBy(1 / 1.15)">Zoom −</button>
     <button type="button" onclick="zoomBy(1.15)">Zoom +</button>
     <button type="button" onclick="resetZoom()">Reset</button>
-    ${hasImportedFolding ? `<button id="folding-toolbar-button" type="button" onclick="toggleImportedFolding()" aria-pressed="true">Expand all</button>` : ""}
+    ${hasBranchGraph || hasImportedFolding ? `<button id="folding-expand-all-button" type="button" onclick="expandAllBranches()">Expand all</button>` : ""}
+    ${hasRootedBranches ? `<button id="folding-collapse-all-button" type="button" onclick="collapseAllBranches()">Collapse all</button>` : ""}
+    ${hasLevelView ? `<select id="folding-level-select" aria-label="Visible canvas levels" title="Visible canvas levels" onchange="setVisibleLevel(this.value)"><option value="all">All levels</option>${foldingLevelOptions}</select>` : ""}
+    ${hasImportedFolding ? `<button id="folding-toolbar-button" type="button" onclick="restoreImportedFolding()" hidden>Restore folding</button>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
   </div>
@@ -1397,6 +1415,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
       const foldingToolbarButton = document.getElementById("folding-toolbar-button");
+      const foldingLevelSelect = document.getElementById("folding-level-select");
       const hiddenNodeSummary = document.getElementById("hidden-node-summary");
       const searchToolbarButton = document.getElementById("search-toolbar-button");
       const minimapSvg = document.getElementById("minimap-svg");
@@ -1425,6 +1444,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       let hiddenEdgeIds = new Set();
       let importedBaseEnabled = false;
       let importedStateModified = false;
+      let visibleLevelLimit = null;
       let currentScale = 1;
       let minimapDrag = null;
       let minimapPan = null;
@@ -1674,7 +1694,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const target = document.getElementById("node-" + nodeId);
         if (!target) return;
         if (hiddenNodeIds.has(nodeId)) {
-          applyImportedFolding(false);
+          expandAllBranches();
         }
         const left = parseFloat(target.getAttribute("data-canvas-left") || "0");
         const top = parseFloat(target.getAttribute("data-canvas-top") || "0");
@@ -2188,6 +2208,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
       function applyImportedFolding(applied) {
         collapsedNodeIds.clear();
+        visibleLevelLimit = null;
         importedBaseEnabled = Boolean(applied) && (
           importedHiddenNodeIds.size > 0 || importedHiddenEdgeIds.size > 0
         );
@@ -2195,7 +2216,21 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           ? new Set(importedHiddenNodeIds)
           : new Set();
         importedStateModified = !importedBaseEnabled;
+        syncFoldingLevelSelect();
         updateFoldingVisibility();
+      }
+
+      function syncFoldingLevelSelect() {
+        if (!foldingLevelSelect) return;
+        foldingLevelSelect.value = visibleLevelLimit === null
+          ? "all"
+          : String(visibleLevelLimit);
+      }
+
+      function clearImportedFoldingBase() {
+        importedBaseEnabled = false;
+        importedStateModified = true;
+        workingImportedHiddenNodeIds = new Set();
       }
 
       function getDescendants(nodeId) {
@@ -2248,10 +2283,16 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function updateFoldingVisibility() {
         const exactImportedState = importedBaseEnabled
           && !importedStateModified
-          && collapsedNodeIds.size === 0;
+          && collapsedNodeIds.size === 0
+          && visibleLevelLimit === null;
         const baseHiddenNodeIds = importedBaseEnabled
           ? new Set(workingImportedHiddenNodeIds)
           : new Set();
+        if (visibleLevelLimit !== null) {
+          for (const [nodeId, level] of Object.entries(foldingGraph.levelByNode)) {
+            if (level > visibleLevelLimit) baseHiddenNodeIds.add(nodeId);
+          }
+        }
         hiddenNodeIds = new Set(baseHiddenNodeIds);
         for (const nodeId of deriveCollapsedVisibility(baseHiddenNodeIds)) {
           hiddenNodeIds.add(nodeId);
@@ -2308,11 +2349,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         });
 
         if (foldingToolbarButton) {
-          foldingToolbarButton.textContent = exactImportedState
-            ? "Expand all"
-            : "Restore folding";
-          foldingToolbarButton.classList.toggle("is-active", exactImportedState);
-          foldingToolbarButton.setAttribute("aria-pressed", String(exactImportedState));
+          foldingToolbarButton.hidden = exactImportedState;
         }
         if (hiddenNodeSummary) {
           const hiddenCount = hiddenNodeIds.size;
@@ -2341,6 +2378,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const descendants = getDescendants(nodeId);
         if (descendants.length === 0) return;
         const hasHiddenBranch = branchHasHiddenContent(nodeId, descendants);
+        visibleLevelLimit = null;
+        syncFoldingLevelSelect();
         if (hasHiddenBranch) {
           collapsedNodeIds.delete(nodeId);
           descendants.forEach((descendantId) => collapsedNodeIds.delete(descendantId));
@@ -2352,11 +2391,38 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         updateFoldingVisibility();
       }
 
-      window.toggleImportedFolding = function() {
-        const exactImportedState = importedBaseEnabled
-          && !importedStateModified
-          && collapsedNodeIds.size === 0;
-        applyImportedFolding(!exactImportedState);
+      window.expandAllBranches = function() {
+        clearImportedFoldingBase();
+        collapsedNodeIds.clear();
+        visibleLevelLimit = null;
+        syncFoldingLevelSelect();
+        updateFoldingVisibility();
+      };
+
+      window.collapseAllBranches = function() {
+        clearImportedFoldingBase();
+        collapsedNodeIds.clear();
+        visibleLevelLimit = null;
+        for (const nodeId of foldingGraph.rootNodeIds) {
+          if (getDescendants(nodeId).length > 0) collapsedNodeIds.add(nodeId);
+        }
+        syncFoldingLevelSelect();
+        updateFoldingVisibility();
+      };
+
+      window.setVisibleLevel = function(value) {
+        clearImportedFoldingBase();
+        collapsedNodeIds.clear();
+        const parsedLevel = Number(value);
+        visibleLevelLimit = value === "all" || !Number.isFinite(parsedLevel)
+          ? null
+          : Math.max(0, Math.min(foldingGraph.maxLevel, Math.floor(parsedLevel)));
+        syncFoldingLevelSelect();
+        updateFoldingVisibility();
+      };
+
+      window.restoreImportedFolding = function() {
+        applyImportedFolding(true);
       };
 
       function startMinimapDrag(event) {

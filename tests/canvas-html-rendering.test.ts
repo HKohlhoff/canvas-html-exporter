@@ -701,7 +701,11 @@ await test("applies an imported Canvas Folding state in both export modes", asyn
       },
     });
 
-    assert.match(html, /id="folding-toolbar-button"[^>]+onclick="toggleImportedFolding\(\)"[^>]*>Expand all<\/button>/);
+    assert.match(html, /id="folding-expand-all-button"[^>]+onclick="expandAllBranches\(\)"[^>]*>Expand all<\/button>/);
+    assert.match(html, /id="folding-collapse-all-button"[^>]+onclick="collapseAllBranches\(\)"[^>]*>Collapse all<\/button>/);
+    assert.match(html, /id="folding-level-select"[^>]+onchange="setVisibleLevel\(this\.value\)"/);
+    assert.match(html, /<option value="all">All levels<\/option><option value="0">Level 0<\/option><option value="1">Level 1<\/option>/);
+    assert.match(html, /id="folding-toolbar-button"[^>]+onclick="restoreImportedFolding\(\)" hidden>Restore folding<\/button>/);
     assert.match(html, /id="node-b"[\s\S]+data-node-id="b"/);
     assert.match(html, /class="minimap-node" data-node-id="b"/);
     assert.match(html, /const importedHiddenNodeIds = new Set\(\["b"\]\)/);
@@ -714,9 +718,12 @@ await test("applies an imported Canvas Folding state in both export modes", asyn
     assert.match(html, /function branchHasHiddenContent\(nodeId, descendants\)/);
     assert.match(html, /control\.hidden = false/);
     assert.doesNotMatch(html, /if \(importedFoldingApplied \|\| descendants\.length === 0\) return/);
-    assert.match(html, /window\.toggleImportedFolding = function\(\)/);
+    assert.match(html, /window\.expandAllBranches = function\(\)/);
+    assert.match(html, /window\.collapseAllBranches = function\(\)/);
+    assert.match(html, /window\.setVisibleLevel = function\(value\)/);
+    assert.match(html, /window\.restoreImportedFolding = function\(\)/);
     assert.match(html, /applyImportedFolding\(true\)/);
-    assert.match(html, /if \(hiddenNodeIds\.has\(nodeId\)\) \{\s+applyImportedFolding\(false\)/);
+    assert.match(html, /if \(hiddenNodeIds\.has\(nodeId\)\) \{\s+expandAllBranches\(\)/);
     assert.match(html, /\.node\.is-folding-hidden \{\s+display: none;/);
     assert.match(html, /\.minimap-node\.is-folding-hidden \{\s+display: none;/);
     const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
@@ -765,6 +772,14 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /function deriveCollapsedVisibility\(baseHiddenNodeIds\)/);
     assert.match(html, /function updateFoldingVisibility\(\)/);
     assert.match(html, /function toggleBranch\(nodeId\)/);
+    assert.match(html, /id="folding-expand-all-button"[^>]*>Expand all<\/button>/);
+    assert.match(html, /id="folding-collapse-all-button"[^>]*>Collapse all<\/button>/);
+    assert.match(html, /id="folding-level-select"[^>]*>[\s\S]*<option value="2">Level 2<\/option><\/select>/);
+    assert.match(html, /"levelByNode":\{"root":0,"child":1,"leaf":2\}/);
+    assert.match(html, /"maxLevel":2/);
+    assert.match(html, /"rootNodeIds":\["root"\]/);
+    assert.match(html, /level > visibleLevelLimit/);
+    assert.match(html, /for \(const nodeId of foldingGraph\.rootNodeIds\)/);
     assert.match(html, /collapsedNodeIds\.has\(edge\.fromId\)/);
     assert.match(html, /hasVisibleAlternativeParent/);
     assert.match(html, /control\.hidden = false/);

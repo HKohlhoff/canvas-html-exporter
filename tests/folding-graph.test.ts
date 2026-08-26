@@ -3,6 +3,7 @@ import {
   buildCanvasFoldingGraph,
   deriveCollapsedVisibility,
   getCanvasDescendants,
+  getNodesBeyondLevel,
   toggleCollapsedBranch,
   type FoldingGraphEdge,
   type FoldingGraphNode,
@@ -105,4 +106,37 @@ test("expands an entire branch including nested collapsed nodes", () => {
     [...toggleCollapsedBranch(graph, [], new Set(), "root")],
     ["root"],
   );
+});
+
+test("assigns shortest root levels and keeps rootless cycles outside the level view", () => {
+  const nodes = [
+    node("root-a"),
+    node("root-b"),
+    node("shared"),
+    node("leaf"),
+    node("cycle-a"),
+    node("cycle-b"),
+    node("isolated"),
+  ];
+  const edges: FoldingGraphEdge[] = [
+    { fromNode: "root-a", toNode: "shared" },
+    { fromNode: "root-b", toNode: "leaf" },
+    { fromNode: "leaf", toNode: "shared" },
+    { fromNode: "shared", toNode: "leaf" },
+    { fromNode: "cycle-a", toNode: "cycle-b" },
+    { fromNode: "cycle-b", toNode: "cycle-a" },
+  ];
+  const graph = buildCanvasFoldingGraph(nodes, edges);
+
+  assert.deepEqual(graph.rootNodeIds, ["isolated", "root-a", "root-b"]);
+  assert.deepEqual(graph.levelByNode, {
+    isolated: 0,
+    "root-a": 0,
+    "root-b": 0,
+    leaf: 1,
+    shared: 1,
+  });
+  assert.equal(graph.maxLevel, 1);
+  assert.deepEqual([...getNodesBeyondLevel(graph, 0)].sort(), ["leaf", "shared"]);
+  assert.equal(getNodesBeyondLevel(graph, 0).has("cycle-a"), false);
 });

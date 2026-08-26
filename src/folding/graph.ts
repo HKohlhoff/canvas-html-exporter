@@ -16,7 +16,10 @@ export interface FoldingGraphEdge {
 export interface CanvasFoldingGraph {
   readonly childrenByNode: Readonly<Record<string, readonly string[]>>;
   readonly groupMembersByNode: Readonly<Record<string, readonly string[]>>;
+  readonly levelByNode: Readonly<Record<string, number>>;
+  readonly maxLevel: number;
   readonly parentsByNode: Readonly<Record<string, readonly string[]>>;
+  readonly rootNodeIds: readonly string[];
 }
 
 export interface CanvasFoldingVisibility {
@@ -41,6 +44,11 @@ export function buildCanvasFoldingGraph(
 
   const childrenByNode = mapSetsToRecord(children);
   const parentsByNode = mapSetsToRecord(parents);
+  const rootNodeIds = Object.freeze(
+    nodeIds.filter((nodeId) => (parentsByNode[nodeId] ?? []).length === 0),
+  );
+  const levelByNode = buildRootLevels(rootNodeIds, childrenByNode);
+  const maxLevel = Math.max(-1, ...Object.values(levelByNode));
   const groupMembersByNode = Object.fromEntries(
     nodes
       .filter((node) => node.type.toLowerCase() === "group")
@@ -60,7 +68,10 @@ export function buildCanvasFoldingGraph(
   return Object.freeze({
     childrenByNode: Object.freeze(childrenByNode),
     groupMembersByNode: Object.freeze(groupMembersByNode),
+    levelByNode: Object.freeze(levelByNode),
+    maxLevel,
     parentsByNode: Object.freeze(parentsByNode),
+    rootNodeIds,
   });
 }
 
@@ -141,10 +152,44 @@ export function toggleCollapsedBranch(
   return next;
 }
 
+export function getNodesBeyondLevel(
+  graph: CanvasFoldingGraph,
+  visibleLevel: number,
+): ReadonlySet<string> {
+  const limit = Math.max(0, Math.floor(visibleLevel));
+  return new Set(
+    Object.entries(graph.levelByNode)
+      .filter(([, level]) => level > limit)
+      .map(([nodeId]) => nodeId),
+  );
+}
+
 function mapSetsToRecord(map: ReadonlyMap<string, ReadonlySet<string>>): Record<string, readonly string[]> {
   return Object.fromEntries(
     [...map.entries()].map(([id, values]) => [id, Object.freeze([...values].sort())]),
   );
+}
+
+function buildRootLevels(
+  rootNodeIds: readonly string[],
+  childrenByNode: Readonly<Record<string, readonly string[]>>,
+): Record<string, number> {
+  const levels: Record<string, number> = {};
+  const pending: Array<{ id: string; level: number }> = rootNodeIds.map((id) => ({ id, level: 0 }));
+  let index = 0;
+
+  while (index < pending.length) {
+    const current = pending[index];
+    index += 1;
+    const previousLevel = levels[current.id];
+    if (previousLevel !== undefined && previousLevel <= current.level) continue;
+    levels[current.id] = current.level;
+    for (const childId of childrenByNode[current.id] ?? []) {
+      pending.push({ id: childId, level: current.level + 1 });
+    }
+  }
+
+  return levels;
 }
 
 export function getCanvasDescendants(
