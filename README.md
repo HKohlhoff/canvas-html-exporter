@@ -34,8 +34,92 @@ A **demo-vault** with the full documentation can be downloaded from the `example
 - Render LaTeX math with KaTeX
 - Highlight fenced code blocks with Shiki and selectable themes
 - Support link nodes with preview pages and offline/blocking fallbacks
-- Include zoom controls, optional minimap, and optional search overlay
+- Include zoom controls, visibility-aware reset/fit, an optional minimap, and an optional search overlay
+- Add interactive branch folding, level views, branch focus, and global folding actions to exported pages
+- Optionally import the effective hidden state from Canvas Folding through its public API v1
+- Keep folding available in exported HTML even when Canvas Folding is not installed
+- Show hidden node and group counts separately in the exported page header
+- Highlight selected search results with a strong yellow pulse
 - Preserve light/dark mode and selected Obsidian theme colors where possible
+
+## Interactive Canvas Controls
+
+Every exported Canvas page keeps its original node positions and adds browser
+controls above the Canvas:
+
+- `Zoom −` and `Zoom +` change the current scale without moving nodes.
+- `Reset` fits the currently relevant graph into the available browser area.
+  Hidden nodes are excluded; while a branch is focused, the dimmed surrounding
+  context is excluded as well. The fit calculation uses the actual remaining
+  height below the toolbar, heading, and information line, including in short
+  browser windows.
+- `Minimap` shows the Canvas overview, hidden/focused state, and current
+  viewport. It can be moved and used for navigation.
+- `Search...` opens keyboard- and mouse-accessible node search. Selecting a
+  result reveals it when necessary, scrolls it into view, and marks it briefly
+  with a prominent yellow pulse highlight.
+
+### Folding menu
+
+Canvases with directed branches or an imported hidden state receive a
+`Folding` menu:
+
+- `No folding` expands the complete Canvas and hides node folding/focus
+  controls. `Enable folding` turns the controls back on.
+- `Expand all` reveals all branches.
+- `Collapse all` collapses every rooted branch while safely handling multiple
+  roots, shared descendants, cross-links, and cycles.
+- `Level N` shows nodes through the selected shortest root level. Nodes in
+  rootless directed cycles remain available rather than being assigned an
+  arbitrary level.
+- `Restore folding` restores the unchanged state imported during export. If no
+  state was imported, it restores the initial fully expanded view. This action
+  remains available even in `No folding` mode.
+- `Exit focus` ends the active branch focus and deliberately appears last in
+  the menu because it is a focus action rather than a folding action.
+
+Nodes with directed descendants receive two controls:
+
+- the `−`/`+` control collapses or expands that branch recursively;
+- the focus icon shows the selected node and its descendants at full opacity
+  while keeping the rest of the Canvas visible as context at 20% opacity.
+  Selecting the same focus icon again exits focus.
+
+Folding is non-destructive. It changes only the browser representation:
+visible nodes retain their original positions, and the source `.canvas` file
+is never changed. An edge and its label are hidden whenever at least one of its
+endpoints is hidden. The information line reports hidden content nodes and
+hidden Canvas groups separately.
+
+## Optional Canvas Folding Integration
+
+[Canvas Folding](https://github.com/HKohlhoff/canvas-folding) is an optional
+companion plugin, not a dependency. In `Initial folding state`, choose:
+
+- `Fully expanded` to keep the established exporter behavior;
+- `Current Canvas Folding state` to request the effective hidden node and edge
+  IDs from the active Canvas through Canvas Folding's public, versioned API v1.
+
+The exporter discovers only the plugin ID `canvas-folding` and accepts only the
+documented API version. If Canvas Folding is missing, disabled, incompatible,
+returns invalid data, or reports an error, export continues normally with a
+fully usable HTML page. No private Canvas Folding classes, DOM elements, views,
+or persistent Canvas metadata are used.
+
+The generated page is self-contained: its folding controls work in a normal
+browser regardless of whether Canvas Folding is installed in the Obsidian
+Vault that later opens or shares the export.
+
+## One-Time Feature Update Description
+
+After this feature update is loaded in Obsidian, the plugin opens a Markdown-
+rendered `What's new` view once. It summarizes the new controls and how to use
+them. Closing the view removes it completely; no release-note file is created
+in the Vault.
+
+The Markdown source is embedded in the installed plugin code. The plugin stores
+only a small release-note identifier in its versioned plugin data so the view
+is not opened again on every Obsidian start.
 
 ## Supported Content
 
@@ -85,6 +169,8 @@ Because assets are embedded, the file can grow to several MB for large canvases 
 3. Open the generated export:
    - `index.html` for `Package folder`
    - `Canvas_Name.html` for `Single HTML file`
+4. Use the node controls or the `Folding` menu to collapse branches, choose a
+   level, focus a branch, restore the imported state, or disable folding.
 
 You can also use the ribbon icon to trigger the export.
 
@@ -114,6 +200,8 @@ Install from Obsidian Community Plugins, or copy `manifest.json`, `main.js`, and
 - `Dark default theme`: use a dark default theme for exported HTML
 - `Show minimap`: include a minimap on the exported canvas page
 - `Show search`: include a search overlay on the exported canvas page
+- `Initial folding state`: start fully expanded or import the current effective
+  state from the optional Canvas Folding plugin
 - `Syntax highlighting`: choose the Shiki theme family for code blocks
 - `Output folder`: enter a folder inside the vault or an absolute filesystem folder on desktop
 - `Choose vault folder`: browse for a folder inside the current vault
@@ -128,6 +216,12 @@ Install from Obsidian Community Plugins, or copy `manifest.json`, `main.js`, and
 - Browser behavior around very large inline assets, PDF rendering, and history can vary more in `Single HTML file` mode than in the `Package folder` export.
   Remember the presentation of the HTML files and their content always depends on the browser used and optional add-ons which may be installed in your system.
 - Markdown rendering covers common Obsidian syntax, but plugin-specific Markdown extensions may not render exactly like they do inside Obsidian.
+- Canvas is treated as a directed graph rather than assumed to be a strict
+  tree. Multiple parents can keep a shared descendant visible through another
+  expanded branch, and traversal of directed cycles is deterministic and
+  finite.
+- Folding version 1 uses stable layout. It does not compact or automatically
+  rearrange the remaining visible nodes.
 
 ## Development
 Install dependencies and run the checks:

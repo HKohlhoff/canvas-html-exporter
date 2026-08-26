@@ -29,3 +29,12 @@ classes, DOM objects or implementation details of the other.
 The first integration uses stable node positions. It does not introduce a
 shared runtime core, persistent Canvas metadata or an Advanced Canvas
 dependency.
+
+## Plugin data and one-time UI
+
+Persisted plugin data uses a versioned envelope that keeps user settings and
+one-time UI state separate. Legacy top-level settings remain a supported
+migration source. The feature-update description is embedded as Markdown in
+the plugin bundle and rendered in a short-lived Obsidian modal; it does not
+create a note or other content file in the Vault. The read marker is stored
+only after the modal closes.

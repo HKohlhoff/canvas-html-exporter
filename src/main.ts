@@ -5,6 +5,9 @@ import { exportCanvasPackage } from "./export/exporter";
 import { CanvasHtmlExporterSettingTab, DEFAULT_SETTINGS, normalizePluginSettings, PluginSettings } from "./settings";
 import { normalizeThemeColor } from "./helpers/color-helpers";
 import { resolveInitialCanvasFoldState } from "./integrations/canvas-folding";
+import { buildStoredPluginData, readPluginData } from "./plugin-data";
+import { CURRENT_RELEASE_NOTES_ID } from "./release-notes-content";
+import { openCurrentReleaseNotes } from "./ui/release-notes";
 
 type CanvasColorMap = Record<string, string>;
 type CalloutColorMap = Record<string, string>;
@@ -21,6 +24,7 @@ const FALLBACK_HEADING_COLORS: HeadingColorMap = {
 
 export default class CanvasHtmlExporterPlugin extends Plugin {
   settings: PluginSettings = DEFAULT_SETTINGS;
+  private lastShownReleaseNotesId = "";
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -38,6 +42,10 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     });
 
     this.addSettingTab(new CanvasHtmlExporterSettingTab(this.app, this));
+
+    this.app.workspace.onLayoutReady(() => {
+      void this.showCurrentReleaseNotesOnce();
+    });
   }
 
   async exportCurrentCanvas(): Promise<void> {
@@ -360,10 +368,39 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
 
   private async loadSettings(): Promise<void> {
     const saved: unknown = await this.loadData();
-    this.settings = normalizePluginSettings(saved);
+    const pluginData = readPluginData(saved);
+    this.settings = normalizePluginSettings(pluginData.settingsSource);
+    this.lastShownReleaseNotesId = pluginData.lastShownReleaseNotesId;
   }
 
   async saveSettings(): Promise<void> {
-    await this.saveData(this.settings);
+    await this.savePluginData();
+  }
+
+  private async showCurrentReleaseNotesOnce(): Promise<void> {
+    if (this.lastShownReleaseNotesId === CURRENT_RELEASE_NOTES_ID) return;
+
+    try {
+      await openCurrentReleaseNotes(this.app);
+    } catch (error) {
+      console.error("[canvas-html-exporter] Could not open release notes", error);
+      new Notice("Canvas HTML exporter could not open its feature update description.", 5000);
+      return;
+    }
+
+    this.lastShownReleaseNotesId = CURRENT_RELEASE_NOTES_ID;
+    try {
+      await this.savePluginData();
+    } catch (error) {
+      console.error("[canvas-html-exporter] Could not save release-note state", error);
+      new Notice("The feature update description may appear again after restart.", 5000);
+    }
+  }
+
+  private async savePluginData(): Promise<void> {
+    await this.saveData(buildStoredPluginData(
+      this.settings,
+      this.lastShownReleaseNotesId,
+    ));
   }
 }

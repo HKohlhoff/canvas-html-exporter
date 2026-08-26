@@ -6,6 +6,26 @@ first.
 
 ## [Unreleased]
 
+### Added
+
+- Add optional Canvas Folding API v1 integration with a fully expanded
+  fallback when the provider is missing, disabled, incompatible, or failing.
+- Add browser controls for individual branches, expand/collapse all, visible
+  levels, imported-state restore, no-folding mode, and branch focus.
+- Add separate hidden-node and hidden-group counts to the exported page.
+- Add visibility-aware fit/reset and a stronger yellow search-result highlight.
+- Add a one-time Markdown-rendered feature update view that disappears when
+  closed and leaves no note in the Vault.
+
+### Changed
+
+- Keep nodes outside branch focus visible at 20% opacity and use the same focus
+  icon as Canvas Folding.
+- Size the Canvas viewport from the actual toolbar and heading area so short
+  browser windows keep the top of the fitted Canvas visible.
+- Store settings and one-time UI state in a versioned plugin-data envelope with
+  migration from legacy top-level settings.
+
 ### Development
 
 - Prepare the project structure, role-based review workflow, manual test matrix

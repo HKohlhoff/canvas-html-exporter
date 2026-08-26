@@ -35,6 +35,14 @@ These cases become mandatory as soon as Folding code is implemented.
 
 Every failure case must produce a normal usable export rather than aborting.
 
+### Update note and plugin data
+
+- Start once with legacy top-level plugin settings and no release-note marker.
+- Confirm the Markdown-rendered feature description opens in Obsidian.
+- Confirm the existing exporter settings are unchanged after migration.
+- Close it and confirm no release-note file remains anywhere in the Vault.
+- Reload or restart Obsidian and confirm the description is not opened again.
+
 ### Graph cases
 
 - simple rooted tree;

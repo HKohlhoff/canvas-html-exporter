@@ -40,6 +40,9 @@ npm run build:prod
 - Enable, disable and re-enable the plugin in a real Vault.
 - Run export from the ribbon and command palette.
 - Check settings loading, saving and backward-compatible defaults.
+- Upgrade once from legacy plugin data: confirm the Markdown-rendered feature
+  description opens once, existing settings survive, closing it leaves no
+  Vault file, and a restart does not reopen it.
 - Export to a Vault folder and an allowed absolute desktop folder.
 - Verify useful notices and failures for missing files and invalid targets.
 - Confirm that Canvas and source notes are not modified.
