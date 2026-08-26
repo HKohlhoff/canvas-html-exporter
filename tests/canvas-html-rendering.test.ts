@@ -777,9 +777,12 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /data-branch-node-id="root"[^>]+title="Collapse branch · 2 descendants">−<\/button>/);
     assert.match(html, /data-branch-node-id="child"[^>]+title="Collapse branch · 1 descendants">−<\/button>/);
     assert.doesNotMatch(html, /data-branch-node-id="leaf"/);
-    assert.match(html, /data-focus-node-id="root"[^>]+title="Focus branch · 2 descendants">◎<\/button>/);
-    assert.match(html, /data-focus-node-id="child"[^>]+title="Focus branch · 1 descendants">◎<\/button>/);
+    assert.match(html, /data-focus-node-id="root"[^>]+title="Focus branch · 2 descendants"><svg class="branch-focus-icon"/);
+    assert.match(html, /data-focus-node-id="child"[^>]+title="Focus branch · 1 descendants"><svg class="branch-focus-icon"/);
     assert.doesNotMatch(html, /data-focus-node-id="leaf"/);
+    assert.match(html, /<circle cx="12" cy="12" r="3"><\/circle>/);
+    assert.match(html, /<path d="M3 7V5a2 2 0 0 1 2-2h2"><\/path>/);
+    assert.doesNotMatch(html, />◎<\/button>/);
     assert.match(html, /"childrenByNode":\{"child":\["leaf"\],"leaf":\[\],"root":\["child"\]\}/);
     assert.doesNotMatch(html, /"descendantsByNode"/);
     assert.match(html, /function getDescendants\(nodeId\)/);

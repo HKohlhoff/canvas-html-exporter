@@ -97,6 +97,7 @@ export interface EmbeddedPage {
 export const EXPORTER_VERSION = "1.0.1";
 export const EXPORTER_SIGNATURE = `canvas-html-exporter v${EXPORTER_VERSION}`;
 export type HighlightingThemeChoice = "shiki" | "github" | "vscode" | "catppuccin" | "material";
+const FOCUS_ICON_SVG = `<svg class="branch-focus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"></circle><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>`;
 const CALLOUT_FALLBACK_COLORS: Record<string, string> = {
   note: "#4a9eff",
   info: "#4a9eff",
@@ -498,6 +499,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     .branch-focus-control {
       right: 36px;
       font-size: 14px;
+    }
+    .branch-focus-icon {
+      display: block;
+      width: 16px;
+      height: 16px;
     }
     .branch-control:hover,
     .branch-control:focus-visible,
@@ -3121,7 +3127,7 @@ async function renderNode(
 
   const content = type === "group" ? "" : await renderNodeContent(node, darkMode, highlightingTheme);
   const branchControl = descendantCount > 0
-    ? `<button class="branch-focus-control" type="button" data-focus-node-id="${escapeAttribute(node.id)}" aria-label="Focus branch" aria-pressed="false" title="Focus branch · ${descendantCount} descendants">◎</button><button class="branch-control" type="button" data-branch-node-id="${escapeAttribute(node.id)}" aria-expanded="true" title="Collapse branch · ${descendantCount} descendants">−</button>`
+    ? `<button class="branch-focus-control" type="button" data-focus-node-id="${escapeAttribute(node.id)}" aria-label="Focus branch" aria-pressed="false" title="Focus branch · ${descendantCount} descendants">${FOCUS_ICON_SVG}</button><button class="branch-control" type="button" data-branch-node-id="${escapeAttribute(node.id)}" aria-expanded="true" title="Collapse branch · ${descendantCount} descendants">−</button>`
     : "";
 
   return `<div
