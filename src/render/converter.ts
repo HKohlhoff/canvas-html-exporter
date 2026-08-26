@@ -807,6 +807,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       border-radius: 8px;
       padding: 6px 10px;
       cursor: pointer;
+      font: inherit;
+      font-size: 0.875rem;
     }
     .toolbar button:hover,
     .toolbar select:hover,
@@ -830,7 +832,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     }
     .toolbar-menu-content {
       position: absolute;
-      top: calc(100% + 6px);
+      top: 100%;
       right: 0;
       z-index: 20;
       display: flex;
@@ -1461,6 +1463,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const minimapPanel = document.getElementById("minimap-panel");
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
+      const foldingMenu = document.getElementById("folding-menu");
       const foldingModeButton = document.getElementById("folding-mode-button");
       const foldingLevelSelect = document.getElementById("folding-level-select");
       const hiddenNodeSummary = document.getElementById("hidden-node-summary");
@@ -2586,6 +2589,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       viewport.addEventListener("scroll", updateMinimapViewport, { passive: true });
       if (minimapDragHandle) {
         minimapDragHandle.addEventListener("pointerdown", startMinimapDrag);
+      }
+      if (foldingMenu) {
+        foldingMenu.addEventListener("mouseleave", () => {
+          foldingMenu.removeAttribute("open");
+        });
       }
       document.querySelectorAll(".branch-control[data-branch-node-id]").forEach((control) => {
         control.addEventListener("click", (event) => {

@@ -702,6 +702,7 @@ await test("applies an imported Canvas Folding state in both export modes", asyn
     });
 
     assert.match(html, /id="folding-menu" class="toolbar-menu"><summary>Folding<\/summary><div class="toolbar-menu-content">/);
+    assert.match(html, /\.toolbar-menu > summary \{[\s\S]*font: inherit;\s+font-size: 0\.875rem;/);
     assert.match(html, /id="folding-expand-all-button"[^>]+onclick="expandAllBranches\(\)"[^>]*>Expand all<\/button>/);
     assert.match(html, /id="folding-mode-button"[^>]+onclick="toggleFoldingMode\(\)"[^>]*>No folding<\/button>/);
     assert.match(html, /id="folding-collapse-all-button"[^>]+onclick="collapseAllBranches\(\)"[^>]*>Collapse all<\/button>/);
@@ -790,6 +791,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /control\.hidden = !foldingControlsEnabled/);
     assert.match(html, /window\.toggleFoldingMode = function\(\)/);
     assert.match(html, /window\.restoreImportedFolding = function\(\) \{\s+foldingControlsEnabled = true;\s+applyImportedFolding\(false\)/);
+    assert.match(html, /foldingMenu\.addEventListener\("mouseleave", \(\) => \{\s+foldingMenu\.removeAttribute\("open"\)/);
     assert.match(html, /foldingModeButton\.textContent = foldingControlsEnabled\s+\? "No folding"\s+: "Enable folding"/);
     assert.match(html, /collapsedNodeIds\.has\(edge\.fromId\)/);
     assert.match(html, /hasVisibleAlternativeParent/);
