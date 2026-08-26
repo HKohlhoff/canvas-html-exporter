@@ -29,6 +29,7 @@ import oneDarkTheme from "shiki/themes/one-dark-pro.mjs";
 import oneLightTheme from "shiki/themes/one-light.mjs";
 import type { HighlighterCore, LanguageInput, ThemeInput } from "shiki/core";
 import type { CanvasFoldState } from "../folding/types";
+import { buildCanvasFoldingGraph, getCanvasDescendants } from "../folding/graph";
 
 export interface CanvasNode {
   id: string;
@@ -292,6 +293,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   );
 
   const bounds = getBounds(nodes);
+  const foldingGraph = buildCanvasFoldingGraph(nodes, edges);
   const theme = getTheme(options.darkMode);
   const calloutCss = buildCalloutCss(options.calloutColors);
   const headingCss = buildHeadingColorCss(".node-content ", options.headingColors);
@@ -303,7 +305,16 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
   const nodeHtml = (await Promise.all(
     nodes.map((node) =>
-      renderNode(node, bounds.offsetX, bounds.offsetY, theme, options.darkMode, options.canvasColors, options.highlightingTheme),
+      renderNode(
+        node,
+        bounds.offsetX,
+        bounds.offsetY,
+        theme,
+        options.darkMode,
+        options.canvasColors,
+        options.highlightingTheme,
+        getCanvasDescendants(foldingGraph, node.id).length,
+      ),
     ),
   )).join("\n");
 
@@ -433,6 +444,37 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       flex-direction: column;
     }
     .node.is-folding-hidden {
+      display: none;
+    }
+    .branch-control {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      z-index: 5;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 999px;
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      font: inherit;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.16);
+    }
+    .branch-control:hover,
+    .branch-control:focus-visible {
+      border-color: ${theme.link};
+      background: ${theme.chipBackground};
+      outline: none;
+    }
+    .branch-control[hidden] {
       display: none;
     }
     .node.group {
@@ -1372,8 +1414,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       )};
       const edges = ${JSON.stringify(edgesData)};
       const searchEntries = ${JSON.stringify(searchEntries)};
+      const foldingGraph = ${JSON.stringify(foldingGraph)};
+      const descendantsCache = new Map();
       const importedHiddenNodeIds = new Set(${JSON.stringify(initialFoldState?.hiddenNodeIds ?? [])});
       const importedHiddenEdgeIds = new Set(${JSON.stringify(initialFoldState?.hiddenEdgeIds ?? [])});
+      const collapsedNodeIds = new Set();
       let hiddenNodeIds = new Set();
       let hiddenEdgeIds = new Set();
       let importedFoldingApplied = false;
@@ -2139,19 +2184,103 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       };
 
       function applyImportedFolding(applied) {
+        collapsedNodeIds.clear();
         importedFoldingApplied = Boolean(applied) && (
           importedHiddenNodeIds.size > 0 || importedHiddenEdgeIds.size > 0
         );
-        hiddenNodeIds = importedFoldingApplied
-          ? new Set(importedHiddenNodeIds)
-          : new Set();
-        hiddenEdgeIds = importedFoldingApplied
-          ? new Set(importedHiddenEdgeIds)
-          : new Set();
+        updateFoldingVisibility();
+      }
+
+      function getDescendants(nodeId) {
+        if (descendantsCache.has(nodeId)) return descendantsCache.get(nodeId);
+        const visited = new Set([nodeId]);
+        const pending = [...(foldingGraph.childrenByNode[nodeId] || [])].reverse();
+        while (pending.length > 0) {
+          const current = pending.pop();
+          if (!current || visited.has(current)) continue;
+          visited.add(current);
+          const children = foldingGraph.childrenByNode[current] || [];
+          for (let index = children.length - 1; index >= 0; index -= 1) {
+            pending.push(children[index]);
+          }
+        }
+        visited.delete(nodeId);
+        const descendants = [...visited].sort();
+        descendantsCache.set(nodeId, descendants);
+        return descendants;
+      }
+
+      function deriveCollapsedVisibility() {
+        const dynamicHiddenNodeIds = new Set();
+        for (const nodeId of [...collapsedNodeIds].sort()) {
+          for (const descendantId of getDescendants(nodeId)) {
+            dynamicHiddenNodeIds.add(descendantId);
+          }
+        }
+
+        let revealedAny = true;
+        while (revealedAny) {
+          revealedAny = false;
+          for (const nodeId of [...dynamicHiddenNodeIds].sort()) {
+            const parents = foldingGraph.parentsByNode[nodeId] || [];
+            const hasVisibleAlternativeParent = parents.some((parentId) => (
+              !dynamicHiddenNodeIds.has(parentId) && !collapsedNodeIds.has(parentId)
+            ));
+            if (hasVisibleAlternativeParent) {
+              dynamicHiddenNodeIds.delete(nodeId);
+              revealedAny = true;
+            }
+          }
+        }
+
+        for (const [groupId, memberIds] of Object.entries(foldingGraph.groupMembersByNode)) {
+          if (memberIds.length > 0 && memberIds.every((memberId) => dynamicHiddenNodeIds.has(memberId))) {
+            dynamicHiddenNodeIds.add(groupId);
+          }
+        }
+
+        const dynamicHiddenEdgeIds = new Set();
+        for (const edge of edges) {
+          if (!edge.id) continue;
+          if (
+            collapsedNodeIds.has(edge.fromId)
+            || dynamicHiddenNodeIds.has(edge.fromId)
+            || dynamicHiddenNodeIds.has(edge.toId)
+          ) {
+            dynamicHiddenEdgeIds.add(edge.id);
+          }
+        }
+        return { hiddenEdgeIds: dynamicHiddenEdgeIds, hiddenNodeIds: dynamicHiddenNodeIds };
+      }
+
+      function updateFoldingVisibility() {
+        if (importedFoldingApplied) {
+          hiddenNodeIds = new Set(importedHiddenNodeIds);
+          hiddenEdgeIds = new Set(importedHiddenEdgeIds);
+        } else {
+          const dynamicVisibility = deriveCollapsedVisibility();
+          hiddenNodeIds = dynamicVisibility.hiddenNodeIds;
+          hiddenEdgeIds = dynamicVisibility.hiddenEdgeIds;
+        }
 
         document.querySelectorAll(".node[data-node-id]").forEach((node) => {
           const nodeId = node.getAttribute("data-node-id") || "";
           node.classList.toggle("is-folding-hidden", hiddenNodeIds.has(nodeId));
+        });
+        document.querySelectorAll(".branch-control[data-branch-node-id]").forEach((control) => {
+          const nodeId = control.getAttribute("data-branch-node-id") || "";
+          const descendants = getDescendants(nodeId);
+          const descendantCount = descendants.length;
+          const hasHiddenBranch = collapsedNodeIds.has(nodeId)
+            || descendants.some((descendantId) => hiddenNodeIds.has(descendantId));
+          control.hidden = importedFoldingApplied;
+          control.textContent = hasHiddenBranch ? "+" : "−";
+          control.setAttribute("aria-expanded", String(!hasHiddenBranch));
+          control.setAttribute(
+            "title",
+            (hasHiddenBranch ? "Expand branch" : "Collapse branch")
+              + " · " + descendantCount + " descendants",
+          );
         });
         document.querySelectorAll(".minimap-node[data-node-id]").forEach((node) => {
           const nodeId = node.getAttribute("data-node-id") || "";
@@ -2167,6 +2296,20 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         }
         drawEdges();
         updateMinimapViewport();
+      }
+
+      function toggleBranch(nodeId) {
+        const descendants = getDescendants(nodeId);
+        if (importedFoldingApplied || descendants.length === 0) return;
+        const hasHiddenBranch = collapsedNodeIds.has(nodeId)
+          || descendants.some((descendantId) => hiddenNodeIds.has(descendantId));
+        if (hasHiddenBranch) {
+          collapsedNodeIds.delete(nodeId);
+          descendants.forEach((descendantId) => collapsedNodeIds.delete(descendantId));
+        } else {
+          collapsedNodeIds.add(nodeId);
+        }
+        updateFoldingVisibility();
       }
 
       window.toggleImportedFolding = function() {
@@ -2268,6 +2411,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       if (minimapDragHandle) {
         minimapDragHandle.addEventListener("pointerdown", startMinimapDrag);
       }
+      document.querySelectorAll(".branch-control[data-branch-node-id]").forEach((control) => {
+        control.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          toggleBranch(control.getAttribute("data-branch-node-id") || "");
+        });
+      });
       window.addEventListener("pointermove", moveMinimap, { passive: true });
       window.addEventListener("pointerup", stopMinimapDrag);
       window.addEventListener("pointercancel", stopMinimapDrag);
@@ -2645,6 +2795,7 @@ async function renderNode(
   darkMode: boolean,
   canvasColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
+  descendantCount = 0,
 ): Promise<string> {
   const frame = getNodeFrame(node, offsetX, offsetY);
   const type = (node.type || "text").toLowerCase();
@@ -2662,6 +2813,9 @@ async function renderNode(
   }
 
   const content = type === "group" ? "" : await renderNodeContent(node, darkMode, highlightingTheme);
+  const branchControl = descendantCount > 0
+    ? `<button class="branch-control" type="button" data-branch-node-id="${escapeAttribute(node.id)}" aria-expanded="true" title="Collapse branch · ${descendantCount} descendants">−</button>`
+    : "";
 
   return `<div
     id="node-${escapeAttribute(node.id)}"
@@ -2670,7 +2824,7 @@ async function renderNode(
     data-canvas-left="${frame.left}"
     data-canvas-top="${frame.top}"
     style="left:${frame.left}px;top:${frame.top}px;width:${frame.width}px;height:${frame.height}px;background:${colors.background};border-color:${colors.border};--node-border-color:${colors.border};"
-  >${title}<div class="node-content">${content}</div></div>`;
+  >${branchControl}${title}<div class="node-content">${content}</div></div>`;
 }
 
 function renderMinimapNode(

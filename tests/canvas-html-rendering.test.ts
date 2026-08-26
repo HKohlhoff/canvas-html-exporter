@@ -731,6 +731,41 @@ await test("keeps the folding control absent for a fully expanded export", async
   assert.match(html, /applyImportedFolding\(false\)/);
 });
 
+await test("renders cycle-safe branch controls in both export modes", async () => {
+  const data: CanvasData = {
+    name: "Branches",
+    nodes: [
+      { id: "root", type: "text", x: 0, y: 0, width: 200, height: 100, text: "Root" },
+      { id: "child", type: "text", x: 280, y: 0, width: 200, height: 100, text: "Child" },
+      { id: "leaf", type: "text", x: 560, y: 0, width: 200, height: 100, text: "Leaf" },
+    ],
+    edges: [
+      { id: "root-child", fromNode: "root", toNode: "child" },
+      { id: "child-leaf", fromNode: "child", toNode: "leaf" },
+    ],
+  };
+
+  for (const exportFormat of ["package", "single-html"] as const) {
+    const html = await convertCanvasToHtml(data, { ...baseOptions, exportFormat });
+
+    assert.match(html, /data-branch-node-id="root"[^>]+title="Collapse branch · 2 descendants">−<\/button>/);
+    assert.match(html, /data-branch-node-id="child"[^>]+title="Collapse branch · 1 descendants">−<\/button>/);
+    assert.doesNotMatch(html, /data-branch-node-id="leaf"/);
+    assert.match(html, /"childrenByNode":\{"child":\["leaf"\],"leaf":\[\],"root":\["child"\]\}/);
+    assert.doesNotMatch(html, /"descendantsByNode"/);
+    assert.match(html, /function getDescendants\(nodeId\)/);
+    assert.match(html, /function deriveCollapsedVisibility\(\)/);
+    assert.match(html, /function updateFoldingVisibility\(\)/);
+    assert.match(html, /function toggleBranch\(nodeId\)/);
+    assert.match(html, /collapsedNodeIds\.has\(edge\.fromId\)/);
+    assert.match(html, /hasVisibleAlternativeParent/);
+    assert.match(html, /control\.hidden = importedFoldingApplied/);
+    assert.match(html, /control\.addEventListener\("click"/);
+    const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
+    assert.doesNotThrow(() => new vm.Script(runtime));
+  }
+});
+
 await test("renders search overlay and toolbar button when enabled", async () => {
   const data: CanvasData = {
     name: "Suche",
