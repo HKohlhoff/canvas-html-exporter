@@ -1,11 +1,15 @@
 # Architecture
 
-Canvas HTML Exporter has four main boundaries:
+Canvas HTML Exporter has these main boundaries:
 
 1. `src/main.ts`, settings and path pickers integrate with Obsidian.
 2. `src/export/` normalizes Canvas data and orchestrates package creation.
-3. `src/render/` creates HTML/Markdown and the standalone browser runtime.
-4. `src/helpers/` provides small independently testable transformations.
+3. `src/integrations/` discovers optional providers through public APIs.
+4. `src/folding/` contains pure graph and export-state logic.
+5. `src/render/` creates HTML/Markdown and the standalone browser runtime.
+6. `src/ui/` contains short-lived Obsidian UI, while `src/plugin-data.ts`
+   owns versioned persistence and migration.
+7. `src/helpers/` provides small independently testable transformations.
 
 Both export modes use the same semantic rendering path:
 

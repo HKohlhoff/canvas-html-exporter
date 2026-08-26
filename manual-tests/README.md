@@ -58,10 +58,18 @@ Every failure case must produce a normal usable export rather than aborting.
 - collapse and expand one branch repeatedly;
 - collapse all and expand all;
 - show through several levels and restore all levels;
+- switch to `No folding`, confirm both node controls and the focus action are
+  hidden, then enable folding again;
+- confirm `Restore folding` remains present in every folding mode;
 - focus one branch and exit focus;
+- confirm the focused branch remains at full opacity and its context at 20%;
 - confirm hidden nodes, incident edges and labels disappear together;
+- confirm hidden content nodes and hidden groups are counted separately;
 - confirm visible node positions do not change;
 - fit/reset uses the visible graph appropriately;
+- repeat fit/reset in a short browser window and confirm the top of the Canvas
+  stays below the toolbar, heading and information line;
+- choose a search result and confirm its yellow pulse is clearly visible;
 - search, links, subpages, minimap, zoom and pan still work;
 - refresh/reopen starts in the configured initial state.
 

@@ -21,8 +21,13 @@ npm run build:prod:deploy
 ## Project structure
 
 - `src/export/` handles normalized Canvas data, export orchestration and files.
+- `src/folding/` contains pure graph and export-state logic without Obsidian or
+  browser DOM dependencies.
+- `src/integrations/` contains the narrow optional Canvas Folding API adapter.
 - `src/render/` generates Markdown/HTML and the embedded browser runtime.
 - `src/helpers/` contains focused path, link, color and preview helpers.
+- `src/ui/` contains short-lived Obsidian UI such as the one-time feature view.
+- `src/plugin-data.ts` owns versioned settings and UI-state migration.
 - `tests/` contains automated unit and integration tests.
 - `manual-tests/` documents realistic Obsidian and browser checks.
 - `examples/demo-vault/` is the public demonstration vault.

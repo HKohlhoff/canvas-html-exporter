@@ -34,8 +34,8 @@ first.
   runtimes and automated release-metadata checks.
 - Add Obsidian's standard funding metadata and refresh published-installation
   wording.
-- Develop the integration on `feature/canvas-folding-integration`; no
-  user-facing folding behavior has been released yet.
+- Keep the completed integration isolated on
+  `feature/canvas-folding-integration` until review and release approval.
 
 ## [1.1.2] – 2026-08-01
 

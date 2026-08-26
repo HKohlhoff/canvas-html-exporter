@@ -10,6 +10,10 @@ Use this checklist before publishing Canvas HTML Exporter.
 - No `node_modules/`, `.test-build/`, `.DS_Store`, local Vault state, generated
   exports, `_local/` files or `AGENTS.md` are tracked.
 - `CHANGELOG.md`, README and public documentation match actual behavior.
+- README clearly discloses local source access and optional writes to an
+  explicitly selected folder outside the Vault.
+- Demo-Vault instructions list all required installation files, including
+  `styles.css`.
 
 ## Metadata
 
@@ -56,6 +60,8 @@ npm run build:prod
 - Zoom, pan, fit/reset, search, minimap and subpage navigation work.
 - Internal links, anchors, embeds and missing-target fallbacks work.
 - Test the documentation Canvas from `examples/demo-vault/`.
+- Regenerate the checked-in interactive HTML example from the current
+  documentation Canvas when its content or browser runtime changed.
 
 ## Canvas Folding integration
 
