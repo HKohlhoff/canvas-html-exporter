@@ -4,6 +4,11 @@ Export your Obsidian canvas as an interactive HTML page that can be opened in an
 
 Requires Obsidian 1.13.0 or later.
 
+If Canvas HTML Exporter is useful to you, you can support its continued
+development by buying me a coffee.
+
+<a href="https://ko-fi.com/R5R2151DS7" target="_blank"><img height="36" style="border:0;height:36px" src="https://storage.ko-fi.com/cdn/kofi1.png?v=6" border="0" alt="Buy Me a Coffee at ko-fi.com"></a>
+
 The canvas showing the documentation of this plugin, seen in Obsidian...
 ![Canvas in Obsidian view](images/canvas_in_obsidian.png)
 
@@ -262,12 +267,12 @@ created or updated only in the output folder you explicitly choose. If you
 select an absolute folder outside the Vault, filesystem access is limited to
 creating and updating the export and its assets in that folder.
 
+The Ko-fi image in this README is documentation content and is not loaded or
+contacted by the installed plugin.
+
 The bundled plugin code may contain static-analysis matches for `fetch()`, `request()`, `atob()`, or `btoa()`. These are not used for network communication or obfuscation:
 - `fetch()` and `request()` matches come from bundled syntax-highlighting and math-rendering dependencies, where they are internal parser or grammar terms.
 - `atob()` and `btoa()` are used only for local asset handling in standalone HTML exports, where embedded files are represented as `data:` URLs and materialized as browser blobs.
 
 ## Support
 Please report bugs via the GitHub repository. I will try to respond to confirmed bugs and issues as quickly as possible.
-
-If you enjoy the plugin and find it useful, you can
-[support further development on Ko-fi](https://ko-fi.com/hokdev).
