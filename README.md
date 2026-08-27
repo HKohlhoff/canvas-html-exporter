@@ -69,8 +69,8 @@ controls above the Canvas:
 
 ### Folding menu
 
-Canvases with directed branches or an imported hidden state receive a
-`Folding` menu:
+Canvases with content nodes or an imported hidden state receive a `Folding`
+menu:
 
 - `No folding` expands the complete Canvas and hides node folding/focus
   controls. `Enable folding` turns the controls back on.
@@ -86,12 +86,15 @@ Canvases with directed branches or an imported hidden state receive a
 - `Exit focus` ends the active branch focus and deliberately appears last in
   the menu because it is a focus action rather than a folding action.
 
-Nodes with directed descendants receive two controls:
+Every content node receives a focus control. Nodes with directed descendants
+additionally receive a branch control:
 
 - the `−`/`+` control collapses or expands that branch recursively;
-- the focus icon shows the selected node and its descendants at full opacity
-  while keeping the rest of the Canvas visible as context at 20% opacity.
-  Selecting the same focus icon again exits focus.
+- the focus icon shows the selected node and, when present, its descendants at
+  full opacity while keeping the rest of the Canvas visible as context at 20%
+  opacity. A node without children can therefore be focused on its own; `Reset`
+  fits it to the available viewport. Selecting the same focus icon again exits
+  focus.
 
 Folding is non-destructive. It changes only the browser representation:
 visible nodes retain their original positions, and the source `.canvas` file

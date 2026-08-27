@@ -10,7 +10,7 @@ This update adds interactive tree and folding tools to exported Canvas HTML page
 - **No required dependency:** exports remain fully usable when Canvas Folding is not installed, disabled, incompatible, or unavailable.
 - **Branch controls:** expand or collapse individual directed branches directly on their nodes.
 - **Global folding menu:** use **Expand all**, **Collapse all**, a visible level, **Restore folding**, or **No folding**.
-- **Branch focus:** focus a node and its descendants while the surrounding context remains visible at 20% opacity. Use the same focus control again or **Exit focus** to return.
+- **Node and branch focus:** focus any node on its own or together with its descendants while the surrounding context remains visible at 20% opacity. Use the same focus control again or **Exit focus** to return.
 - **Stable layout:** folding changes visibility only. Visible nodes keep their Canvas positions.
 - **Consistent connections:** an edge and its label disappear whenever an endpoint is hidden.
 - **Clear status information:** the header reports hidden nodes and hidden groups separately.

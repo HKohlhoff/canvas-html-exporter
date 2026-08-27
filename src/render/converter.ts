@@ -306,13 +306,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
   const bounds = getBounds(nodes);
   const foldingGraph = buildCanvasFoldingGraph(nodes, edges);
-  const hasBranchGraph = nodes.some(
-    (node) => getCanvasDescendants(foldingGraph, node.id).length > 0,
-  );
   const hasRootedBranches = foldingGraph.rootNodeIds.some(
     (nodeId) => getCanvasDescendants(foldingGraph, nodeId).length > 0,
   );
-  const hasFoldingControls = hasBranchGraph || hasImportedFolding;
+  const hasFoldingControls = contentNodeCount > 0 || hasImportedFolding;
   const hasLevelView = foldingGraph.maxLevel > 0;
   const foldingLevelOptions = Array.from(
     { length: foldingGraph.maxLevel + 1 },
@@ -1837,7 +1834,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           .filter((node) => {
             const nodeId = node.getAttribute("data-node-id") || "";
             return !hiddenNodeIds.has(nodeId)
-              && (focusedBranchNodeId === null || !focusMutedNodeIds.has(nodeId));
+              && (focusedBranchNodeId === null || (
+                !focusMutedNodeIds.has(nodeId)
+                && !groupNodeIds.has(nodeId)
+              ));
           });
         if (activeNodes.length === 0) {
           return {
@@ -2563,17 +2563,21 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         document.querySelectorAll(".branch-focus-control[data-focus-node-id]").forEach((control) => {
           const nodeId = control.getAttribute("data-focus-node-id") || "";
           const isFocused = nodeId === focusedBranchNodeId;
+          const descendantCount = getDescendants(nodeId).length;
           control.hidden = !foldingControlsEnabled;
           control.classList.toggle("is-active", isFocused);
           control.setAttribute("aria-pressed", String(isFocused));
           control.setAttribute(
             "aria-label",
-            isFocused ? "Exit branch focus" : "Focus branch",
+            isFocused ? "Exit focus" : descendantCount > 0 ? "Focus branch" : "Focus node",
           );
           control.setAttribute(
             "title",
-            (isFocused ? "Exit branch focus" : "Focus branch")
-              + " · " + getDescendants(nodeId).length + " descendants",
+            isFocused
+              ? "Exit focus"
+              : descendantCount > 0
+                ? "Focus branch · " + descendantCount + " descendants"
+                : "Focus node",
           );
         });
         document.querySelectorAll(".minimap-node[data-node-id]").forEach((node) => {
@@ -2687,7 +2691,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       };
 
       function focusBranch(nodeId) {
-        if (!nodeId || getDescendants(nodeId).length === 0) return;
+        if (!nodeId || !Object.prototype.hasOwnProperty.call(foldingGraph.childrenByNode, nodeId)) return;
         focusedBranchNodeId = focusedBranchNodeId === nodeId ? null : nodeId;
         updateFoldingVisibility();
       }
@@ -3222,8 +3226,11 @@ async function renderNode(
   }
 
   const content = type === "group" ? "" : await renderNodeContent(node, darkMode, highlightingTheme);
+  const focusControl = type !== "group"
+    ? `<button class="branch-focus-control" type="button" data-focus-node-id="${escapeAttribute(node.id)}" aria-label="${descendantCount > 0 ? "Focus branch" : "Focus node"}" aria-pressed="false" title="${descendantCount > 0 ? `Focus branch · ${descendantCount} descendants` : "Focus node"}">${FOCUS_ICON_SVG}</button>`
+    : "";
   const branchControl = descendantCount > 0
-    ? `<button class="branch-focus-control" type="button" data-focus-node-id="${escapeAttribute(node.id)}" aria-label="Focus branch" aria-pressed="false" title="Focus branch · ${descendantCount} descendants">${FOCUS_ICON_SVG}</button><button class="branch-control" type="button" data-branch-node-id="${escapeAttribute(node.id)}" aria-expanded="true" title="Collapse branch · ${descendantCount} descendants">−</button>`
+    ? `<button class="branch-control" type="button" data-branch-node-id="${escapeAttribute(node.id)}" aria-expanded="true" title="Collapse branch · ${descendantCount} descendants">−</button>`
     : "";
 
   return `<div
@@ -3235,7 +3242,7 @@ async function renderNode(
     data-canvas-width="${frame.width}"
     data-canvas-height="${frame.height}"
     style="left:${frame.left}px;top:${frame.top}px;width:${frame.width}px;height:${frame.height}px;background:${colors.background};border-color:${colors.border};--node-border-color:${colors.border};"
-  >${branchControl}${title}<div class="node-content">${content}</div></div>`;
+  >${focusControl}${branchControl}${title}<div class="node-content">${content}</div></div>`;
 }
 
 function renderMinimapNode(

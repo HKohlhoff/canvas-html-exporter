@@ -749,19 +749,28 @@ await test("applies an imported Canvas Folding state in both export modes", asyn
   }
 });
 
-await test("keeps the folding control absent for a fully expanded export", async () => {
-  const html = await convertCanvasToHtml(
-    {
-      name: "Expanded",
-      nodes: [{ id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" }],
-      edges: [],
-    },
-    baseOptions,
-  );
+await test("renders node focus for an isolated node in both export modes", async () => {
+  for (const exportFormat of ["package", "single-html"] as const) {
+    const html = await convertCanvasToHtml(
+      {
+        name: "Expanded",
+        nodes: [
+          { id: "group", type: "group", x: -100, y: -100, width: 400, height: 300, label: "Area" },
+          { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+        ],
+        edges: [],
+      },
+      { ...baseOptions, exportFormat },
+    );
 
-  assert.doesNotMatch(html, /id="folding-toolbar-button"/);
-  assert.doesNotMatch(html, /id="folding-mode-button"/);
-  assert.match(html, /applyImportedFolding\(false\)/);
+    assert.match(html, /id="folding-toolbar-button"/);
+    assert.match(html, /id="folding-mode-button"/);
+    assert.match(html, /data-focus-node-id="a"[^>]+aria-label="Focus node"[^>]+title="Focus node"><svg class="branch-focus-icon"/);
+    assert.doesNotMatch(html, /data-focus-node-id="group"/);
+    assert.doesNotMatch(html, /data-branch-node-id="a"/);
+    assert.match(html, /Object\.prototype\.hasOwnProperty\.call\(foldingGraph\.childrenByNode, nodeId\)/);
+    assert.match(html, /applyImportedFolding\(false\)/);
+  }
 });
 
 await test("renders cycle-safe branch controls in both export modes", async () => {
@@ -786,7 +795,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.doesNotMatch(html, /data-branch-node-id="leaf"/);
     assert.match(html, /data-focus-node-id="root"[^>]+title="Focus branch · 2 descendants"><svg class="branch-focus-icon"/);
     assert.match(html, /data-focus-node-id="child"[^>]+title="Focus branch · 1 descendants"><svg class="branch-focus-icon"/);
-    assert.doesNotMatch(html, /data-focus-node-id="leaf"/);
+    assert.match(html, /data-focus-node-id="leaf"[^>]+aria-label="Focus node"[^>]+title="Focus node"><svg class="branch-focus-icon"/);
     assert.match(html, /id="node-root"[\s\S]+data-canvas-width="200"[\s\S]+data-canvas-height="100"/);
     assert.match(html, /<circle cx="12" cy="12" r="3"><\/circle>/);
     assert.match(html, /<path d="M3 7V5a2 2 0 0 1 2-2h2"><\/path>/);
@@ -824,7 +833,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /if \(focusMuted\) bg\.setAttribute\("opacity", "0\.2"\)/);
     assert.match(html, /focusedBranchNodeId !== null && focusMutedNodeIds\.has\(nodeId\)/);
     assert.match(html, /function getFitNodeBounds\(\)/);
-    assert.match(html, /!hiddenNodeIds\.has\(nodeId\)[\s\S]+&& \(focusedBranchNodeId === null \|\| !focusMutedNodeIds\.has\(nodeId\)\)/);
+    assert.match(html, /!hiddenNodeIds\.has\(nodeId\)[\s\S]+&& \(focusedBranchNodeId === null \|\| \([\s\S]+!focusMutedNodeIds\.has\(nodeId\)[\s\S]+&& !groupNodeIds\.has\(nodeId\)/);
     assert.match(html, /const fitBounds = getFitNodeBounds\(\)/);
     assert.match(html, /scrollViewportToCanvasPoint\([\s\S]+fitBounds\.left \+ fitBounds\.width \/ 2,[\s\S]+fitBounds\.top \+ fitBounds\.height \/ 2/);
     assert.match(html, /const width = parseFloat\(target\.getAttribute\("data-canvas-width"\) \|\| "0"\)/);

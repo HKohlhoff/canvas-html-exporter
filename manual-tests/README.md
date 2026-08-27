@@ -62,6 +62,8 @@ Every failure case must produce a normal usable export rather than aborting.
   hidden, then enable folding again;
 - confirm `Restore folding` remains present in every folding mode;
 - focus one branch and exit focus;
+- focus a node without children, run reset, and confirm that the node alone is
+  fitted without surrounding group bounds;
 - confirm the focused branch remains at full opacity and its context at 20%;
 - confirm hidden nodes, incident edges and labels disappear together;
 - confirm hidden content nodes and hidden groups are counted separately;

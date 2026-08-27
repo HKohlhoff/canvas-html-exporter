@@ -19,6 +19,8 @@ first.
 
 ### Changed
 
+- Make branch focus available on nodes without children and let focused-node
+  reset/fit ignore surrounding group bounds.
 - Keep nodes outside branch focus visible at 20% opacity and use the same focus
   icon as Canvas Folding.
 - Size the Canvas viewport from the actual toolbar and heading area so short
