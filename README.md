@@ -17,8 +17,13 @@ looks (nearly) the same in the exported interactive HTML page...
 
 The plugin supports two export formats:
 
-- `Package folder`: creates a portable folder containing `index.html`, copied assets, and optional HTML subpages
-- `Single HTML file`: creates one self-contained HTML document with inline assets and virtual subpages
+- `Package folder`: creates a portable folder containing `index.html`, copied
+  assets, and optional HTML subpages. This is the recommended format for large
+  or media-heavy Canvases because the browser opens a small HTML document and
+  loads assets separately.
+- `Single HTML file`: creates one self-contained HTML document with inline
+  assets and virtual subpages. It is easiest to share as one file, but large
+  embedded assets can delay initial browser interactivity.
 
 You can choose the export format and other options in the plugin settings.
 
@@ -69,8 +74,8 @@ controls above the Canvas:
 
 ### Folding menu
 
-Canvases with content nodes or an imported hidden state receive a `Folding`
-menu:
+Canvases with content nodes receive a `Folding` menu in every initial folding
+mode:
 
 - `No folding` expands the complete Canvas and hides node folding/focus
   controls. `Enable folding` turns the controls back on.
@@ -105,14 +110,19 @@ hidden Canvas groups separately.
 ## Optional Canvas Folding Integration
 
 [Canvas Folding](https://github.com/HKohlhoff/canvas-folding) is an optional
-companion plugin, not a dependency. In `Initial folding state`, choose:
+companion plugin, not a dependency. In the `Folding` setting, choose:
 
-- `Fully expanded` to keep the established exporter behavior;
+- `No folding` to start fully expanded with node folding/focus controls
+  switched off; this is the default. The Folding menu remains available, and
+  `Enable folding` activates the controls in the exported page;
+- `Fully expanded` to include the controls while starting with every node
+  visible;
 - `Current Canvas Folding state` to start the exported page with the same
   folded branches that are currently shown in Obsidian.
 
-If Canvas Folding is not available, export continues normally and the page
-starts fully expanded.
+If Canvas Folding is not available while `Current Canvas Folding state` is
+selected, export continues normally and the page starts fully expanded with
+browser folding controls.
 
 The generated page is self-contained: its folding controls work in a normal
 browser regardless of whether Canvas Folding is installed in the Obsidian
@@ -158,6 +168,10 @@ Canvas-Exports/
 
 Depending on the canvas contents, the export may also include additional HTML pages for Markdown and link nodes which will then reside in the files folder.
 
+For large or media-heavy Canvases, this is usually the better-performing
+format. Keep the complete package folder together when moving, publishing, or
+sharing it.
+
 ### Single HTML file
 
 Single HTML exports create one file in the configured output location (here: "Canvas-Exports"):
@@ -168,6 +182,8 @@ Canvas-Exports/
 ```
 
 Because assets are embedded, the file can grow to several MB for large canvases and/or many assets.
+The browser must parse the embedded content before the page becomes fully
+interactive, so initial controls may respond later than in a package export.
 
 ## How to Use
 
@@ -176,8 +192,8 @@ Because assets are embedded, the file can grow to several MB for large canvases 
 3. Open the generated export:
    - `index.html` for `Package folder`
    - `Canvas_Name.html` for `Single HTML file`
-4. Use the node controls or the `Folding` menu to collapse branches, choose a
-   level, focus a branch, restore the imported state, or disable folding.
+4. Use the `Folding` menu to enable or disable node controls, collapse branches,
+   choose a level, focus a branch, or restore the imported state.
 
 You can also use the ribbon icon to trigger the export.
 
@@ -208,8 +224,9 @@ Install from Obsidian Community Plugins, or copy `manifest.json`, `main.js`, and
 - `Dark default theme`: use a dark default theme for exported HTML
 - `Show minimap`: include a minimap on the exported canvas page
 - `Show search`: include a search overlay on the exported canvas page
-- `Initial folding state`: start fully expanded or import the current effective
-  state from the optional Canvas Folding plugin
+- `Folding`: start with folding switched off (default), start enabled with a
+  fully expanded Canvas, or import the current effective state from the
+  optional Canvas Folding plugin
 - `Syntax highlighting`: choose the Shiki theme family for code blocks
 - `Output folder`: enter a folder inside the vault or an absolute filesystem folder on desktop
 - `Choose vault folder`: browse for a folder inside the current vault

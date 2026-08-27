@@ -24,6 +24,7 @@ function test(name: string, fn: () => Promise<void> | void): Promise<void> | voi
 const baseOptions = {
   darkMode: true,
   title: "Test Canvas",
+  foldingInitiallyEnabled: true,
   showMinimap: true,
   showSearch: true,
 };
@@ -770,6 +771,45 @@ await test("renders node focus for an isolated node in both export modes", async
     assert.doesNotMatch(html, /data-branch-node-id="a"/);
     assert.match(html, /Object\.prototype\.hasOwnProperty\.call\(foldingGraph\.childrenByNode, nodeId\)/);
     assert.match(html, /applyImportedFolding\(false\)/);
+  }
+});
+
+await test("starts in no-folding mode while retaining the menu and controls", async () => {
+  const data: CanvasData = {
+    name: "No folding",
+    nodes: [
+      { id: "root", type: "text", x: 0, y: 0, width: 200, height: 100, text: "Root" },
+      { id: "leaf", type: "text", x: 280, y: 0, width: 200, height: 100, text: "Leaf" },
+    ],
+    edges: [{ id: "root-leaf", fromNode: "root", toNode: "leaf" }],
+  };
+
+  for (const exportFormat of ["package", "single-html"] as const) {
+    for (const foldingInitiallyEnabled of [undefined, false] as const) {
+      const html = await convertCanvasToHtml(data, {
+        ...baseOptions,
+        exportFormat,
+        foldingInitiallyEnabled,
+        initialFoldState: {
+          hiddenEdgeIds: ["root-leaf"],
+          hiddenNodeIds: ["leaf"],
+          source: "persisted",
+        },
+      });
+
+      assert.match(html, /id="folding-menu"/);
+      assert.match(html, /id="folding-mode-button"[^>]+aria-pressed="true"[^>]*>Enable folding<\/button>/);
+      assert.match(html, /class="branch-focus-control"[^>]+hidden>/);
+      assert.match(html, /class="branch-control"[^>]+hidden>/);
+      assert.match(html, /id="folding-expand-all-button"[^>]+hidden>/);
+      assert.match(html, /id="folding-toolbar-button"[^>]*>Restore folding<\/button>/);
+      assert.match(html, /let foldingControlsEnabled = false/);
+      assert.match(html, /foldingModeButton\.textContent = foldingControlsEnabled\s+\? "No folding"\s+: "Enable folding"/);
+      assert.match(html, /control\.hidden = !foldingControlsEnabled/);
+      assert.match(html, /const importedHiddenNodeIds = new Set\(\[\]\)/);
+      assert.match(html, /const importedHiddenEdgeIds = new Set\(\[\]\)/);
+      assert.match(html, /applyImportedFolding\(false\)/);
+    }
   }
 });
 

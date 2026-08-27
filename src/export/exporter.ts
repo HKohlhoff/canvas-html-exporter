@@ -33,6 +33,7 @@ export type ExportSettings = {
   highlightingTheme?: HighlightingThemeChoice;
   showMinimap?: boolean;
   showSearch?: boolean;
+  foldingInitiallyEnabled?: boolean;
   initialFoldState?: CanvasFoldState;
 };
 
@@ -231,7 +232,7 @@ export async function exportCanvasPackage(
 
   const nodeIds = new Set(preparedNodes.map((node) => node.id));
   const preparedEdges = edges.filter((edge) => nodeIds.has(edge.fromNode) && nodeIds.has(edge.toNode));
-  const initialFoldState = settings.initialFoldState
+  const initialFoldState = settings.foldingInitiallyEnabled === true && settings.initialFoldState
     ? filterCanvasFoldState(
       settings.initialFoldState,
       nodeIds,
@@ -249,6 +250,7 @@ export async function exportCanvasPackage(
       highlightingTheme: settings.highlightingTheme,
       showMinimap: settings.showMinimap,
       showSearch: settings.showSearch,
+      foldingInitiallyEnabled: settings.foldingInitiallyEnabled === true,
       calloutColors: settings.calloutColors,
       headingColors: settings.headingColors,
       inlineStyleColors: settings.inlineStyleColors,

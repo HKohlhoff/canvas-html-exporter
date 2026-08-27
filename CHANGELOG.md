@@ -16,6 +16,7 @@ first.
 - Add visibility-aware fit/reset and a stronger yellow search-result highlight.
 - Add a one-time Markdown-rendered feature update view that disappears when
   closed and leaves no note in the Vault.
+- Add `No folding` as a third setting and make it the default for exports.
 
 ### Changed
 
@@ -27,6 +28,8 @@ first.
   browser windows keep the top of the fitted Canvas visible.
 - Store settings and one-time UI state in a versioned plugin-data envelope with
   migration from legacy top-level settings.
+- Recommend package exports for large or media-heavy Canvases while retaining
+  single HTML as the convenient one-file sharing option.
 
 ### Development
 

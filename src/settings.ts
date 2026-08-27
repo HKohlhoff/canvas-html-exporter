@@ -1,6 +1,10 @@
 import { App, Plugin, PluginSettingTab, SettingDefinitionItem } from "obsidian";
 import type { HighlightingThemeChoice } from "./render/converter";
-import type { FoldingInitialStateChoice } from "./folding/types";
+import {
+  DEFAULT_FOLDING_INITIAL_STATE,
+  normalizeFoldingInitialStateChoice,
+  type FoldingInitialStateChoice,
+} from "./folding/types";
 import { isAbsoluteFilesystemPath, isMobileRuntime } from "./helpers/desktop-paths";
 import { normalizeStoredOutputPath, openVaultFolderPicker, pickFolderPath } from "./path-pickers";
 
@@ -20,7 +24,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   darkMode: false,
   outputDir: "Canvas-Exports",
   exportFormat: "package",
-  foldingInitialState: "expanded",
+  foldingInitialState: DEFAULT_FOLDING_INITIAL_STATE,
   highlightingTheme: "shiki",
   showMinimap: true,
   showSearch: true,
@@ -40,6 +44,7 @@ const HIGHLIGHTING_THEME_LABELS: Record<HighlightingThemeChoice, string> = {
 };
 
 const FOLDING_INITIAL_STATE_LABELS: Record<FoldingInitialStateChoice, string> = {
+  none: "No folding",
   expanded: "Fully expanded",
   current: "Current Canvas Folding state",
 };
@@ -53,7 +58,9 @@ export function normalizePluginSettings(saved: unknown): PluginSettings {
   const data = saved && typeof saved === "object" ? (saved as Record<string, unknown>) : {};
   const exportFormat = (typeof data.exportFormat === "string" ? data.exportFormat.trim() : "") as ExportFormatChoice;
   const highlightingTheme = (typeof data.highlightingTheme === "string" ? data.highlightingTheme.trim() : "") as HighlightingThemeChoice;
-  const foldingInitialState = (typeof data.foldingInitialState === "string" ? data.foldingInitialState.trim() : "") as FoldingInitialStateChoice;
+  const foldingInitialState = normalizeFoldingInitialStateChoice(
+    typeof data.foldingInitialState === "string" ? data.foldingInitialState.trim() : "",
+  );
   let normalizedOutputDir = normalizeStoredOutputPath(typeof data.outputDir === "string" ? data.outputDir : "");
   if (isMobileRuntime() && isAbsoluteFilesystemPath(normalizedOutputDir)) {
     normalizedOutputDir = DEFAULT_SETTINGS.outputDir;
@@ -63,7 +70,7 @@ export function normalizePluginSettings(saved: unknown): PluginSettings {
     darkMode: typeof data.darkMode === "boolean" ? data.darkMode : DEFAULT_SETTINGS.darkMode,
     outputDir: normalizedOutputDir || DEFAULT_SETTINGS.outputDir,
     exportFormat: VALID_EXPORT_FORMATS.has(exportFormat) ? exportFormat : DEFAULT_SETTINGS.exportFormat,
-    foldingInitialState: VALID_FOLDING_INITIAL_STATES.has(foldingInitialState) ? foldingInitialState : DEFAULT_SETTINGS.foldingInitialState,
+    foldingInitialState,
     highlightingTheme: VALID_HIGHLIGHTING_THEMES.has(highlightingTheme) ? highlightingTheme : DEFAULT_SETTINGS.highlightingTheme,
     showMinimap: typeof data.showMinimap === "boolean" ? data.showMinimap : DEFAULT_SETTINGS.showMinimap,
     showSearch: typeof data.showSearch === "boolean" ? data.showSearch : DEFAULT_SETTINGS.showSearch,
@@ -171,8 +178,8 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
             },
           },
           {
-            name: "Initial folding state",
-            desc: "Start fully expanded or import the current state from the optional Canvas Folding plugin.",
+            name: "Folding",
+            desc: "Start with folding switched off, start enabled and fully expanded, or import the current state from the optional Canvas Folding plugin.",
             aliases: ["canvas folding", "tree", "collapsed branches"],
             control: {
               type: "dropdown",

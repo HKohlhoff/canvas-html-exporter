@@ -71,6 +71,7 @@ async function main(): Promise<void> {
       },
     });
 
+    assert.equal(await resolveInitialCanvasFoldState(app, "Tree.canvas", "none"), null);
     assert.equal(await resolveInitialCanvasFoldState(app, "Tree.canvas", "expanded"), null);
     assert.equal(calls, 0);
     assert.equal(await resolveInitialCanvasFoldState(app, "Tree.canvas", "current"), null);

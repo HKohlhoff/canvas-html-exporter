@@ -195,6 +195,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const result = await exportCanvasPackage(app as never, canvasFile as never, {
       darkMode: true,
       outputDir: "Canvas-Exports",
+      foldingInitiallyEnabled: true,
       initialFoldState: {
         hiddenEdgeIds: ["edge-package"],
         hiddenNodeIds: ["img"],
@@ -779,6 +780,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       darkMode: false,
       outputDir: "Canvas-Exports",
       exportFormat: "single-html",
+      foldingInitiallyEnabled: false,
       initialFoldState: {
         hiddenEdgeIds: [],
         hiddenNodeIds: ["link"],
@@ -788,11 +790,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
 
     assert.equal(result.outputKind, "file");
     assert.equal(result.outputPath, "Canvas-Exports/single.html");
-    assert.deepEqual(result.options.initialFoldState, {
-      hiddenEdgeIds: [],
-      hiddenNodeIds: ["link"],
-      source: "persisted",
-    });
+    assert.equal(result.options.foldingInitiallyEnabled, false);
+    assert.equal(result.options.initialFoldState, undefined);
 
     const markdownNode = result.data.nodes.find((node) => node.id === "md");
     const linkNode = result.data.nodes.find((node) => node.id === "link");

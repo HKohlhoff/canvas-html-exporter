@@ -71,6 +71,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
         calloutColors,
         headingColors,
         inlineStyleColors,
+        foldingInitiallyEnabled: this.settings.foldingInitialState !== "none",
         initialFoldState: initialFoldState ?? undefined,
       });
       const html = await convertCanvasToHtml(result.data, result.options);

@@ -44,6 +44,9 @@ npm run build:prod
 - Enable, disable and re-enable the plugin in a real Vault.
 - Run export from the ribbon and command palette.
 - Check settings loading, saving and backward-compatible defaults.
+- Confirm a missing legacy Folding setting normalizes to `No folding`, while
+  explicitly stored `Fully expanded` and `Current Canvas Folding state` values
+  remain unchanged.
 - Upgrade once from legacy plugin data: confirm the Markdown-rendered feature
   description opens once, existing settings survive, closing it leaves no
   Vault file, and a restart does not reopen it.
@@ -69,6 +72,9 @@ When the release includes Folding support, complete `manual-tests/README.md`
 and verify at least:
 
 - normal export without Canvas Folding installed;
+- default `No folding` export starts fully expanded with node controls hidden,
+  while the Folding menu remains available and `Enable folding` activates the
+  controls;
 - disabled, incompatible and failing Folding API fallback;
 - current fold state imported through supported API v1;
 - package and single-HTML output behave identically;

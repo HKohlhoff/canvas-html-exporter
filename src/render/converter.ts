@@ -82,6 +82,7 @@ export interface ExportOptions {
   highlightingTheme?: HighlightingThemeChoice;
   showMinimap?: boolean;
   showSearch?: boolean;
+  foldingInitiallyEnabled?: boolean;
   exportFormat?: "package" | "single-html";
   embeddedPages?: EmbeddedPage[];
   initialFoldState?: CanvasFoldState;
@@ -285,9 +286,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const edges = Array.isArray(data.edges) ? data.edges : [];
   const showMinimap = options.showMinimap !== false;
   const showSearch = options.showSearch !== false;
+  const foldingInitiallyEnabled = options.foldingInitiallyEnabled === true;
   const exportFormat = options.exportFormat || "package";
   const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
-  const initialFoldState = options.initialFoldState;
+  const initialFoldState = foldingInitiallyEnabled ? options.initialFoldState : undefined;
   const hasImportedFolding = Boolean(
     initialFoldState
     && (initialFoldState.hiddenNodeIds.length > 0 || initialFoldState.hiddenEdgeIds.length > 0),
@@ -335,6 +337,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         options.canvasColors,
         options.highlightingTheme,
         getCanvasDescendants(foldingGraph, node.id).length,
+        !foldingInitiallyEnabled,
       ),
     ),
   )).join("\n");
@@ -1499,12 +1502,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     <button type="button" onclick="zoomBy(1.15)">Zoom +</button>
     <button type="button" onclick="resetZoom()">Reset</button>
     ${hasFoldingControls ? `<details id="folding-menu" class="toolbar-menu"><summary>Folding</summary><div class="toolbar-menu-content">
-      <button id="folding-mode-button" type="button" onclick="toggleFoldingMode()" aria-pressed="false">No folding</button>
-      <button id="folding-expand-all-button" class="folding-action-control" type="button" onclick="expandAllBranches()">Expand all</button>
-      ${hasRootedBranches ? `<button id="folding-collapse-all-button" class="folding-action-control" type="button" onclick="collapseAllBranches()">Collapse all</button>` : ""}
-      ${hasLevelView ? `<select id="folding-level-select" class="folding-action-control" aria-label="Visible canvas levels" title="Visible canvas levels" onchange="setVisibleLevel(this.value)"><option value="all">All levels</option>${foldingLevelOptions}</select>` : ""}
+      <button id="folding-mode-button" type="button" onclick="toggleFoldingMode()" aria-pressed="${String(!foldingInitiallyEnabled)}">${foldingInitiallyEnabled ? "No folding" : "Enable folding"}</button>
+      <button id="folding-expand-all-button" class="folding-action-control" type="button" onclick="expandAllBranches()"${foldingInitiallyEnabled ? "" : " hidden"}>Expand all</button>
+      ${hasRootedBranches ? `<button id="folding-collapse-all-button" class="folding-action-control" type="button" onclick="collapseAllBranches()"${foldingInitiallyEnabled ? "" : " hidden"}>Collapse all</button>` : ""}
+      ${hasLevelView ? `<select id="folding-level-select" class="folding-action-control" aria-label="Visible canvas levels" title="Visible canvas levels" onchange="setVisibleLevel(this.value)"${foldingInitiallyEnabled ? "" : " hidden"}><option value="all">All levels</option>${foldingLevelOptions}</select>` : ""}
       <button id="folding-toolbar-button" type="button" onclick="restoreImportedFolding()">Restore folding</button>
-      <button id="folding-focus-exit-button" class="folding-action-control" type="button" onclick="exitBranchFocus()" disabled>Exit focus</button>
+      <button id="folding-focus-exit-button" class="folding-action-control" type="button" onclick="exitBranchFocus()" disabled${foldingInitiallyEnabled ? "" : " hidden"}>Exit focus</button>
     </div></details>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
@@ -1572,7 +1575,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       let focusMutedNodeIds = new Set();
       let importedBaseEnabled = false;
       let importedStateModified = false;
-      let foldingControlsEnabled = true;
+      let foldingControlsEnabled = ${JSON.stringify(foldingInitiallyEnabled)};
       let focusedBranchNodeId = null;
       let visibleLevelLimit = null;
       let currentScale = 1;
@@ -3209,6 +3212,7 @@ async function renderNode(
   canvasColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
   descendantCount = 0,
+  foldingControlsInitiallyHidden = false,
 ): Promise<string> {
   const frame = getNodeFrame(node, offsetX, offsetY);
   const type = (node.type || "text").toLowerCase();
@@ -3226,11 +3230,12 @@ async function renderNode(
   }
 
   const content = type === "group" ? "" : await renderNodeContent(node, darkMode, highlightingTheme);
+  const foldingControlHiddenAttribute = foldingControlsInitiallyHidden ? " hidden" : "";
   const focusControl = type !== "group"
-    ? `<button class="branch-focus-control" type="button" data-focus-node-id="${escapeAttribute(node.id)}" aria-label="${descendantCount > 0 ? "Focus branch" : "Focus node"}" aria-pressed="false" title="${descendantCount > 0 ? `Focus branch · ${descendantCount} descendants` : "Focus node"}">${FOCUS_ICON_SVG}</button>`
+    ? `<button class="branch-focus-control" type="button" data-focus-node-id="${escapeAttribute(node.id)}" aria-label="${descendantCount > 0 ? "Focus branch" : "Focus node"}" aria-pressed="false" title="${descendantCount > 0 ? `Focus branch · ${descendantCount} descendants` : "Focus node"}"${foldingControlHiddenAttribute}>${FOCUS_ICON_SVG}</button>`
     : "";
   const branchControl = descendantCount > 0
-    ? `<button class="branch-control" type="button" data-branch-node-id="${escapeAttribute(node.id)}" aria-expanded="true" title="Collapse branch · ${descendantCount} descendants">−</button>`
+    ? `<button class="branch-control" type="button" data-branch-node-id="${escapeAttribute(node.id)}" aria-expanded="true" title="Collapse branch · ${descendantCount} descendants"${foldingControlHiddenAttribute}>−</button>`
     : "";
 
   return `<div

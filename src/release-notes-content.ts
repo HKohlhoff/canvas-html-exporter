@@ -7,6 +7,7 @@ This update adds interactive tree and folding tools to exported Canvas HTML page
 ## Highlights
 
 - **Optional Canvas Folding integration:** choose **Current Canvas Folding state** to start the exported page with the same folded branches that are currently shown in Obsidian.
+- **No folding by default:** pages start fully expanded with node controls switched off. The Folding menu remains available, and **Enable folding** activates the controls at any time.
 - **No required dependency:** exports remain fully usable when Canvas Folding is not installed, disabled, incompatible, or unavailable.
 - **Branch controls:** expand or collapse individual directed branches directly on their nodes.
 - **Global folding menu:** use **Expand all**, **Collapse all**, a visible level, **Restore folding**, or **No folding**.
@@ -20,9 +21,9 @@ This update adds interactive tree and folding tools to exported Canvas HTML page
 ## Using the new features
 
 1. Open **Settings → Canvas HTML Exporter**.
-2. Keep **Fully expanded** for the established export behavior, or select **Current Canvas Folding state** to import the optional Canvas Folding state.
+2. Keep **No folding** to start fully expanded with node controls switched off, select **Fully expanded** to start with the controls enabled, or select **Current Canvas Folding state** to import the optional Canvas Folding state. The Folding menu is included in every mode.
 3. Export a Canvas as a package folder or a single HTML file.
-4. Use the node controls and the **Folding** menu in the generated page.
+4. Use the **Folding** menu in the generated page. In **No folding** mode, choose **Enable folding** when you want to show the node controls.
 
 Both export formats use the same browser runtime. The exporter never writes folding state into the source Canvas.
 

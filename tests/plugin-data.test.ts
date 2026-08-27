@@ -20,7 +20,7 @@ const settings: PluginSettings = {
   darkMode: false,
   outputDir: "Canvas-Exports",
   exportFormat: "package",
-  foldingInitialState: "expanded",
+  foldingInitialState: "none",
   highlightingTheme: "shiki",
   showMinimap: true,
   showSearch: true,

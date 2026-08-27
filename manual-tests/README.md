@@ -58,8 +58,10 @@ Every failure case must produce a normal usable export rather than aborting.
 - collapse and expand one branch repeatedly;
 - collapse all and expand all;
 - show through several levels and restore all levels;
-- switch to `No folding`, confirm both node controls and the focus action are
-  hidden, then enable folding again;
+- export with the default `No folding`, confirm the Canvas starts fully
+  expanded with both node controls and the focus action hidden, while the
+  Folding menu remains available, then use `Enable folding` and confirm the
+  controls appear;
 - confirm `Restore folding` remains present in every folding mode;
 - focus one branch and exit focus;
 - focus a node without children, run reset, and confirm that the node alone is
@@ -74,6 +76,17 @@ Every failure case must produce a normal usable export rather than aborting.
 - choose a search result and confirm its yellow pulse is clearly visible;
 - search, links, subpages, minimap, zoom and pan still work;
 - refresh/reopen starts in the configured initial state.
+
+### Export size and initial responsiveness
+
+- export the same large or media-heavy Canvas as a package and as single HTML;
+- record `index.html` and single-HTML file sizes;
+- reload both with the same browser and record when zoom, reset and node
+  controls first respond;
+- confirm the package becomes interactive earlier when the single HTML contains
+  large embedded assets;
+- confirm all package assets and subpages still work when the complete folder
+  is moved together.
 
 Repeat the complete matrix for package and single-HTML output. Where practical,
 check at least one Chromium browser, Firefox and Safari/WebKit.
