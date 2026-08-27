@@ -98,7 +98,7 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
     return [
       {
         name: "Export format",
-        desc: "Export as a portable package folder or a single self-contained HTML file.",
+        desc: "Package folders start faster for large or media-heavy Canvases. Single HTML is easier to share, but can be much larger and respond later at startup.",
         aliases: ["package", "standalone", "single HTML"],
         control: {
           type: "dropdown",
@@ -179,7 +179,7 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
           },
           {
             name: "Folding",
-            desc: "Start with folding switched off, start enabled and fully expanded, or import the current state from the optional Canvas Folding plugin.",
+            desc: "Choose the initial state or import it from the optional Canvas Folding plugin. Folding can be switched on or off at any time in the exported HTML.",
             aliases: ["canvas folding", "tree", "collapsed branches"],
             control: {
               type: "dropdown",

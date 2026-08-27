@@ -224,13 +224,15 @@ Install from Obsidian Community Plugins, or copy `manifest.json`, `main.js`, and
 
 ## Plugin Settings
 
-- `Export format`: export as package or single HTML file
+- `Export format`: use a package for faster startup on large or media-heavy
+  Canvases, or a single HTML file for easier one-file sharing
 - `Dark default theme`: use a dark default theme for exported HTML
 - `Show minimap`: include a minimap on the exported canvas page
 - `Show search`: include a search overlay on the exported canvas page
 - `Folding`: start with folding switched off (default), start enabled with a
   fully expanded Canvas, or import the current effective state from the
-  optional Canvas Folding plugin
+  optional Canvas Folding plugin; folding can still be switched on or off at
+  any time in the exported HTML
 - `Syntax highlighting`: choose the Shiki theme family for code blocks
 - `Output folder`: enter a folder inside the vault or an absolute filesystem folder on desktop
 - `Choose vault folder`: browse for a folder inside the current vault
