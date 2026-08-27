@@ -17,6 +17,7 @@ This update adds interactive tree and folding tools to exported Canvas HTML page
 - **Clear status information:** the header reports hidden nodes and hidden groups separately.
 - **Visibility-aware fit:** **Reset** fits the currently relevant nodes and respects short browser windows, the header, folding, levels, and branch focus.
 - **Improved search feedback:** the selected search result receives a strong yellow pulse highlight.
+- **Faster option for large Canvases:** prefer **Package folder** for large or media-heavy Canvases. Its small **index.html** usually becomes interactive sooner than a single HTML file with embedded assets.
 
 ## Using the new features
 

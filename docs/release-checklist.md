@@ -53,6 +53,8 @@ npm run build:prod
 - Export to a Vault folder and an allowed absolute desktop folder.
 - Verify useful notices and failures for missing files and invalid targets.
 - Confirm that Canvas and source notes are not modified.
+- Complete the compact Windows smoke test from `manual-tests/README.md` on a
+  current Windows/Obsidian installation and record the tested versions.
 
 ## Export regression matrix
 
@@ -84,6 +86,7 @@ and verify at least:
 - hidden nodes also hide incident edges and edge labels;
 - visible nodes retain their positions;
 - existing browser controls remain usable.
+- the compact Windows smoke test passes for package and single-HTML output.
 
 ## Release assets and publication
 

@@ -90,3 +90,23 @@ Every failure case must produce a normal usable export rather than aborting.
 
 Repeat the complete matrix for package and single-HTML output. Where practical,
 check at least one Chromium browser, Firefox and Safari/WebKit.
+
+## Compact Windows smoke test
+
+Before release, also perform one compact test on a current Windows system and
+record the Windows, Obsidian, browser and plugin versions:
+
+- install or update the plugin in a Windows test Vault and confirm that it
+  loads with its settings intact;
+- export one representative Canvas as both `Package folder` and `Single HTML
+  file`, once to a Vault folder and once to a valid absolute Windows folder;
+- open both results in Microsoft Edge or another current Chromium browser and
+  confirm that text, connections, links and representative image/file assets
+  render;
+- confirm the default `No folding` start, the persistent Folding menu,
+  `Enable folding`, one branch collapse/expand, node focus and `Reset`;
+- confirm zoom, pan and search, then reopen both exports and check that they
+  start normally without requiring the source Vault.
+
+This Windows check is a compact cross-platform smoke test; it supplements and
+does not replace the complete manual matrix above.

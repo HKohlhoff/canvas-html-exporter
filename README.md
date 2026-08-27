@@ -170,7 +170,10 @@ Depending on the canvas contents, the export may also include additional HTML pa
 
 For large or media-heavy Canvases, this is usually the better-performing
 format. Keep the complete package folder together when moving, publishing, or
-sharing it.
+sharing it. As a concrete example, the documentation Canvas used during
+development produced a package `index.html` of about 237 KB, while the
+equivalent single HTML file was about 19 MB. Actual sizes depend on the Canvas
+and its embedded assets.
 
 ### Single HTML file
 
@@ -184,6 +187,7 @@ Canvas-Exports/
 Because assets are embedded, the file can grow to several MB for large canvases and/or many assets.
 The browser must parse the embedded content before the page becomes fully
 interactive, so initial controls may respond later than in a package export.
+If quick startup matters more than distributing one file, use `Package folder`.
 
 ## How to Use
 

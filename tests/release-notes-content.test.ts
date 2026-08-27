@@ -10,6 +10,7 @@ assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /same folded branches that are curr
 assert.doesNotMatch(CURRENT_RELEASE_NOTES_MARKDOWN, /API v1/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /No folding by default/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Enable folding/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /prefer \*\*Package folder\*\*/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /No required dependency/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Branch controls/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Visibility-aware fit/);

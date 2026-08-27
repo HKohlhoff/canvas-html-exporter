@@ -30,6 +30,7 @@ first.
   migration from legacy top-level settings.
 - Recommend package exports for large or media-heavy Canvases while retaining
   single HTML as the convenient one-file sharing option.
+- Require a compact Windows smoke test for both export formats before release.
 
 ### Development
 
