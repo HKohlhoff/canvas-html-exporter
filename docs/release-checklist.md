@@ -28,6 +28,8 @@ Use this checklist before publishing Canvas HTML Exporter.
   it closes, create no Vault file, and keep **Show last update** at the bottom
   of settings. Apply the same standard when starting a new plugin.
 - Plugin ID, name, description, author, repository and GPL metadata agree.
+- `npm run test:metadata` rejects Community Directory CSS warnings caused by
+  `!important` declarations in `styles.css`.
 - `build.mjs` deploys to the correct plugin ID.
 - Version changes were made only during explicit release preparation.
 
