@@ -2529,6 +2529,22 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         return descendants;
       }
 
+      function getFocusedNodeIds(nodeId) {
+        const directedFocusNodeIds = new Set([nodeId, ...getDescendants(nodeId)]);
+        const focusedNodeIds = new Set(directedFocusNodeIds);
+        for (const groupId of directedFocusNodeIds) {
+          for (const containedNodeId of foldingGraph.groupContentsByNode[groupId] || []) {
+            focusedNodeIds.add(containedNodeId);
+          }
+        }
+        for (const [groupId, memberIds] of Object.entries(foldingGraph.groupMembersByNode)) {
+          if (memberIds.some((memberId) => focusedNodeIds.has(memberId))) {
+            focusedNodeIds.add(groupId);
+          }
+        }
+        return focusedNodeIds;
+      }
+
       function deriveCollapsedVisibility(baseHiddenNodeIds) {
         const dynamicHiddenNodeIds = new Set();
         for (const nodeId of [...collapsedNodeIds].sort()) {
@@ -2614,15 +2630,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
         focusMutedNodeIds = new Set();
         if (focusedBranchNodeId !== null) {
-          const focusedNodeIds = new Set([
-            focusedBranchNodeId,
-            ...getDescendants(focusedBranchNodeId),
-          ]);
-          for (const [groupId, memberIds] of Object.entries(foldingGraph.groupMembersByNode)) {
-            if (memberIds.some((memberId) => focusedNodeIds.has(memberId))) {
-              focusedNodeIds.add(groupId);
-            }
-          }
+          const focusedNodeIds = getFocusedNodeIds(focusedBranchNodeId);
           for (const nodeId of Object.keys(foldingGraph.childrenByNode)) {
             if (!focusedNodeIds.has(nodeId)) focusMutedNodeIds.add(nodeId);
           }

@@ -92,7 +92,8 @@ and verify at least:
 - current fold state imported through supported API v1;
 - package and single-HTML output behave identically;
 - collapse/expand, all branches, levels and branch focus;
-- connected group branches plus focus controls on groups;
+- connected group branches plus focus controls on groups; focusing a group
+  keeps all of its geometrically contained items active;
 - a connected group containing a separate node branch: each branch controls
   only its own visibility, a hidden group takes its geometric contents with it,
   and an unavailable branch control remains visible but disabled until restore;

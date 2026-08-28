@@ -81,6 +81,8 @@ Every failure case must produce a normal usable export rather than aborting.
 - expand `A1`, then collapse `B1`; confirm only the `B1` to `B2` connection is
   hidden because `B2` and its descendants remain reachable through `A1`;
 - focus one branch and exit focus;
+- focus a group and confirm that all geometrically contained items remain at
+  full opacity while unrelated items are dimmed;
 - collapse and expand a connected group branch; confirm all descendant groups
   follow the branch and every visible group has a working focus control;
 - put the child of a separate node branch inside a connected child group.

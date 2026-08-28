@@ -907,7 +907,11 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /\.branch-control:disabled \{[\s\S]+cursor: not-allowed;[\s\S]+opacity: 0\.5;/);
     assert.match(html, /function focusBranch\(nodeId\)/);
     assert.match(html, /focusedBranchNodeId = focusedBranchNodeId === nodeId \? null : nodeId/);
-    assert.match(html, /focusedNodeIds = new Set\(\[\s+focusedBranchNodeId,\s+\.\.\.getDescendants\(focusedBranchNodeId\)/);
+    assert.match(html, /function getFocusedNodeIds\(nodeId\)/);
+    assert.match(html, /directedFocusNodeIds = new Set\(\[nodeId, \.\.\.getDescendants\(nodeId\)\]\)/);
+    assert.match(html, /for \(const groupId of directedFocusNodeIds\)/);
+    assert.match(html, /for \(const containedNodeId of foldingGraph\.groupContentsByNode\[groupId\] \|\| \[\]\)/);
+    assert.match(html, /const focusedNodeIds = getFocusedNodeIds\(focusedBranchNodeId\)/);
     assert.match(html, /if \(!focusedNodeIds\.has\(nodeId\)\) focusMutedNodeIds\.add\(nodeId\)/);
     assert.match(html, /\.node\.is-focus-muted \{\s+opacity: 0\.2;/);
     assert.match(html, /\.minimap-node\.is-focus-muted \{\s+opacity: 0\.2;/);

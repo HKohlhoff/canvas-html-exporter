@@ -113,9 +113,10 @@ descendants additionally receive a branch control:
   that branch's previous state;
 - the focus icon shows the selected node and, when present, its descendants at
   full opacity while keeping the rest of the Canvas visible as context at 20%
-  opacity. A node or group without children can therefore be focused on its
-  own; `Reset` fits it to the available viewport. Selecting the same focus icon
-  again exits focus.
+  opacity. Focusing a group also keeps every item geometrically contained by
+  that group at full opacity. A node or empty group can therefore be focused on
+  its own; `Reset` fits the focused area to the available viewport. Selecting
+  the same focus icon again exits focus.
 
 Folding is non-destructive. It changes only the browser representation:
 visible nodes retain their original positions, and the source `.canvas` file
