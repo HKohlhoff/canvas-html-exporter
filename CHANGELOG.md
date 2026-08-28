@@ -38,9 +38,8 @@ first.
   migration from legacy top-level settings.
 - Recommend package exports for large or media-heavy Canvases while retaining
   single HTML as the convenient one-file sharing option.
-- Keep an export-progress notice visible until the output file is complete or
-  the export fails, and explain that Obsidian may show a large completed single
-  HTML file in its file tree with a short delay.
+- Explain that exported HTML remains hidden in Obsidian's file tree unless
+  **Detect all file extensions** is enabled.
 - Require a compact Windows smoke test for both export formats before release.
 - Keep shared descendants visible while another open parent branch still
   reaches them, hiding only the connections belonging to the collapsed branch.

@@ -199,6 +199,11 @@ development produced a package `index.html` of about 252 KB, while the
 equivalent single HTML file was about 19.3 MB. Actual sizes depend on the Canvas
 and its embedded assets.
 
+Obsidian can hide generated `.html` files in its file tree even though the
+export completed successfully and the files are present on disk. Enable
+**Settings → Files and links → Detect all file extensions** when you want
+`index.html` and single HTML exports to appear in Obsidian's file tree.
+
 ### Single HTML file
 
 Single HTML exports create one file in the configured output location (here: "Canvas-Exports"):
@@ -212,9 +217,6 @@ Because assets are embedded, the file can grow to several MB for large canvases 
 The browser must parse the embedded content before the page becomes fully
 interactive, so initial controls may respond later than in a package export.
 If quick startup matters more than distributing one file, use `Package folder`.
-When a large single HTML file is written inside the Vault, Obsidian may also
-need a little longer to show it in the file tree even though the completed file
-is already visible through the operating system.
 
 ## How to Use
 

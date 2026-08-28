@@ -55,10 +55,6 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
       return;
     }
 
-    const progressNotice = new Notice(
-      "Exporting canvas HTML… large single HTML files may take a moment.",
-      0,
-    );
     try {
       const canvasColors = this.readCanvasPaletteColors();
       const calloutColors = this.readCalloutColors();
@@ -81,17 +77,11 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
       const html = await convertCanvasToHtml(result.data, result.options);
       await this.writeOutput(result.outputPath, result.outputKind, html);
       const label = result.outputKind === "file" ? "Self-contained canvas HTML exported" : "Canvas package exported";
-      const vaultFileTreeHint = result.outputKind === "file"
-        && !isAbsoluteFilesystemPath(result.outputPath)
-        ? " Large files may take a moment to appear in Obsidian's file tree."
-        : "";
-      new Notice(`${label}: ${result.outputPath}.${vaultFileTreeHint}`, 6000);
+      new Notice(`${label}: ${result.outputPath}`, 6000);
     } catch (error) {
       console.error("[canvas-html-exporter] Export failed", error);
       const message = error instanceof Error ? error.message : "Unknown error";
       new Notice(`Canvas export failed: ${message}`, 7000);
-    } finally {
-      progressNotice.hide();
     }
   }
 
