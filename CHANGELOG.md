@@ -4,7 +4,7 @@ All notable user-facing changes to Canvas HTML Exporter are documented here.
 The format follows the spirit of Keep a Changelog, with the newest release
 first.
 
-## [Unreleased]
+## [1.2.0] – 2026-08-28
 
 ### Added
 
