@@ -639,7 +639,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       border-bottom: 0;
       border-radius: 0;
       box-shadow: none;
-      padding-block: 20px;
+    }
+    .node[data-node-shape="database"] .node-content {
+      overflow: visible;
+      transform: translateY(20px);
     }
     .node[data-node-shape="database"]::before,
     .node[data-node-shape="database"]::after {
