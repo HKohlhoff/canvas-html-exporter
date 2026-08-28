@@ -74,11 +74,11 @@ Every failure case must produce a normal usable export rather than aborting.
 - collapse branches with one-, two- and, where practical, three-digit hidden
   node counts; confirm the number remains readable and the focus control moves
   left without overlap;
-- collapse `B1` in `TestCanvas` and confirm `B2` plus its descendants are
-  hidden even though `B2` is also reachable through `A1`/`A2`, while `A2`
-  remains visible;
-- use the control on the visible alternative parent and confirm its shared
-  branch is revealed without revealing unrelated hidden siblings;
+- collapse `A1` in `TestCanvas`; confirm `A2` and both of its branch
+  connections to `B2` disappear, while the complete `B1` branch from `B1`
+  through `B2` remains visible;
+- expand `A1`, then collapse `B1`; confirm only the `B1` to `B2` connection is
+  hidden because `B2` and its descendants remain reachable through `A1`;
 - focus one branch and exit focus;
 - focus a node without children, run reset, and confirm that the node alone is
   fitted without surrounding group bounds;

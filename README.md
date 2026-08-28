@@ -101,9 +101,9 @@ additionally receive a branch control:
 - the `−` control collapses that branch recursively. An expandable branch
   displays the number of its currently hidden descendant nodes instead of `+`;
   the control grows for multi-digit counts while the focus control moves left.
-  Shared descendants remain hidden by the collapsed branch even when they have
-  another visible parent. The control on that parent can explicitly reveal its
-  shared branch without revealing unrelated hidden siblings;
+  Shared descendants remain visible while they are still reachable through
+  another open parent branch. In that case the collapsed branch connection is
+  hidden, `+` remains, and its tooltip reports the hidden connections;
 - the focus icon shows the selected node and, when present, its descendants at
   full opacity while keeping the rest of the Canvas visible as context at 20%
   opacity. A node without children can therefore be focused on its own; `Reset`

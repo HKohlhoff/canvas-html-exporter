@@ -44,7 +44,7 @@ test("derives descendants deterministically and collapses a simple branch", () =
   assert.equal(visibility.hiddenNodeIds.has("isolated"), false);
 });
 
-test("keeps a shared descendant hidden until an alternative parent is explicitly revealed", () => {
+test("keeps shared descendants visible through an uncollapsed alternative branch", () => {
   const nodes = [node("a1"), node("a2"), node("b1"), node("b2"), node("leaf")];
   const edges: FoldingGraphEdge[] = [
     { id: "a1-a2", fromNode: "a1", toNode: "a2" },
@@ -54,24 +54,18 @@ test("keeps a shared descendant hidden until an alternative parent is explicitly
     { id: "b2-leaf", fromNode: "b2", toNode: "leaf" },
   ];
   const graph = buildCanvasFoldingGraph(nodes, edges);
-  const visibility = deriveCollapsedVisibility(graph, edges, ["b1"]);
+  const collapsedB1 = deriveCollapsedVisibility(graph, edges, ["b1"]);
+  assert.deepEqual([...collapsedB1.hiddenNodeIds], []);
+  assert.deepEqual([...collapsedB1.hiddenEdgeIds], ["b1-b2"]);
 
-  assert.deepEqual([...visibility.hiddenNodeIds].sort(), ["b2", "leaf"]);
-  assert.equal(visibility.hiddenNodeIds.has("a1"), false);
-  assert.equal(visibility.hiddenNodeIds.has("a2"), false);
+  const collapsedA1 = deriveCollapsedVisibility(graph, edges, ["a1"]);
+  assert.deepEqual([...collapsedA1.hiddenNodeIds], ["a2"]);
   assert.deepEqual(
-    [...visibility.hiddenEdgeIds].sort(),
-    ["a1-b2", "a2-b2", "b1-b2", "b2-leaf"],
+    [...collapsedA1.hiddenEdgeIds].sort(),
+    ["a1-a2", "a1-b2", "a2-b2"],
   );
-
-  const revealedVisibility = deriveCollapsedVisibility(
-    graph,
-    edges,
-    ["b1"],
-    new Map([["b1", new Set(["a1"])]]),
-  );
-  assert.deepEqual([...revealedVisibility.hiddenNodeIds], []);
-  assert.deepEqual([...revealedVisibility.hiddenEdgeIds], []);
+  assert.equal(collapsedA1.hiddenEdgeIds.has("b1-b2"), false);
+  assert.equal(collapsedA1.hiddenEdgeIds.has("b2-leaf"), false);
 });
 
 test("collapses a directed cycle finitely without hiding the selected node", () => {
@@ -108,59 +102,23 @@ test("hides a non-empty group only when all contained nodes are hidden", () => {
   assert.equal(visibility.hiddenNodeIds.has("group"), true);
 });
 
-test("preserves nested restrictions and reveals only the selected shared branch", () => {
+test("expands an entire branch including nested collapsed nodes", () => {
   const nodes = [node("root"), node("child"), node("leaf")];
   const edges: FoldingGraphEdge[] = [
     { id: "root-child", fromNode: "root", toNode: "child" },
     { id: "child-leaf", fromNode: "child", toNode: "leaf" },
   ];
   const graph = buildCanvasFoldingGraph(nodes, edges);
-  const collapsedChildState = {
-    collapsedNodeIds: new Set(["child"]),
-    revealedBranchesByRestriction: new Map<string, ReadonlySet<string>>(),
-  };
-  const collapsedRootState = toggleCollapsedBranch(graph, collapsedChildState, "root");
-  assert.deepEqual([...collapsedRootState.collapsedNodeIds].sort(), ["child", "root"]);
+  const nestedVisibility = deriveCollapsedVisibility(graph, edges, ["child"]);
 
-  const expandedRootState = toggleCollapsedBranch(graph, collapsedRootState, "root");
-  assert.deepEqual([...expandedRootState.collapsedNodeIds], ["child"]);
   assert.deepEqual(
-    [...deriveCollapsedVisibility(
-      graph,
-      edges,
-      expandedRootState.collapsedNodeIds,
-      expandedRootState.revealedBranchesByRestriction,
-    ).hiddenNodeIds],
-    ["leaf"],
+    [...toggleCollapsedBranch(graph, ["child"], nestedVisibility.hiddenNodeIds, "root")],
+    [],
   );
-});
-
-test("reveals a shared branch without restoring a hidden sibling", () => {
-  const nodes = [node("a1"), node("a2"), node("b"), node("shared"), node("leaf")];
-  const edges: FoldingGraphEdge[] = [
-    { id: "a1-a2", fromNode: "a1", toNode: "a2" },
-    { id: "a1-shared", fromNode: "a1", toNode: "shared" },
-    { id: "b-shared", fromNode: "b", toNode: "shared" },
-    { id: "shared-leaf", fromNode: "shared", toNode: "leaf" },
-  ];
-  const graph = buildCanvasFoldingGraph(nodes, edges);
-  const collapsedState = {
-    collapsedNodeIds: new Set(["a1"]),
-    revealedBranchesByRestriction: new Map<string, ReadonlySet<string>>(),
-  };
-
-  const revealedState = toggleCollapsedBranch(graph, collapsedState, "b");
-  const visibility = deriveCollapsedVisibility(
-    graph,
-    edges,
-    revealedState.collapsedNodeIds,
-    revealedState.revealedBranchesByRestriction,
+  assert.deepEqual(
+    [...toggleCollapsedBranch(graph, [], new Set(), "root")],
+    ["root"],
   );
-
-  assert.deepEqual([...revealedState.collapsedNodeIds], ["a1"]);
-  assert.deepEqual([...revealedState.revealedBranchesByRestriction.get("a1") ?? []], ["b"]);
-  assert.deepEqual([...visibility.hiddenNodeIds], ["a2"]);
-  assert.deepEqual([...visibility.hiddenEdgeIds], ["a1-a2"]);
 });
 
 test("assigns shortest root levels and keeps rootless cycles outside the level view", () => {

@@ -36,9 +36,8 @@ first.
 - Recommend package exports for large or media-heavy Canvases while retaining
   single HTML as the convenient one-file sharing option.
 - Require a compact Windows smoke test for both export formats before release.
-- Match Canvas Folding for shared descendants: a collapsed branch remains the
-  active visibility restriction until a visible alternative parent explicitly
-  reveals its shared branch.
+- Keep shared descendants visible while another open parent branch still
+  reaches them, hiding only the connections belonging to the collapsed branch.
 
 ### Development
 
