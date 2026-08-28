@@ -569,7 +569,7 @@ await test("applies canvas colors to group nodes", async () => {
     canvasColors: { "4": "rgb(12, 34, 56)" },
   });
 
-  assert.match(html, /background:var\(--canvas-color-4-bg, #56ae6c22\);border-color:var\(--canvas-color-4, #56ae6c\);--node-border-color:var\(--canvas-color-4, #56ae6c\);/);
+  assert.match(html, /background:var\(--canvas-color-4-bg, #56ae6c22\);border-color:var\(--canvas-color-4, #56ae6c\);--node-background-color:var\(--canvas-color-4-bg, #56ae6c22\);--node-border-color:var\(--canvas-color-4, #56ae6c\);/);
   assert.match(html, /<div class="group-title">Group<\/div><div class="node-content"><\/div>/);
   assert.match(html, /\.group-title \{[\s\S]*color: var\(--node-border-color\);/);
 });
@@ -660,6 +660,121 @@ await test("renders the Advanced Canvas long-dashed edge path", async () => {
   const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /"lineStyle":"long-dash"/);
   assert.match(html, /style === "long-dash"/);
+});
+
+await test("renders Advanced Canvas palette colors for nodes, groups and edges", async () => {
+  const data: CanvasData = {
+    name: "Advanced colors",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A", color: "7" },
+      { id: "group", type: "group", x: 240, y: -20, width: 260, height: 160, label: "Group", color: "8" },
+    ],
+    edges: [
+      { fromNode: "a", toNode: "group", color: "9" },
+    ],
+  };
+
+  const html = await convertCanvasToHtml(data, {
+    ...baseOptions,
+    canvasColors: {
+      "7": "rgb(10, 20, 30)",
+      "8": "#abcdef",
+      "9": "oklch(62% 0.2 25)",
+    },
+  });
+
+  assert.match(html, /--canvas-color-7: rgb\(10, 20, 30\)/);
+  assert.match(html, /--canvas-color-8: #abcdef/);
+  assert.match(html, /"9":"oklch\(62% 0.2 25\)"/);
+  assert.match(html, /resolveEdgeColor\(edge\.color\)/);
+});
+
+await test("rejects unsafe Advanced Canvas palette values", async () => {
+  const unsafeColor = "red; } </style><script>window.injected = true</script>";
+  const html = await convertCanvasToHtml(
+    {
+      name: "Unsafe Advanced colors",
+      nodes: [
+        { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A", color: "7" },
+      ],
+      edges: [],
+    },
+    {
+      ...baseOptions,
+      canvasColors: { "7": unsafeColor },
+    },
+  );
+
+  assert.doesNotMatch(html, /window\.injected/);
+  assert.doesNotMatch(html, /--canvas-color-7:/);
+});
+
+await test("renders all built-in Advanced Canvas node styles in both export modes", async () => {
+  const shapes = [
+    "pill",
+    "diamond",
+    "parallelogram",
+    "circle",
+    "predefined-process",
+    "document",
+    "database",
+  ] as const;
+  const data: CanvasData = {
+    name: "Advanced styles",
+    nodes: [
+      ...shapes.map((shape, index) => ({
+        id: shape,
+        type: "text",
+        x: index * 240,
+        y: 0,
+        width: 200,
+        height: 120,
+        text: shape,
+        shape,
+      })),
+      {
+        id: "bordered",
+        type: "text",
+        x: 0,
+        y: 180,
+        width: 200,
+        height: 100,
+        text: "Bordered",
+        borderStyle: "dotted",
+        textAlign: "right",
+      },
+      {
+        id: "invisible",
+        type: "text",
+        x: 240,
+        y: 180,
+        width: 200,
+        height: 100,
+        text: "Invisible",
+        borderStyle: "invisible",
+        textAlign: "center",
+      },
+    ],
+    edges: [],
+  };
+
+  for (const exportFormat of ["package", "single-html"] as const) {
+    const html = await convertCanvasToHtml(data, { ...baseOptions, exportFormat });
+    for (const shape of shapes) {
+      assert.match(html, new RegExp(`data-node-shape="${shape}"`));
+    }
+    assert.match(html, /data-node-border="dotted"/);
+    assert.match(html, /data-node-border="invisible"/);
+    assert.match(html, /data-node-text-align="right"/);
+    assert.match(html, /data-node-text-align="center"/);
+    assert.match(html, /\.node\[data-node-shape="diamond"\]/);
+    assert.match(html, /\.node\[data-node-shape="database"\]/);
+    assert.match(html, /> :not\(\.node-controls\)/);
+    assert.match(html, /\.node\[data-node-border="invisible"\]/);
+    assert.match(html, /\.node\[data-node-text-align="center"\]/);
+    assert.match(html, /<polygon class="minimap-node"[^>]+data-node-id="diamond"/);
+    assert.match(html, /<ellipse class="minimap-node"[^>]+data-node-id="circle"/);
+  }
 });
 
 await test("renders minimap markup and viewport sync when enabled", async () => {

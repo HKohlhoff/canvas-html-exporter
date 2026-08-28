@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { normalizeCanvasData, shouldRewriteInternalTarget } from "../src/export/canvas-data";
+import { collectCanvasColorKeys, normalizeCanvasData, shouldRewriteInternalTarget } from "../src/export/canvas-data";
 
 function test(name: string, fn: () => void): void {
   try {
@@ -211,4 +211,23 @@ test("ignores unsupported Advanced Canvas edge path styles", () => {
   );
 
   assert.equal(data.edges[0]?.lineStyle, undefined);
+});
+
+test("collects the numeric palette colors used by nodes, groups and edges", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [
+        { id: "node", type: "text", color: "7" },
+        { id: "group", type: "group", color: 12 },
+        { id: "hex", type: "text", color: "#abcdef" },
+      ],
+      edges: [
+        { fromNode: "node", toNode: "group", color: "7" },
+        { fromNode: "group", toNode: "hex", color: "2" },
+      ],
+    },
+    "Fallback",
+  );
+
+  assert.deepEqual(collectCanvasColorKeys(data), ["2", "7", "12"]);
 });

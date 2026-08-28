@@ -81,6 +81,18 @@ export function normalizeCanvasData(input: unknown, fallbackName: string): Canva
   return { nodes, edges, name };
 }
 
+export function collectCanvasColorKeys(data: Pick<CanvasData, "nodes" | "edges">): readonly string[] {
+  const keys = new Set<string>();
+  for (const color of [
+    ...data.nodes.map((node) => node.color),
+    ...data.edges.map((edge) => edge.color),
+  ]) {
+    const normalized = String(color || "").trim();
+    if (/^\d+$/.test(normalized)) keys.add(normalized);
+  }
+  return [...keys].sort((left, right) => Number(left) - Number(right));
+}
+
 function normalizeCanvasNode(input: Record<string, unknown>): CanvasNode | null {
   const id = typeof input.id === "string" && input.id.trim() ? input.id.trim() : "";
   if (!id) return null;

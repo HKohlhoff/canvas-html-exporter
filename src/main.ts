@@ -8,6 +8,7 @@ import { resolveInitialCanvasFoldState } from "./integrations/canvas-folding";
 import { buildStoredPluginData, readPluginData } from "./plugin-data";
 import { CURRENT_RELEASE_NOTES_ID } from "./release-notes-content";
 import { openCurrentReleaseNotes } from "./ui/release-notes";
+import { collectCanvasColorKeys } from "./export/canvas-data";
 
 type CanvasColorMap = Record<string, string>;
 type CalloutColorMap = Record<string, string>;
@@ -74,6 +75,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
         foldingInitiallyEnabled: this.settings.foldingInitialState !== "none",
         initialFoldState: initialFoldState ?? undefined,
       });
+      result.options.canvasColors = this.readCanvasPaletteColors(collectCanvasColorKeys(result.data));
       const html = await convertCanvasToHtml(result.data, result.options);
       await this.writeOutput(result.outputPath, result.outputKind, html);
       const label = result.outputKind === "file" ? "Self-contained canvas HTML exported" : "Canvas package exported";
@@ -109,7 +111,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     return file;
   }
 
-  private readCanvasPaletteColors(): CanvasColorMap {
+  private readCanvasPaletteColors(additionalColorKeys: readonly string[] = []): CanvasColorMap {
     if (typeof window === "undefined" || typeof activeDocument === "undefined" || !activeDocument.body) {
       return {};
     }
@@ -127,6 +129,14 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
 
     for (const [colorIndex, cssVar] of Object.entries(colorMap)) {
       const resolved = this.resolveCssVariable(cssVar);
+      if (resolved) {
+        result[colorIndex] = resolved;
+      }
+    }
+
+    for (const colorIndex of additionalColorKeys) {
+      if (result[colorIndex] || !/^\d+$/.test(colorIndex)) continue;
+      const resolved = this.resolveCssVariable(`--canvas-color-${colorIndex}`);
       if (resolved) {
         result[colorIndex] = resolved;
       }

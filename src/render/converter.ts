@@ -30,6 +30,7 @@ import oneLightTheme from "shiki/themes/one-light.mjs";
 import type { HighlighterCore, LanguageInput, ThemeInput } from "shiki/core";
 import type { CanvasFoldState } from "../folding/types";
 import { buildCanvasFoldingGraph, getCanvasDescendants } from "../folding/graph";
+import { normalizeThemeColor } from "../helpers/color-helpers";
 
 export type CanvasNodeShape =
   | "pill"
@@ -334,6 +335,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     (_, level) => `<option value="${level}">Level ${level}</option>`,
   ).join("");
   const theme = getTheme(options.darkMode);
+  const edgePaletteColors = buildCanvasEdgeColorMap(options.canvasColors);
   const calloutCss = buildCalloutCss(options.calloutColors);
   const headingCss = buildHeadingColorCss(".node-content ", options.headingColors);
   const singlePageHeadingCss = buildHeadingColorCss(".single-page-body ", options.headingColors);
@@ -528,6 +530,138 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       overflow: hidden;
       display: flex;
       flex-direction: column;
+    }
+    .node[data-node-border="dashed"] {
+      border-style: dashed;
+      box-shadow: none;
+    }
+    .node[data-node-border="dotted"] {
+      border-style: dotted;
+      box-shadow: none;
+    }
+    .node[data-node-border="invisible"] {
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+    }
+    .node[data-node-text-align="center"] {
+      text-align: center;
+    }
+    .node[data-node-text-align="right"] {
+      text-align: right;
+    }
+    .node[data-node-shape="pill"] {
+      border-radius: 999px;
+      padding-inline: 28px;
+    }
+    .node[data-node-shape="circle"] {
+      border-radius: 50%;
+      padding: 18px 24px;
+      justify-content: center;
+    }
+    .node[data-node-shape="parallelogram"] {
+      transform: skewX(-16deg);
+      border-radius: 6px;
+      padding-inline: 28px;
+    }
+    .node[data-node-shape="parallelogram"] > * {
+      transform: skewX(16deg);
+    }
+    .node[data-node-shape="diamond"],
+    .node[data-node-shape="document"] {
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+      overflow: visible;
+    }
+    .node[data-node-shape="diamond"] {
+      padding: 20px 38px;
+      justify-content: center;
+    }
+    .node[data-node-shape="diamond"]::before,
+    .node[data-node-shape="diamond"]::after,
+    .node[data-node-shape="document"]::before,
+    .node[data-node-shape="document"]::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+    }
+    .node[data-node-shape="diamond"]::before,
+    .node[data-node-shape="diamond"]::after {
+      clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    }
+    .node[data-node-shape="diamond"]::before,
+    .node[data-node-shape="document"]::before {
+      inset: 0;
+      z-index: 0;
+      background: var(--node-border-color);
+    }
+    .node[data-node-shape="diamond"]::after,
+    .node[data-node-shape="document"]::after {
+      inset: 3px;
+      z-index: 0;
+      background: var(--node-background-color);
+    }
+    .node[data-node-shape="diamond"] > :not(.node-controls),
+    .node[data-node-shape="document"] > :not(.node-controls),
+    .node[data-node-shape="database"] > :not(.node-controls) {
+      position: relative;
+      z-index: 1;
+    }
+    .node[data-node-shape="predefined-process"] {
+      padding-inline: 28px;
+    }
+    .node[data-node-shape="predefined-process"]::before,
+    .node[data-node-shape="predefined-process"]::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      border-left: 2px solid var(--node-border-color);
+      pointer-events: none;
+    }
+    .node[data-node-shape="predefined-process"]::before {
+      left: 12px;
+    }
+    .node[data-node-shape="predefined-process"]::after {
+      right: 12px;
+    }
+    .node[data-node-shape="document"] {
+      padding-bottom: 24px;
+    }
+    .node[data-node-shape="document"]::before,
+    .node[data-node-shape="document"]::after {
+      clip-path: polygon(0 0, 100% 0, 100% 82%, 76% 94%, 50% 84%, 24% 94%, 0 82%);
+    }
+    .node[data-node-shape="database"] {
+      overflow: visible;
+      border-top: 0;
+      border-bottom: 0;
+      border-radius: 0;
+      box-shadow: none;
+      padding-block: 20px;
+    }
+    .node[data-node-shape="database"]::before,
+    .node[data-node-shape="database"]::after {
+      content: "";
+      position: absolute;
+      left: -2px;
+      right: -2px;
+      height: 28px;
+      border: 2px solid var(--node-border-color);
+      border-radius: 50%;
+      background: var(--node-background-color);
+      pointer-events: none;
+    }
+    .node[data-node-shape="database"]::before {
+      top: -14px;
+    }
+    .node[data-node-shape="database"]::after {
+      bottom: -14px;
+    }
+    .node[data-node-border="invisible"]::before,
+    .node[data-node-border="invisible"]::after {
+      display: none;
     }
     .node.is-folding-hidden {
       display: none;
@@ -1641,9 +1775,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const edgeColor = ${JSON.stringify(theme.edge)};
       const textColor = ${JSON.stringify(theme.text)};
       const inlineBlobCache = new Map();
-      const obsidianColors = ${JSON.stringify(
-        Object.fromEntries(Object.entries(OBSIDIAN_COLORS).map(([key, value]) => [key, value.border]))
-      )};
+      const obsidianColors = ${JSON.stringify(edgePaletteColors)};
       const edges = ${JSON.stringify(edgesData)};
       const searchEntries = ${JSON.stringify(searchEntries)};
       const foldingGraph = ${JSON.stringify(foldingGraph)};
@@ -3563,6 +3695,18 @@ async function renderNode(
   const mediaKind = type === "file" ? getNodeMediaKind(node) : "";
   const classes = ["node", type, type === "group" ? "group" : "", isPdf ? "pdf" : "", mediaKind].filter(Boolean).join(" ");
   const colors = resolveNodeColors(node, theme, canvasColors);
+  const usesLayeredShape = node.shape === "diamond" || node.shape === "document";
+  const renderedBackground = usesLayeredShape || node.borderStyle === "invisible"
+    ? "transparent"
+    : colors.background;
+  const renderedBorder = usesLayeredShape || node.borderStyle === "invisible"
+    ? "transparent"
+    : colors.border;
+  const advancedStyleAttributes = [
+    node.shape ? `data-node-shape="${escapeAttribute(node.shape)}"` : "",
+    node.borderStyle ? `data-node-border="${escapeAttribute(node.borderStyle)}"` : "",
+    node.textAlign ? `data-node-text-align="${escapeAttribute(node.textAlign)}"` : "",
+  ].filter(Boolean).join("\n    ");
   const groupName = type === "group" ? (node.label || node.text || "").trim() : "";
 
   let title = "";
@@ -3591,7 +3735,8 @@ async function renderNode(
     data-canvas-top="${frame.top}"
     data-canvas-width="${frame.width}"
     data-canvas-height="${frame.height}"
-    style="left:${frame.left}px;top:${frame.top}px;width:${frame.width}px;height:${frame.height}px;background:${colors.background};border-color:${colors.border};--node-border-color:${colors.border};"
+    ${advancedStyleAttributes}
+    style="left:${frame.left}px;top:${frame.top}px;width:${frame.width}px;height:${frame.height}px;background:${renderedBackground};border-color:${renderedBorder};--node-background-color:${colors.background};--node-border-color:${colors.border};"
   >${nodeControls}${title}<div class="node-content">${content}</div></div>`;
 }
 
@@ -3608,7 +3753,26 @@ function renderMinimapNode(
   const classes = ["minimap-node", type === "group" ? "group" : ""].filter(Boolean).join(" ");
   const radius = type === "group" ? 14 : 10;
 
-  return `<rect class="${classes}" data-node-id="${escapeAttribute(node.id)}" x="${frame.left}" y="${frame.top}" width="${frame.width}" height="${frame.height}" rx="${radius}" ry="${radius}" fill="${escapeAttribute(colors.minimapFill)}" stroke="${escapeAttribute(colors.minimapStroke)}"></rect>`;
+  if (node.shape === "diamond") {
+    const centerX = frame.left + frame.width / 2;
+    const centerY = frame.top + frame.height / 2;
+    const points = `${centerX},${frame.top} ${frame.left + frame.width},${centerY} ${centerX},${frame.top + frame.height} ${frame.left},${centerY}`;
+    return `<polygon class="${classes}" data-node-id="${escapeAttribute(node.id)}" points="${points}" fill="${escapeAttribute(colors.minimapFill)}" stroke="${escapeAttribute(colors.minimapStroke)}"></polygon>`;
+  }
+
+  if (node.shape === "parallelogram") {
+    const inset = Math.min(24, frame.width * 0.12);
+    const points = `${frame.left + inset},${frame.top} ${frame.left + frame.width},${frame.top} ${frame.left + frame.width - inset},${frame.top + frame.height} ${frame.left},${frame.top + frame.height}`;
+    return `<polygon class="${classes}" data-node-id="${escapeAttribute(node.id)}" points="${points}" fill="${escapeAttribute(colors.minimapFill)}" stroke="${escapeAttribute(colors.minimapStroke)}"></polygon>`;
+  }
+
+  if (node.shape === "circle") {
+    return `<ellipse class="${classes}" data-node-id="${escapeAttribute(node.id)}" cx="${frame.left + frame.width / 2}" cy="${frame.top + frame.height / 2}" rx="${frame.width / 2}" ry="${frame.height / 2}" fill="${escapeAttribute(colors.minimapFill)}" stroke="${escapeAttribute(colors.minimapStroke)}"></ellipse>`;
+  }
+
+  const shapeRadius = node.shape === "pill" ? frame.height / 2 : radius;
+
+  return `<rect class="${classes}" data-node-id="${escapeAttribute(node.id)}" x="${frame.left}" y="${frame.top}" width="${frame.width}" height="${frame.height}" rx="${shapeRadius}" ry="${shapeRadius}" fill="${escapeAttribute(colors.minimapFill)}" stroke="${escapeAttribute(colors.minimapStroke)}"></rect>`;
 }
 
 function buildSearchEntry(
@@ -4396,21 +4560,24 @@ function resolveNodeColors(
   const type = (node.type || "text").toLowerCase();
   const colorKey = String(node.color || "").trim();
   const isNumericColor = /^\d+$/.test(colorKey);
+  const customPaletteColor = isNumericColor
+    ? normalizeCssColorValue(canvasColors?.[colorKey] || "")
+    : "";
   const fallbackBackground = type === "group" ? theme.groupBackground : theme.nodeBackground;
   const fallbackBorder = type === "group" ? theme.groupBorder : theme.nodeBorder;
   const fallbackMinimapFill = type === "group"
     ? (theme.darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)")
     : (theme.darkMode ? "rgba(255,255,255,0.14)" : "rgba(36,48,61,0.08)");
 
-  if (isNumericColor && canvasColors && canvasColors[colorKey]) {
+  if (isNumericColor && customPaletteColor) {
     const bgVar = `--canvas-color-${colorKey}-bg`;
     const borderVar = `--canvas-color-${colorKey}`;
     const fallbackPalette = OBSIDIAN_COLORS[colorKey] || { background: fallbackBackground, border: fallbackBorder };
     return {
       background: `var(${bgVar}, ${fallbackPalette.background})`,
       border: `var(${borderVar}, ${fallbackPalette.border})`,
-      minimapFill: toSoftBackground(canvasColors[colorKey]),
-      minimapStroke: canvasColors[colorKey],
+      minimapFill: toSoftBackground(customPaletteColor),
+      minimapStroke: customPaletteColor,
     };
   }
 
@@ -4454,6 +4621,19 @@ export function buildCanvasColorVariables(canvasColors?: Record<string, string>)
     parts.push(`--canvas-color-${normalizedKey}-bg: ${bg};`);
   }
   return parts.join(" ");
+}
+
+function buildCanvasEdgeColorMap(canvasColors?: Record<string, string>): Record<string, string> {
+  const result = Object.fromEntries(
+    Object.entries(OBSIDIAN_COLORS).map(([key, value]) => [key, value.border]),
+  );
+  for (const [rawKey, rawColor] of Object.entries(canvasColors ?? {})) {
+    const key = String(rawKey).trim();
+    if (!/^\d+$/.test(key)) continue;
+    const color = normalizeCssColorValue(rawColor);
+    if (color) result[key] = color;
+  }
+  return result;
 }
 
 function indentCssBlock(css: string, spaces: number): string {
@@ -4553,9 +4733,6 @@ function scopeCalloutCss(css: string, prefix: string): string {
 function normalizeCssColorValue(value: string): string {
   const raw = String(value || "").trim();
   if (!raw) return "";
-  if (/^rgba?\(/i.test(raw) || /^hsla?\(/i.test(raw) || raw.startsWith("#")) {
-    return raw;
-  }
   const rgbMatch = raw.match(/^(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?$/);
   if (rgbMatch) {
     const r = clampColor(rgbMatch[1]);
@@ -4567,7 +4744,7 @@ function normalizeCssColorValue(value: string): string {
     }
     return `rgb(${r}, ${g}, ${b})`;
   }
-  return raw;
+  return normalizeThemeColor(raw);
 }
 
 function clampColor(value: string): number {
