@@ -201,8 +201,10 @@ and its embedded assets.
 
 Obsidian can hide generated `.html` files in its file tree even though the
 export completed successfully and the files are present on disk. Enable
-**Settings → Files and links → Detect all file extensions** when you want
-`index.html` and single HTML exports to appear in Obsidian's file tree.
+**Obsidian Settings → Files and links → Detect all file extensions** for the
+current Vault when you want `index.html` and single HTML exports to appear in
+Obsidian's file tree. This is an Obsidian Vault setting, not a Canvas HTML
+Exporter setting, and can therefore differ between Vaults.
 
 ### Single HTML file
 

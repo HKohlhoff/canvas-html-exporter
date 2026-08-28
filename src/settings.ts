@@ -111,8 +111,8 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
       {
         name: "Output folder",
         desc: isMobile
-          ? "Enter a folder inside the vault."
-          : "Enter a vault folder or an absolute folder on this system.",
+          ? "Enter a folder inside the vault. HTML visibility is controlled for this vault under Obsidian Settings → Files and links → Detect all file extensions, not by this plugin."
+          : "Enter a vault folder or an absolute folder on this system. For vault output, HTML visibility is controlled for this vault under Obsidian Settings → Files and links → Detect all file extensions, not by this plugin.",
         aliases: ["destination", "directory", "path"],
         control: {
           type: "text",

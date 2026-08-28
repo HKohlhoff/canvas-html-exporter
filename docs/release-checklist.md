@@ -61,6 +61,10 @@ npm run build:prod
 - Use **Show last update** at the bottom of settings and confirm that the same
   version 1.2.0 description can be reopened at any time.
 - Export to a Vault folder and an allowed absolute desktop folder.
+- With **Obsidian Settings → Files and links → Detect all file extensions**
+  disabled for the test Vault, confirm that completed HTML exists on disk but
+  may remain hidden in Obsidian's file tree. Enable the Vault setting and
+  confirm that the existing HTML becomes visible without another export.
 - Verify useful notices and failures for missing files and invalid targets.
 - Confirm that Canvas and source notes are not modified.
 - Complete the compact Windows smoke test from `manual-tests/README.md` on a

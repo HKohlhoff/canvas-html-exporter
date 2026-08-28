@@ -38,8 +38,9 @@ first.
   migration from legacy top-level settings.
 - Recommend package exports for large or media-heavy Canvases while retaining
   single HTML as the convenient one-file sharing option.
-- Explain that exported HTML remains hidden in Obsidian's file tree unless
-  **Detect all file extensions** is enabled.
+- Explain that exported HTML remains hidden in Obsidian's file tree unless the
+  current Vault enables **Obsidian Settings → Files and links → Detect all file
+  extensions**, which is an Obsidian Vault setting rather than a plugin setting.
 - Require a compact Windows smoke test for both export formats before release.
 - Keep shared descendants visible while another open parent branch still
   reaches them, hiding only the connections belonging to the collapsed branch.
