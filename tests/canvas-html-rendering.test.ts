@@ -733,7 +733,7 @@ await test("applies an imported Canvas Folding state in both export modes", asyn
     assert.match(html, /hiddenNodeIds\.has\(edge\.toId\)/);
     assert.match(html, /function applyImportedFolding\(applied\)/);
     assert.match(html, /workingImportedHiddenNodeIds\.delete\(descendantId\)/);
-    assert.match(html, /function branchHasHiddenContent\(nodeId, descendants\)/);
+    assert.match(html, /function branchHasHiddenContent\(nodeId\)/);
     assert.match(html, /control\.hidden = !foldingControlsEnabled \|\| !foldingNodeControlsVisible/);
     assert.doesNotMatch(html, /if \(importedFoldingApplied \|\| descendants\.length === 0\) return/);
     assert.match(html, /window\.expandAllBranches = function\(\)/);
@@ -847,7 +847,9 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /"childrenByNode":\{"child":\["leaf"\],"leaf":\[\],"root":\["child"\]\}/);
     assert.doesNotMatch(html, /"descendantsByNode"/);
     assert.match(html, /function getDescendants\(nodeId\)/);
-    assert.match(html, /function deriveCollapsedVisibility\(baseHiddenNodeIds\)/);
+    assert.match(html, /function getHiddenNodesForRestriction\(restrictedNodeId\)/);
+    assert.match(html, /function deriveCollapsedVisibility\(\)/);
+    assert.match(html, /function getGloballyHiddenNodeIds\(\)/);
     assert.match(html, /function updateFoldingVisibility\(\)/);
     assert.match(html, /function toggleBranch\(nodeId\)/);
     assert.match(html, /id="folding-expand-all-button"[^>]*>Expand all<\/button>/);
@@ -873,11 +875,9 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /const hiddenDescendantCount = descendants\s+\.filter\(\(descendantId\) => hiddenNodeIds\.has\(descendantId\) && !groupNodeIds\.has\(descendantId\)\)/);
     assert.match(html, /control\.textContent = hasHiddenBranch && hiddenDescendantCount > 0\s+\? String\(hiddenDescendantCount\)/);
     assert.match(html, /control\.classList\.toggle\("has-hidden-count", hasHiddenBranch && hiddenDescendantCount > 0\)/);
-    assert.match(html, /const hiddenConnectionCount = getHiddenBranchConnectionCount\(nodeId, descendants\)/);
-    assert.match(html, /const hasHiddenBranch = collapsedNodeIds\.has\(nodeId\)\s+\|\| hasHiddenDescendant\s+\|\| hiddenConnectionCount > 0/);
-    assert.match(html, /hiddenConnectionCount === 1 \? " hidden connection" : " hidden connections"/);
-    assert.match(html, /function getHiddenBranchConnectionCount\(nodeId, descendants\)/);
-    assert.match(html, /return edges\.filter\(\(edge\) => \([\s\S]+\)\)\.length/);
+    assert.match(html, /const hasHiddenBranch = hasHiddenChild/);
+    assert.doesNotMatch(html, /getHiddenBranchConnectionCount/);
+    assert.doesNotMatch(html, /hidden connection/);
     assert.match(html, /control\.setAttribute\("aria-label", branchControlLabel\)/);
     assert.match(html, /\.node-controls \{[\s\S]+display: flex;[\s\S]+gap: 6px;/);
     assert.match(html, /\.branch-control\.has-hidden-count \{[\s\S]+width: auto;[\s\S]+padding: 0 6px;/);
@@ -907,8 +907,9 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /window\.restoreImportedFolding = function\(\) \{\s+foldingControlsEnabled = true;\s+applyImportedFolding\(false\)/);
     assert.match(html, /foldingMenu\.addEventListener\("mouseleave", \(\) => \{\s+foldingMenu\.removeAttribute\("open"\)/);
     assert.match(html, /foldingModeButton\.textContent = foldingControlsEnabled\s+\? "No folding"\s+: "Enable folding"/);
-    assert.match(html, /collapsedNodeIds\.has\(edge\.fromId\)/);
-    assert.match(html, /hasVisibleAlternativeParent/);
+    assert.doesNotMatch(html, /collapsedNodeIds\.has\(edge\.fromId\)/);
+    assert.doesNotMatch(html, /hasVisibleAlternativeParent/);
+    assert.match(html, /revealedNodeIdsByRestriction\.set\(restrictedNodeId, revealedNodeIds\)/);
     assert.match(html, /foldingControlsVisibilityButton\.textContent = foldingNodeControlsVisible\s+\? "Hide folding controls"\s+: "Show folding controls"/);
     assert.match(html, /focusControlsVisibilityButton\.textContent = focusNodeControlsVisible\s+\? "Hide focus controls"\s+: "Show focus controls"/);
     assert.match(html, /control\.addEventListener\("click"/);

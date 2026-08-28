@@ -1591,6 +1591,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const importedHiddenNodeIds = new Set(${JSON.stringify(initialFoldState?.hiddenNodeIds ?? [])});
       const importedHiddenEdgeIds = new Set(${JSON.stringify(initialFoldState?.hiddenEdgeIds ?? [])});
       const collapsedNodeIds = new Set();
+      const globallyRevealedNodeIds = new Set();
+      const revealedNodeIdsByRestriction = new Map();
       let workingImportedHiddenNodeIds = new Set();
       let hiddenNodeIds = new Set();
       let hiddenEdgeIds = new Set();
@@ -2434,6 +2436,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
       function applyImportedFolding(applied) {
         collapsedNodeIds.clear();
+        globallyRevealedNodeIds.clear();
+        revealedNodeIdsByRestriction.clear();
         focusedBranchNodeId = null;
         visibleLevelLimit = null;
         importedBaseEnabled = Boolean(applied) && (
@@ -2479,32 +2483,38 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         return descendants;
       }
 
-      function deriveCollapsedVisibility(baseHiddenNodeIds) {
+      function getHiddenNodesForRestriction(restrictedNodeId) {
+        const hiddenByRestriction = new Set(getDescendants(restrictedNodeId));
+        for (const revealedNodeId of revealedNodeIdsByRestriction.get(restrictedNodeId) || []) {
+          for (const descendantId of getDescendants(revealedNodeId)) {
+            hiddenByRestriction.delete(descendantId);
+          }
+        }
+        return hiddenByRestriction;
+      }
+
+      function deriveCollapsedVisibility() {
         const dynamicHiddenNodeIds = new Set();
         for (const nodeId of [...collapsedNodeIds].sort()) {
-          for (const descendantId of getDescendants(nodeId)) {
+          for (const descendantId of getHiddenNodesForRestriction(nodeId)) {
             dynamicHiddenNodeIds.add(descendantId);
           }
         }
+        return dynamicHiddenNodeIds;
+      }
 
-        let revealedAny = true;
-        while (revealedAny) {
-          revealedAny = false;
-          for (const nodeId of [...dynamicHiddenNodeIds].sort()) {
-            const parents = foldingGraph.parentsByNode[nodeId] || [];
-            const hasVisibleAlternativeParent = parents.some((parentId) => (
-              !baseHiddenNodeIds.has(parentId)
-              && !dynamicHiddenNodeIds.has(parentId)
-              && !collapsedNodeIds.has(parentId)
-            ));
-            if (hasVisibleAlternativeParent) {
-              dynamicHiddenNodeIds.delete(nodeId);
-              revealedAny = true;
-            }
+      function getGloballyHiddenNodeIds() {
+        const globallyHiddenNodeIds = new Set();
+        if (visibleLevelLimit === null) return globallyHiddenNodeIds;
+        for (const [nodeId, level] of Object.entries(foldingGraph.levelByNode)) {
+          if (level > visibleLevelLimit) globallyHiddenNodeIds.add(nodeId);
+        }
+        for (const revealedNodeId of globallyRevealedNodeIds) {
+          for (const descendantId of getDescendants(revealedNodeId)) {
+            globallyHiddenNodeIds.delete(descendantId);
           }
         }
-
-        return dynamicHiddenNodeIds;
+        return globallyHiddenNodeIds;
       }
 
       function updateFoldingVisibility() {
@@ -2515,13 +2525,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const baseHiddenNodeIds = importedBaseEnabled
           ? new Set(workingImportedHiddenNodeIds)
           : new Set();
-        if (visibleLevelLimit !== null) {
-          for (const [nodeId, level] of Object.entries(foldingGraph.levelByNode)) {
-            if (level > visibleLevelLimit) baseHiddenNodeIds.add(nodeId);
-          }
+        for (const nodeId of getGloballyHiddenNodeIds()) {
+          baseHiddenNodeIds.add(nodeId);
         }
         hiddenNodeIds = new Set(baseHiddenNodeIds);
-        for (const nodeId of deriveCollapsedVisibility(baseHiddenNodeIds)) {
+        for (const nodeId of deriveCollapsedVisibility()) {
           hiddenNodeIds.add(nodeId);
         }
 
@@ -2559,8 +2567,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           for (const edge of edges) {
             if (!edge.id) continue;
             if (
-              collapsedNodeIds.has(edge.fromId)
-              || hiddenNodeIds.has(edge.fromId)
+              hiddenNodeIds.has(edge.fromId)
               || hiddenNodeIds.has(edge.toId)
             ) {
               hiddenEdgeIds.add(edge.id);
@@ -2577,14 +2584,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const nodeId = control.getAttribute("data-branch-node-id") || "";
           const descendants = getDescendants(nodeId);
           const descendantCount = descendants.length;
-          const hasHiddenDescendant = descendants.some((descendantId) => hiddenNodeIds.has(descendantId));
+          const hasHiddenChild = (foldingGraph.childrenByNode[nodeId] || [])
+            .some((childId) => hiddenNodeIds.has(childId));
           const hiddenDescendantCount = descendants
             .filter((descendantId) => hiddenNodeIds.has(descendantId) && !groupNodeIds.has(descendantId))
             .length;
-          const hiddenConnectionCount = getHiddenBranchConnectionCount(nodeId, descendants);
-          const hasHiddenBranch = collapsedNodeIds.has(nodeId)
-            || hasHiddenDescendant
-            || hiddenConnectionCount > 0;
+          const hasHiddenBranch = hasHiddenChild;
           control.hidden = !foldingControlsEnabled || !foldingNodeControlsVisible;
           control.textContent = hasHiddenBranch && hiddenDescendantCount > 0
             ? String(hiddenDescendantCount)
@@ -2595,8 +2600,6 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             + " · "
             + (hasHiddenBranch && hiddenDescendantCount > 0
               ? hiddenDescendantCount + (hiddenDescendantCount === 1 ? " hidden node" : " hidden nodes")
-              : hasHiddenBranch && hiddenConnectionCount > 0
-                ? hiddenConnectionCount + (hiddenConnectionCount === 1 ? " hidden connection" : " hidden connections")
               : descendantCount + (descendantCount === 1 ? " descendant" : " descendants"));
           control.setAttribute("aria-label", branchControlLabel);
           control.setAttribute("title", branchControlLabel);
@@ -2676,34 +2679,38 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         updateMinimapViewport();
       }
 
-      function branchHasHiddenContent(nodeId, descendants) {
-        if (collapsedNodeIds.has(nodeId)) return true;
-        if (descendants.some((descendantId) => hiddenNodeIds.has(descendantId))) return true;
-        return getHiddenBranchConnectionCount(nodeId, descendants) > 0;
-      }
-
-      function getHiddenBranchConnectionCount(nodeId, descendants) {
-        const branchSources = new Set([nodeId, ...descendants]);
-        const branchTargets = new Set(descendants);
-        return edges.filter((edge) => (
-          hiddenEdgeIds.has(edge.id)
-          && branchSources.has(edge.fromId)
-          && branchTargets.has(edge.toId)
-        )).length;
+      function branchHasHiddenContent(nodeId) {
+        return (foldingGraph.childrenByNode[nodeId] || [])
+          .some((childId) => hiddenNodeIds.has(childId));
       }
 
       function toggleBranch(nodeId) {
         const descendants = getDescendants(nodeId);
         if (descendants.length === 0) return;
-        const hasHiddenBranch = branchHasHiddenContent(nodeId, descendants);
-        visibleLevelLimit = null;
-        syncFoldingLevelSelect();
+        const hasHiddenBranch = branchHasHiddenContent(nodeId);
         if (hasHiddenBranch) {
-          collapsedNodeIds.delete(nodeId);
-          descendants.forEach((descendantId) => collapsedNodeIds.delete(descendantId));
+          if (collapsedNodeIds.has(nodeId)) {
+            collapsedNodeIds.delete(nodeId);
+            revealedNodeIdsByRestriction.delete(nodeId);
+          }
+
+          const childIds = foldingGraph.childrenByNode[nodeId] || [];
+          const globallyHiddenNodeIds = getGloballyHiddenNodeIds();
+          if (childIds.some((childId) => globallyHiddenNodeIds.has(childId))) {
+            globallyRevealedNodeIds.add(nodeId);
+          }
+          for (const restrictedNodeId of collapsedNodeIds) {
+            const hiddenByRestriction = getHiddenNodesForRestriction(restrictedNodeId);
+            if (!childIds.some((childId) => hiddenByRestriction.has(childId))) continue;
+            const revealedNodeIds = revealedNodeIdsByRestriction.get(restrictedNodeId) || new Set();
+            revealedNodeIds.add(nodeId);
+            revealedNodeIdsByRestriction.set(restrictedNodeId, revealedNodeIds);
+          }
           descendants.forEach((descendantId) => workingImportedHiddenNodeIds.delete(descendantId));
         } else {
+          globallyRevealedNodeIds.delete(nodeId);
           collapsedNodeIds.add(nodeId);
+          revealedNodeIdsByRestriction.delete(nodeId);
         }
         if (importedBaseEnabled) importedStateModified = true;
         updateFoldingVisibility();
@@ -2712,6 +2719,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       window.expandAllBranches = function() {
         clearImportedFoldingBase();
         collapsedNodeIds.clear();
+        globallyRevealedNodeIds.clear();
+        revealedNodeIdsByRestriction.clear();
         focusedBranchNodeId = null;
         visibleLevelLimit = null;
         syncFoldingLevelSelect();
@@ -2721,6 +2730,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       window.collapseAllBranches = function() {
         clearImportedFoldingBase();
         collapsedNodeIds.clear();
+        globallyRevealedNodeIds.clear();
+        revealedNodeIdsByRestriction.clear();
         focusedBranchNodeId = null;
         visibleLevelLimit = null;
         for (const nodeId of foldingGraph.rootNodeIds) {
@@ -2733,6 +2744,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       window.setVisibleLevel = function(value) {
         clearImportedFoldingBase();
         collapsedNodeIds.clear();
+        globallyRevealedNodeIds.clear();
+        revealedNodeIdsByRestriction.clear();
         focusedBranchNodeId = null;
         const parsedLevel = Number(value);
         visibleLevelLimit = value === "all" || !Number.isFinite(parsedLevel)
@@ -2777,6 +2790,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         if (!foldingControlsEnabled) {
           clearImportedFoldingBase();
           collapsedNodeIds.clear();
+          globallyRevealedNodeIds.clear();
+          revealedNodeIdsByRestriction.clear();
           focusedBranchNodeId = null;
           visibleLevelLimit = null;
           syncFoldingLevelSelect();

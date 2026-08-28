@@ -27,6 +27,16 @@ export interface CanvasFoldingVisibility {
   readonly hiddenNodeIds: ReadonlySet<string>;
 }
 
+export type RevealedBranchesByRestriction = ReadonlyMap<
+  string,
+  ReadonlySet<string>
+>;
+
+export interface CanvasBranchCollapseState {
+  readonly collapsedNodeIds: ReadonlySet<string>;
+  readonly revealedBranchesByRestriction: RevealedBranchesByRestriction;
+}
+
 export function buildCanvasFoldingGraph(
   nodes: readonly FoldingGraphNode[],
   edges: readonly FoldingGraphEdge[],
@@ -79,6 +89,7 @@ export function deriveCollapsedVisibility(
   graph: CanvasFoldingGraph,
   edges: readonly FoldingGraphEdge[],
   collapsedNodeIds: Iterable<string>,
+  revealedBranchesByRestriction: RevealedBranchesByRestriction = new Map(),
 ): CanvasFoldingVisibility {
   const collapsed = new Set(
     [...collapsedNodeIds].filter((nodeId) => getCanvasDescendants(graph, nodeId).length > 0),
@@ -86,22 +97,13 @@ export function deriveCollapsedVisibility(
   const hiddenNodes = new Set<string>();
 
   for (const nodeId of [...collapsed].sort()) {
-    for (const descendantId of getCanvasDescendants(graph, nodeId)) {
+    const hiddenByRestriction = getHiddenNodesForRestriction(
+      graph,
+      nodeId,
+      revealedBranchesByRestriction.get(nodeId) ?? new Set(),
+    );
+    for (const descendantId of hiddenByRestriction) {
       hiddenNodes.add(descendantId);
-    }
-  }
-
-  let revealedAny = true;
-  while (revealedAny) {
-    revealedAny = false;
-    for (const nodeId of [...hiddenNodes].sort()) {
-      const hasVisibleAlternativeParent = (graph.parentsByNode[nodeId] ?? []).some(
-        (parentId) => !hiddenNodes.has(parentId) && !collapsed.has(parentId),
-      );
-      if (hasVisibleAlternativeParent) {
-        hiddenNodes.delete(nodeId);
-        revealedAny = true;
-      }
     }
   }
 
@@ -115,8 +117,7 @@ export function deriveCollapsedVisibility(
   for (const edge of edges) {
     if (!edge.id) continue;
     if (
-      collapsed.has(edge.fromNode)
-      || hiddenNodes.has(edge.fromNode)
+      hiddenNodes.has(edge.fromNode)
       || hiddenNodes.has(edge.toNode)
     ) {
       hiddenEdges.add(edge.id);
@@ -129,27 +130,81 @@ export function deriveCollapsedVisibility(
   });
 }
 
+export function getHiddenNodesForRestriction(
+  graph: CanvasFoldingGraph,
+  restrictedNodeId: string,
+  revealedBranchNodeIds: Iterable<string> = [],
+): ReadonlySet<string> {
+  const hiddenNodeIds = new Set(getCanvasDescendants(graph, restrictedNodeId));
+  for (const revealedNodeId of revealedBranchNodeIds) {
+    for (const descendantId of getCanvasDescendants(graph, revealedNodeId)) {
+      hiddenNodeIds.delete(descendantId);
+    }
+  }
+  return hiddenNodeIds;
+}
+
 export function toggleCollapsedBranch(
   graph: CanvasFoldingGraph,
-  collapsedNodeIds: Iterable<string>,
-  hiddenNodeIds: ReadonlySet<string>,
+  state: CanvasBranchCollapseState,
   nodeId: string,
-): ReadonlySet<string> {
+): CanvasBranchCollapseState {
   const descendants = getCanvasDescendants(graph, nodeId);
-  const next = new Set(collapsedNodeIds);
-  if (descendants.length === 0) return next;
+  const collapsedNodeIds = new Set(state.collapsedNodeIds);
+  const revealedBranchesByRestriction = new Map(
+    [...state.revealedBranchesByRestriction].map(([restrictedNodeId, revealedNodeIds]) => [
+      restrictedNodeId,
+      new Set(revealedNodeIds),
+    ]),
+  );
+  if (descendants.length === 0) {
+    return { collapsedNodeIds, revealedBranchesByRestriction };
+  }
 
-  const hasHiddenBranch = next.has(nodeId)
-    || descendants.some((descendantId) => hiddenNodeIds.has(descendantId));
+  const childIds = graph.childrenByNode[nodeId] ?? [];
+  const hiddenNodeIds = deriveCollapsedHiddenNodeIds(
+    graph,
+    collapsedNodeIds,
+    revealedBranchesByRestriction,
+  );
+  const hasHiddenBranch = childIds.some((childId) => hiddenNodeIds.has(childId));
   if (hasHiddenBranch) {
-    next.delete(nodeId);
-    for (const descendantId of descendants) {
-      next.delete(descendantId);
+    collapsedNodeIds.delete(nodeId);
+    revealedBranchesByRestriction.delete(nodeId);
+    for (const restrictedNodeId of collapsedNodeIds) {
+      const hiddenByRestriction = getHiddenNodesForRestriction(
+        graph,
+        restrictedNodeId,
+        revealedBranchesByRestriction.get(restrictedNodeId) ?? [],
+      );
+      if (!childIds.some((childId) => hiddenByRestriction.has(childId))) continue;
+      const revealedNodeIds = revealedBranchesByRestriction.get(restrictedNodeId) ?? new Set();
+      revealedNodeIds.add(nodeId);
+      revealedBranchesByRestriction.set(restrictedNodeId, revealedNodeIds);
     }
   } else {
-    next.add(nodeId);
+    collapsedNodeIds.add(nodeId);
+    revealedBranchesByRestriction.delete(nodeId);
   }
-  return next;
+  return { collapsedNodeIds, revealedBranchesByRestriction };
+}
+
+function deriveCollapsedHiddenNodeIds(
+  graph: CanvasFoldingGraph,
+  collapsedNodeIds: Iterable<string>,
+  revealedBranchesByRestriction: RevealedBranchesByRestriction,
+): ReadonlySet<string> {
+  const hiddenNodeIds = new Set<string>();
+  for (const restrictedNodeId of collapsedNodeIds) {
+    for (const hiddenNodeId of getHiddenNodesForRestriction(
+      graph,
+      restrictedNodeId,
+      revealedBranchesByRestriction.get(restrictedNodeId) ?? [],
+    )) {
+      hiddenNodeIds.add(hiddenNodeId);
+    }
+  }
+  return hiddenNodeIds;
 }
 
 export function getNodesBeyondLevel(
