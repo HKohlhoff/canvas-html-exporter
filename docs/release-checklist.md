@@ -19,6 +19,8 @@ Use this checklist before publishing Canvas HTML Exporter.
 
 - `manifest.json`, `package.json` and `versions.json` use the intended version
   and minimum Obsidian version.
+- The embedded update-note ID matches the plugin version so this release opens
+  its note once, and `Last Update.md` contains the identical Markdown.
 - Plugin ID, name, description, author, repository and GPL metadata agree.
 - `build.mjs` deploys to the correct plugin ID.
 - Version changes were made only during explicit release preparation.
@@ -50,6 +52,8 @@ npm run build:prod
 - Upgrade once from legacy plugin data: confirm the Markdown-rendered feature
   description opens once, existing settings survive, closing it leaves no
   Vault file, and a restart does not reopen it.
+- Use **Show last update** at the bottom of settings and confirm that the same
+  version 1.2.0 description can be reopened at any time.
 - Export to a Vault folder and an allowed absolute desktop folder.
 - Verify useful notices and failures for missing files and invalid targets.
 - Confirm that Canvas and source notes are not modified.
@@ -91,6 +95,7 @@ and verify at least:
 ## Release assets and publication
 
 - Release files come from the reviewed production build.
+- `Last Update.md` matches the transient in-plugin update description.
 - Only `main.js`, `manifest.json` and `styles.css` are uploaded unless the
   release process explicitly requires more.
 - Tag, push, GitHub release and Community Plugin update occur only after an

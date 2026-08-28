@@ -1,7 +1,7 @@
 {
   "id": "canvas-html-exporter",
   "name": "Canvas HTML Exporter",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "minAppVersion": "1.13.0",
   "description": "Export canvas files as portable interactive HTML package or standalone page.",
   "author": "Holger Kohlhoff",

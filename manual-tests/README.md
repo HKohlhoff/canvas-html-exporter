@@ -42,6 +42,8 @@ Every failure case must produce a normal usable export rather than aborting.
 - Confirm the existing exporter settings are unchanged after migration.
 - Close it and confirm no release-note file remains anywhere in the Vault.
 - Reload or restart Obsidian and confirm the description is not opened again.
+- At the bottom of settings, choose **Show last update** and confirm that the
+  same description opens again whenever requested.
 
 ### Graph cases
 

@@ -80,6 +80,7 @@ export function normalizePluginSettings(saved: unknown): PluginSettings {
 type SettingsHost = Plugin & {
   settings: PluginSettings;
   saveSettings(): Promise<void>;
+  showLastUpdate(): void;
 };
 
 type PluginSettingKey = keyof PluginSettings;
@@ -197,6 +198,23 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
               key: "highlightingTheme",
               defaultValue: DEFAULT_SETTINGS.highlightingTheme,
               options: HIGHLIGHTING_THEME_LABELS,
+            },
+          },
+        ],
+      },
+      {
+        type: "group",
+        heading: "About",
+        items: [
+          {
+            name: "Last update",
+            desc: "Review the features and usage notes for version 1.2.0.",
+            render: (setting) => {
+              setting.addButton((button) => {
+                button
+                  .setButtonText("Show last update")
+                  .onClick(() => this.plugin.showLastUpdate());
+              });
             },
           },
         ],

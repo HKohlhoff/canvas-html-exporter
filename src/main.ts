@@ -378,16 +378,14 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     await this.savePluginData();
   }
 
+  showLastUpdate(): void {
+    void this.openLastUpdate();
+  }
+
   private async showCurrentReleaseNotesOnce(): Promise<void> {
     if (this.lastShownReleaseNotesId === CURRENT_RELEASE_NOTES_ID) return;
 
-    try {
-      await openCurrentReleaseNotes(this.app);
-    } catch (error) {
-      console.error("[canvas-html-exporter] Could not open release notes", error);
-      new Notice("Canvas HTML exporter could not open its feature update description.", 5000);
-      return;
-    }
+    if (!(await this.openLastUpdate())) return;
 
     this.lastShownReleaseNotesId = CURRENT_RELEASE_NOTES_ID;
     try {
@@ -395,6 +393,17 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     } catch (error) {
       console.error("[canvas-html-exporter] Could not save release-note state", error);
       new Notice("The feature update description may appear again after restart.", 5000);
+    }
+  }
+
+  private async openLastUpdate(): Promise<boolean> {
+    try {
+      await openCurrentReleaseNotes(this.app);
+      return true;
+    } catch (error) {
+      console.error("[canvas-html-exporter] Could not open release notes", error);
+      new Notice("Canvas HTML exporter could not open its feature update description.", 5000);
+      return false;
     }
   }
 

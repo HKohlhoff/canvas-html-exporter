@@ -137,7 +137,7 @@ The generated page is self-contained: its folding controls work in a normal
 browser regardless of whether Canvas Folding is installed in the Obsidian
 Vault that later opens or shares the export.
 
-## One-Time Feature Update Description
+## Update Description
 
 After this feature update is loaded in Obsidian, the plugin opens a Markdown-
 rendered `What's new` view once. It summarizes the new controls and how to use
@@ -145,7 +145,9 @@ them. Closing the view removes it completely; no release-note file is created
 in the Vault.
 
 The update description is shown only once and does not reappear on every
-Obsidian start.
+Obsidian start. Use **Show last update** at the bottom of the plugin settings to
+open it again at any time. The repository keeps the same text in
+[`Last Update.md`](Last%20Update.md).
 
 ## Supported Content
 

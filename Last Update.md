@@ -1,6 +1,4 @@
-export const CURRENT_RELEASE_NOTES_ID = "release-1.2.0";
-
-export const CURRENT_RELEASE_NOTES_MARKDOWN = `# Canvas HTML Exporter 1.2.0: interactive folding
+# Canvas HTML Exporter 1.2.0: interactive folding
 
 This update adds interactive tree and folding tools to exported Canvas HTML pages while preserving the original Canvas layout.
 
@@ -31,4 +29,3 @@ This update adds interactive tree and folding tools to exported Canvas HTML page
 Both export formats use the same browser runtime. The exporter never writes folding state into the source Canvas.
 
 This update description appears automatically once. You can reopen it at any time with **Show last update** at the bottom of the Canvas HTML Exporter settings. Closing it leaves no note or other content file in your Vault.
-`;
