@@ -31,6 +31,18 @@ import type { HighlighterCore, LanguageInput, ThemeInput } from "shiki/core";
 import type { CanvasFoldState } from "../folding/types";
 import { buildCanvasFoldingGraph, getCanvasDescendants } from "../folding/graph";
 
+export type CanvasNodeShape =
+  | "pill"
+  | "diamond"
+  | "parallelogram"
+  | "circle"
+  | "predefined-process"
+  | "document"
+  | "database";
+
+export type CanvasNodeBorderStyle = "dashed" | "dotted" | "invisible";
+export type CanvasNodeTextAlign = "center" | "right";
+
 export interface CanvasNode {
   id: string;
   type: string;
@@ -50,6 +62,10 @@ export interface CanvasNode {
   fileKind?: "image" | "markdown" | "pdf" | "audio" | "video" | "file";
   previewText?: string;
   previewHtml?: string;
+  shape?: CanvasNodeShape;
+  borderStyle?: CanvasNodeBorderStyle;
+  textAlign?: CanvasNodeTextAlign;
+  advancedGroupCollapsed?: boolean;
 }
 
 export interface CanvasEdge {
@@ -1750,6 +1766,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         const stroke = Math.max(1, Number(width) || 2);
         if (style === "dotted") return stroke + " " + (stroke * 3);
         if (style === "short-dash") return (stroke * 3) + " " + (stroke * 3);
+        if (style === "long-dash") return (stroke * 9) + " " + (stroke * 4);
         if (style === "dashed") return (stroke * 6) + " " + (stroke * 4);
         if (style === "dash-dot") return (stroke * 6) + " " + (stroke * 3) + " " + stroke + " " + (stroke * 3);
         return "";
@@ -4657,11 +4674,12 @@ function normalizeEdgeEnd(end: string | undefined, fallback: "none" | "arrow"): 
   return fallback;
 }
 
-function normalizeEdgeLineStyle(style: string | undefined): "solid" | "dashed" | "dotted" | "short-dash" | "dash-dot" {
+function normalizeEdgeLineStyle(style: string | undefined): "solid" | "dashed" | "dotted" | "short-dash" | "long-dash" | "dash-dot" {
   const value = String(style || "").trim().toLowerCase();
   if (!value) return "solid";
   if (value.includes("dash") && value.includes("dot")) return "dash-dot";
   if (value.includes("short")) return "short-dash";
+  if (value.includes("long")) return "long-dash";
   if (value.includes("dot")) return "dotted";
   if (value.includes("dash")) return "dashed";
   return "solid";

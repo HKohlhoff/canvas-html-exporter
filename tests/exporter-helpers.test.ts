@@ -117,3 +117,98 @@ test("preserves edge marker and line style aliases during normalization", () => 
   assert.equal(data.edges[0]?.lineStyle, "short-dash");
   assert.equal(data.edges[0]?.width, 4);
 });
+
+test("normalizes supported Advanced Canvas node and group attributes", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [
+        {
+          id: "styled",
+          type: "text",
+          styleAttributes: {
+            shape: "pill",
+            border: "dashed",
+            textAlign: "center",
+          },
+        },
+        {
+          id: "collapsed-group",
+          type: "group",
+          collapsed: true,
+          styleAttributes: { border: "invisible" },
+        },
+      ],
+      edges: [],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.nodes[0]?.shape, "pill");
+  assert.equal(data.nodes[0]?.borderStyle, "dashed");
+  assert.equal(data.nodes[0]?.textAlign, "center");
+  assert.equal(data.nodes[0]?.advancedGroupCollapsed, undefined);
+  assert.equal(data.nodes[1]?.shape, undefined);
+  assert.equal(data.nodes[1]?.borderStyle, "invisible");
+  assert.equal(data.nodes[1]?.advancedGroupCollapsed, true);
+});
+
+test("ignores unsupported Advanced Canvas style values", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [
+        {
+          id: "custom",
+          type: "text",
+          styleAttributes: {
+            shape: "custom-cloud",
+            border: "double",
+            textAlign: "justify",
+            validationState: "approved",
+          },
+        },
+      ],
+      edges: [],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.nodes[0]?.shape, undefined);
+  assert.equal(data.nodes[0]?.borderStyle, undefined);
+  assert.equal(data.nodes[0]?.textAlign, undefined);
+});
+
+test("uses the Advanced Canvas edge path style when no native alias is present", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [],
+      edges: [
+        {
+          fromNode: "a",
+          toNode: "b",
+          styleAttributes: { path: "long-dashed" },
+        },
+      ],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.edges[0]?.lineStyle, "long-dashed");
+});
+
+test("ignores unsupported Advanced Canvas edge path styles", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [],
+      edges: [
+        {
+          fromNode: "a",
+          toNode: "b",
+          styleAttributes: { path: "animated-rainbow" },
+        },
+      ],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.edges[0]?.lineStyle, undefined);
+});

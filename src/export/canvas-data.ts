@@ -1,4 +1,37 @@
-import { CanvasData, CanvasNode } from "../render/converter";
+import type {
+  CanvasData,
+  CanvasNode,
+  CanvasNodeBorderStyle,
+  CanvasNodeShape,
+  CanvasNodeTextAlign,
+} from "../render/converter";
+
+const ADVANCED_NODE_SHAPES = [
+  "pill",
+  "diamond",
+  "parallelogram",
+  "circle",
+  "predefined-process",
+  "document",
+  "database",
+] as const satisfies readonly CanvasNodeShape[];
+
+const ADVANCED_NODE_BORDER_STYLES = [
+  "dashed",
+  "dotted",
+  "invisible",
+] as const satisfies readonly CanvasNodeBorderStyle[];
+
+const ADVANCED_NODE_TEXT_ALIGNMENTS = [
+  "center",
+  "right",
+] as const satisfies readonly CanvasNodeTextAlign[];
+
+const ADVANCED_EDGE_PATH_STYLES = [
+  "dotted",
+  "short-dashed",
+  "long-dashed",
+] as const;
 
 function normalizeSimplePath(value: string): string {
   return value.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\.\//, "");
@@ -65,6 +98,17 @@ function normalizeCanvasNode(input: Record<string, unknown>): CanvasNode | null 
     typeof input.color === "string" || typeof input.color === "number"
       ? String(input.color).trim()
       : undefined;
+  const styleAttributes = toRecord(input.styleAttributes);
+  const shape = type.toLowerCase() === "text"
+    ? knownString(styleAttributes?.shape, ADVANCED_NODE_SHAPES)
+    : undefined;
+  const borderStyle = knownString(styleAttributes?.border, ADVANCED_NODE_BORDER_STYLES);
+  const textAlign = type.toLowerCase() === "text"
+    ? knownString(styleAttributes?.textAlign, ADVANCED_NODE_TEXT_ALIGNMENTS)
+    : undefined;
+  const advancedGroupCollapsed = type.toLowerCase() === "group" && input.collapsed === true
+    ? true
+    : undefined;
 
   return {
     id,
@@ -78,6 +122,10 @@ function normalizeCanvasNode(input: Record<string, unknown>): CanvasNode | null 
     file,
     url,
     color: color || undefined,
+    shape,
+    borderStyle,
+    textAlign,
+    advancedGroupCollapsed,
   };
 }
 
@@ -92,7 +140,15 @@ function normalizeCanvasEdge(input: Record<string, unknown>): CanvasData["edges"
   const fromEnd = firstString(input.fromEnd, input.fromArrow, input.startArrow, input.startMarker);
   const toEnd = firstString(input.toEnd, input.toArrow, input.endArrow, input.endMarker);
   const label = typeof input.label === "string" ? input.label : undefined;
-  const lineStyle = firstString(input.lineStyle, input.style, input.strokeStyle, input.pathStyle);
+  const styleAttributes = toRecord(input.styleAttributes);
+  const advancedLineStyle = knownString(styleAttributes?.path, ADVANCED_EDGE_PATH_STYLES);
+  const lineStyle = firstString(
+    input.lineStyle,
+    input.style,
+    input.strokeStyle,
+    input.pathStyle,
+    advancedLineStyle,
+  );
   const color =
     typeof input.color === "string" || typeof input.color === "number"
       ? String(input.color).trim()
@@ -121,6 +177,18 @@ function firstString(...values: unknown[]): string | undefined {
     }
   }
   return undefined;
+}
+
+function toRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function knownString<const T extends string>(value: unknown, allowed: readonly T[]): T | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  return allowed.includes(normalized as T) ? normalized as T : undefined;
 }
 
 function toFiniteNumber(value: unknown): number {

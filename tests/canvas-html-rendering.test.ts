@@ -641,6 +641,27 @@ await test("renders edge marker and line style metadata into canvas script", asy
   assert.match(html, /marker-end/);
 });
 
+await test("renders the Advanced Canvas long-dashed edge path", async () => {
+  const data: CanvasData = {
+    name: "Advanced edge",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+      { id: "b", type: "text", x: 260, y: 0, width: 200, height: 100, text: "B" },
+    ],
+    edges: [
+      {
+        fromNode: "a",
+        toNode: "b",
+        lineStyle: "long-dashed",
+      },
+    ],
+  };
+
+  const html = await convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /"lineStyle":"long-dash"/);
+  assert.match(html, /style === "long-dash"/);
+});
+
 await test("renders minimap markup and viewport sync when enabled", async () => {
   const data: CanvasData = {
     name: "Mini",
