@@ -769,6 +769,10 @@ await test("renders all built-in Advanced Canvas node styles in both export mode
     assert.match(html, /data-node-text-align="center"/);
     assert.match(html, /\.node\[data-node-shape="diamond"\]/);
     assert.match(html, /\.node\[data-node-shape="database"\]/);
+    assert.match(
+      html,
+      /\.node\[data-node-shape="database"\]::before,\s+\.node\[data-node-shape="database"\]::after \{[^}]*z-index: 0;/,
+    );
     assert.match(html, /> :not\(\.node-controls\)/);
     assert.match(html, /\.node\[data-node-border="invisible"\]/);
     assert.match(html, /\.node\[data-node-text-align="center"\]/);

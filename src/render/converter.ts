@@ -647,17 +647,18 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       position: absolute;
       left: -2px;
       right: -2px;
-      height: 28px;
+      height: 50px;
       border: 2px solid var(--node-border-color);
       border-radius: 50%;
       background: var(--node-background-color);
+      z-index: 0;
       pointer-events: none;
     }
     .node[data-node-shape="database"]::before {
-      top: -14px;
+      top: -25px;
     }
     .node[data-node-shape="database"]::after {
-      bottom: -14px;
+      bottom: -25px;
     }
     .node[data-node-border="invisible"]::before,
     .node[data-node-border="invisible"]::after {
