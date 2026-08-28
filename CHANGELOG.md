@@ -17,6 +17,9 @@ first.
 - Add a one-time Markdown-rendered feature update view that disappears when
   closed and leaves no note in the Vault.
 - Add `No folding` as a third setting and make it the default for exports.
+- Add separate menu toggles for branch-control and focus-control visibility.
+- Show the number of hidden descendant nodes in expandable branch controls and
+  let multi-digit controls grow without covering the focus control.
 
 ### Changed
 

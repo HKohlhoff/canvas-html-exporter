@@ -63,6 +63,15 @@ Every failure case must produce a normal usable export rather than aborting.
   Folding menu remains available, then use `Enable folding` and confirm the
   controls appear;
 - confirm `Restore folding` remains present in every folding mode;
+- hide and show folding controls, confirm the folded state does not change,
+  and verify that focus controls remain visible;
+- hide and show focus controls, confirm the folding controls remain visible
+  and an active focus can still be ended through `Exit focus`;
+- confirm the separator visually distinguishes folding actions from the focus
+  section;
+- collapse branches with one-, two- and, where practical, three-digit hidden
+  node counts; confirm the number remains readable and the focus control moves
+  left without overlap;
 - focus one branch and exit focus;
 - focus a node without children, run reset, and confirm that the node alone is
   fitted without surrounding group bounds;
@@ -104,7 +113,8 @@ record the Windows, Obsidian, browser and plugin versions:
   confirm that text, connections, links and representative image/file assets
   render;
 - confirm the default `No folding` start, the persistent Folding menu,
-  `Enable folding`, one branch collapse/expand, node focus and `Reset`;
+  `Enable folding`, both control-visibility toggles, one numbered branch
+  collapse/expand, node focus and `Reset`;
 - confirm zoom, pan and search, then reopen both exports and check that they
   start normally without requiring the source Vault.
 

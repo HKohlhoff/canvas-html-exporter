@@ -79,6 +79,8 @@ mode:
 
 - `No folding` expands the complete Canvas and hides node folding/focus
   controls. `Enable folding` turns the controls back on.
+- `Hide/Show folding controls` changes only the visibility of the branch
+  controls on nodes; the current folded state remains unchanged.
 - `Expand all` reveals all branches.
 - `Collapse all` collapses every rooted branch while safely handling multiple
   roots, shared descendants, cross-links, and cycles.
@@ -88,13 +90,17 @@ mode:
 - `Restore folding` restores the unchanged state imported during export. If no
   state was imported, it restores the initial fully expanded view. This action
   remains available even in `No folding` mode.
+- A separator introduces the focus section. `Hide/Show focus controls` changes
+  the visibility of focus controls without ending an active focus.
 - `Exit focus` ends the active branch focus and deliberately appears last in
   the menu because it is a focus action rather than a folding action.
 
 Every content node receives a focus control. Nodes with directed descendants
 additionally receive a branch control:
 
-- the `−`/`+` control collapses or expands that branch recursively;
+- the `−` control collapses that branch recursively. An expandable branch
+  displays the number of its currently hidden descendant nodes instead of `+`;
+  the control grows for multi-digit counts while the focus control moves left;
 - the focus icon shows the selected node and, when present, its descendants at
   full opacity while keeping the rest of the Canvas visible as context at 20%
   opacity. A node without children can therefore be focused on its own; `Reset`
