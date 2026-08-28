@@ -53,6 +53,7 @@ Every failure case must produce a normal usable export rather than aborting.
 - cross-link between branches;
 - directed cycle;
 - groups containing visible and hidden nodes;
+- a directed chain of connected groups, including an empty child group;
 - text, file, link and image nodes.
 
 ### Browser interaction
@@ -80,8 +81,21 @@ Every failure case must produce a normal usable export rather than aborting.
 - expand `A1`, then collapse `B1`; confirm only the `B1` to `B2` connection is
   hidden because `B2` and its descendants remain reachable through `A1`;
 - focus one branch and exit focus;
+- collapse and expand a connected group branch; confirm all descendant groups
+  follow the branch and every visible group has a working focus control;
+- put the child of a separate node branch inside a connected child group.
+  Collapsing the node branch must hide only its child and keep the group frame;
+  collapsing the group parent must hide the child group and its geometrically
+  contained node;
+- while that group parent is collapsed, confirm the separate visible parent's
+  branch control remains in place but disabled with **Branch hidden by folded
+  group**. Expanding the group must restore it without a latent state change;
 - focus a node without children, run reset, and confirm that the node alone is
   fitted without surrounding group bounds;
+- without activating a tool, drag a rectangle with the left mouse button in
+  both directions and confirm release fits that area; verify the cancel hint is
+  visible while held, `Esc` cancels, and short or interactive clicks retain
+  their normal behavior;
 - confirm the focused branch remains at full opacity and its context at 20%;
 - confirm hidden nodes, incident edges and labels disappear together;
 - confirm hidden content nodes and hidden groups are counted separately;

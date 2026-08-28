@@ -15,6 +15,8 @@ export interface FoldingGraphEdge {
 
 export interface CanvasFoldingGraph {
   readonly childrenByNode: Readonly<Record<string, readonly string[]>>;
+  readonly connectedGroupNodeIds: readonly string[];
+  readonly groupContentsByNode: Readonly<Record<string, readonly string[]>>;
   readonly groupMembersByNode: Readonly<Record<string, readonly string[]>>;
   readonly levelByNode: Readonly<Record<string, number>>;
   readonly maxLevel: number;
@@ -23,6 +25,7 @@ export interface CanvasFoldingGraph {
 }
 
 export interface CanvasFoldingVisibility {
+  readonly groupHiddenNodeIds: ReadonlySet<string>;
   readonly hiddenEdgeIds: ReadonlySet<string>;
   readonly hiddenNodeIds: ReadonlySet<string>;
 }
@@ -33,6 +36,9 @@ export function buildCanvasFoldingGraph(
 ): CanvasFoldingGraph {
   const nodeIds = [...new Set(nodes.map((node) => node.id))].sort();
   const knownNodeIds = new Set(nodeIds);
+  const nodeTypeById = new Map(
+    nodes.map((node) => [node.id, node.type.toLowerCase()]),
+  );
   const children = new Map(nodeIds.map((id) => [id, new Set<string>()]));
   const parents = new Map(nodeIds.map((id) => [id, new Set<string>()]));
 
@@ -49,24 +55,47 @@ export function buildCanvasFoldingGraph(
   );
   const levelByNode = buildRootLevels(rootNodeIds, childrenByNode);
   const maxLevel = Math.max(-1, ...Object.values(levelByNode));
-  const groupMembersByNode = Object.fromEntries(
-    nodes
-      .filter((node) => node.type.toLowerCase() === "group")
-      .sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0)
+  const groups = nodes
+    .filter((node) => node.type.toLowerCase() === "group")
+    .sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
+  const groupContentsByNode = Object.fromEntries(
+    groups
       .map((group) => [
         group.id,
         nodes
-          .filter((node) => node.type.toLowerCase() !== "group" && isInsideGroup(node, group))
+          .filter((node) => node.id !== group.id && isInsideGroup(node, group))
           .map((node) => node.id)
           .sort(),
       ]),
   );
+  const groupMembersByNode = Object.fromEntries(
+    groups
+      .map((group) => [
+        group.id,
+        (groupContentsByNode[group.id] ?? []).filter(
+          (nodeId) => nodeTypeById.get(nodeId) !== "group",
+        ),
+      ]),
+  );
+  const connectedGroupNodeIds = Object.freeze(
+    groups
+      .filter((group) =>
+        (childrenByNode[group.id] ?? []).length > 0 ||
+        (parentsByNode[group.id] ?? []).length > 0,
+      )
+      .map((group) => group.id),
+  );
+  for (const contentIds of Object.values(groupContentsByNode)) {
+    Object.freeze(contentIds);
+  }
   for (const memberIds of Object.values(groupMembersByNode)) {
     Object.freeze(memberIds);
   }
 
   return Object.freeze({
     childrenByNode: Object.freeze(childrenByNode),
+    connectedGroupNodeIds,
+    groupContentsByNode: Object.freeze(groupContentsByNode),
     groupMembersByNode: Object.freeze(groupMembersByNode),
     levelByNode: Object.freeze(levelByNode),
     maxLevel,
@@ -105,8 +134,16 @@ export function deriveCollapsedVisibility(
     }
   }
 
+  const groupHiddenNodeIds = getNodeIdsHiddenByGroups(graph, hiddenNodes);
+  for (const nodeId of groupHiddenNodeIds) hiddenNodes.add(nodeId);
+
+  const connectedGroupNodeIds = new Set(graph.connectedGroupNodeIds);
   for (const [groupId, memberIds] of Object.entries(graph.groupMembersByNode)) {
-    if (memberIds.length > 0 && memberIds.every((memberId) => hiddenNodes.has(memberId))) {
+    if (
+      !connectedGroupNodeIds.has(groupId) &&
+      memberIds.length > 0 &&
+      memberIds.every((memberId) => hiddenNodes.has(memberId))
+    ) {
       hiddenNodes.add(groupId);
     }
   }
@@ -124,9 +161,36 @@ export function deriveCollapsedVisibility(
   }
 
   return Object.freeze({
+    groupHiddenNodeIds,
     hiddenEdgeIds: hiddenEdges,
     hiddenNodeIds: hiddenNodes,
   });
+}
+
+export function getNodeIdsHiddenByGroups(
+  graph: Pick<CanvasFoldingGraph, "groupContentsByNode">,
+  hiddenNodeIds: ReadonlySet<string>,
+): ReadonlySet<string> {
+  const pendingGroupIds = Object.keys(graph.groupContentsByNode)
+    .filter((groupId) => hiddenNodeIds.has(groupId))
+    .sort();
+  const processedGroupIds = new Set<string>();
+  const groupHiddenNodeIds = new Set<string>();
+  for (let index = 0; index < pendingGroupIds.length; index += 1) {
+    const groupId = pendingGroupIds[index];
+    if (!groupId || processedGroupIds.has(groupId)) continue;
+    processedGroupIds.add(groupId);
+    for (const nodeId of graph.groupContentsByNode[groupId] ?? []) {
+      groupHiddenNodeIds.add(nodeId);
+      if (
+        nodeId in graph.groupContentsByNode &&
+        !processedGroupIds.has(nodeId)
+      ) {
+        pendingGroupIds.push(nodeId);
+      }
+    }
+  }
+  return groupHiddenNodeIds;
 }
 
 export function toggleCollapsedBranch(
@@ -229,10 +293,8 @@ function collectDescendants(
 }
 
 function isInsideGroup(node: FoldingGraphNode, group: FoldingGraphNode): boolean {
-  const centerX = node.x + node.width / 2;
-  const centerY = node.y + node.height / 2;
-  return centerX >= group.x
-    && centerX <= group.x + group.width
-    && centerY >= group.y
-    && centerY <= group.y + group.height;
+  return node.x >= group.x
+    && node.y >= group.y
+    && node.x + node.width <= group.x + group.width
+    && node.y + node.height <= group.y + group.height;
 }

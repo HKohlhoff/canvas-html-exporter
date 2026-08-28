@@ -70,7 +70,10 @@ npm run build:prod
 - Single HTML opens offline without external assets.
 - Text, Markdown, links, images, PDFs, audio, video and code render correctly.
 - Groups, nodes, edges, labels and colors remain correct.
-- Zoom, pan, fit/reset, search, minimap and subpage navigation work.
+- Zoom, mouse-selected area zoom, pan, fit/reset, search, minimap and subpage
+  navigation work. Area zoom is available without activating a tool; its hint
+  appears while the left mouse button is held, `Esc` cancels the current drag,
+  and short or interactive clicks retain their normal behavior.
 - Internal links, anchors, embeds and missing-target fallbacks work.
 - Test the documentation Canvas from `examples/demo-vault/`.
 - Regenerate the checked-in interactive HTML example from the current
@@ -89,6 +92,10 @@ and verify at least:
 - current fold state imported through supported API v1;
 - package and single-HTML output behave identically;
 - collapse/expand, all branches, levels and branch focus;
+- connected group branches plus focus controls on groups;
+- a connected group containing a separate node branch: each branch controls
+  only its own visibility, a hidden group takes its geometric contents with it,
+  and an unavailable branch control remains visible but disabled until restore;
 - cycles, multiple parents, cross-links, multiple roots, isolated nodes and
   groups;
 - hidden nodes also hide incident edges and edge labels;

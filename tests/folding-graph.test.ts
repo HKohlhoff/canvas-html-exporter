@@ -5,6 +5,7 @@ import {
   getCanvasBranchNodeIds,
   getCanvasDescendants,
   getNodesBeyondLevel,
+  getNodeIdsHiddenByGroups,
   toggleCollapsedBranch,
   type FoldingGraphEdge,
   type FoldingGraphNode,
@@ -100,6 +101,58 @@ test("hides a non-empty group only when all contained nodes are hidden", () => {
 
   assert.deepEqual(graph.groupMembersByNode.group, ["inside-a", "inside-b"]);
   assert.equal(visibility.hiddenNodeIds.has("group"), true);
+});
+
+test("treats connected groups as regular folding descendants", () => {
+  const nodes: FoldingGraphNode[] = [
+    { ...node("group-root", 0, 0), type: "group" },
+    { ...node("group-child", 200, 0), type: "group" },
+    { ...node("group-grandchild", 400, 0), type: "group" },
+  ];
+  const edges: FoldingGraphEdge[] = [
+    { id: "root-child", fromNode: "group-root", toNode: "group-child" },
+    { id: "child-grandchild", fromNode: "group-child", toNode: "group-grandchild" },
+  ];
+  const graph = buildCanvasFoldingGraph(nodes, edges);
+  const visibility = deriveCollapsedVisibility(graph, edges, ["group-root"]);
+
+  assert.deepEqual(
+    [...visibility.hiddenNodeIds],
+    ["group-child", "group-grandchild"],
+  );
+  assert.deepEqual(
+    [...visibility.hiddenEdgeIds],
+    ["root-child", "child-grandchild"],
+  );
+});
+
+test("keeps a connected group visible when a separate branch hides its only content", () => {
+  const nodes: FoldingGraphNode[] = [
+    { id: "group-child", type: "group", x: 0, y: 0, width: 300, height: 200 },
+    { id: "group-grandchild", type: "group", x: 400, y: 0, width: 300, height: 200 },
+    node("d1", 0, 300),
+    node("d1.2", 420, 20),
+  ];
+  const edges: FoldingGraphEdge[] = [
+    { id: "group-branch", fromNode: "group-child", toNode: "group-grandchild" },
+    { id: "d-branch", fromNode: "d1", toNode: "d1.2" },
+  ];
+  const graph = buildCanvasFoldingGraph(nodes, edges);
+
+  const separateBranchFold = deriveCollapsedVisibility(graph, edges, ["d1"]);
+  assert.deepEqual([...separateBranchFold.hiddenNodeIds], ["d1.2"]);
+  assert.equal(separateBranchFold.hiddenNodeIds.has("group-grandchild"), false);
+
+  const groupBranchFold = deriveCollapsedVisibility(graph, edges, ["group-child"]);
+  assert.deepEqual(
+    [...groupBranchFold.hiddenNodeIds],
+    ["group-grandchild", "d1.2"],
+  );
+  assert.deepEqual([...groupBranchFold.groupHiddenNodeIds], ["d1.2"]);
+  assert.deepEqual(
+    [...getNodeIdsHiddenByGroups(graph, new Set(["group-grandchild"]))],
+    ["d1.2"],
+  );
 });
 
 test("expands an entire branch including nested collapsed nodes", () => {

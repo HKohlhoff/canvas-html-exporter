@@ -451,6 +451,39 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       flex: 1 1 auto;
       min-height: 0;
     }
+    .viewport.is-zoom-area-selecting {
+      cursor: crosshair;
+      user-select: none;
+    }
+    .zoom-area-selection {
+      position: fixed;
+      z-index: 1000;
+      box-sizing: border-box;
+      border: 2px solid ${theme.link};
+      border-radius: 4px;
+      background: rgba(25, 103, 210, 0.14);
+      box-shadow: 0 0 0 1px ${theme.nodeBackground};
+      pointer-events: none;
+    }
+    .zoom-area-selection[hidden] {
+      display: none;
+    }
+    .zoom-area-hint {
+      position: fixed;
+      z-index: 1001;
+      transform: translateX(-50%);
+      padding: 6px 10px;
+      border: 1px solid ${theme.nodeBorder};
+      border-radius: 6px;
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+    .zoom-area-hint[hidden] {
+      display: none;
+    }
     #canvas {
       position: relative;
       width: ${bounds.width}px;
@@ -523,6 +556,14 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       width: auto;
       padding: 0 6px;
       font-size: 14px;
+    }
+    .branch-control:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+    .branch-control:disabled:hover {
+      border-color: ${theme.canvasBorder};
+      background: ${theme.nodeBackground};
     }
     .branch-focus-icon {
       display: block;
@@ -1537,6 +1578,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     <p>${canvasCountSummary}<span id="hidden-node-summary" hidden></span></p>
   </div>
   <div class="viewport">
+    <div id="zoom-area-selection" class="zoom-area-selection" hidden></div>
+    <div id="zoom-area-hint" class="zoom-area-hint" role="status" hidden>Release to zoom · Esc to cancel</div>
     <div id="canvas">
       <svg id="edge-layer"></svg>
       ${nodeHtml}
@@ -1555,6 +1598,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const edgeLayer = document.getElementById("edge-layer");
       const canvas = document.getElementById("canvas");
       const viewport = document.querySelector(".viewport");
+      const zoomAreaSelection = document.getElementById("zoom-area-selection");
+      const zoomAreaHint = document.getElementById("zoom-area-hint");
       const singlePageView = document.getElementById("single-page-view");
       const singlePageBody = document.getElementById("single-page-body");
       const singlePageCanvasLink = document.getElementById("single-page-canvas-link");
@@ -1587,12 +1632,14 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const searchEntries = ${JSON.stringify(searchEntries)};
       const foldingGraph = ${JSON.stringify(foldingGraph)};
       const groupNodeIds = new Set(${JSON.stringify(groupNodeIds)});
+      const connectedGroupNodeIds = new Set(foldingGraph.connectedGroupNodeIds || []);
       const descendantsCache = new Map();
       const importedHiddenNodeIds = new Set(${JSON.stringify(initialFoldState?.hiddenNodeIds ?? [])});
       const importedHiddenEdgeIds = new Set(${JSON.stringify(initialFoldState?.hiddenEdgeIds ?? [])});
       const collapsedNodeIds = new Set();
       let workingImportedHiddenNodeIds = new Set();
       let hiddenNodeIds = new Set();
+      let groupHiddenNodeIds = new Set();
       let hiddenEdgeIds = new Set();
       let focusMutedNodeIds = new Set();
       let importedBaseEnabled = false;
@@ -1603,6 +1650,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       let focusedBranchNodeId = null;
       let visibleLevelLimit = null;
       let currentScale = 1;
+      let zoomAreaDrag = null;
+      let cancelledZoomAreaPointerId = null;
+      let suppressNextZoomAreaClick = false;
       let minimapDrag = null;
       let minimapPan = null;
       let highlightedNodeId = null;
@@ -1863,7 +1913,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             return !hiddenNodeIds.has(nodeId)
               && (focusedBranchNodeId === null || (
                 !focusMutedNodeIds.has(nodeId)
-                && !groupNodeIds.has(nodeId)
+                && (!groupNodeIds.has(nodeId) || nodeId === focusedBranchNodeId)
               ));
           });
         if (activeNodes.length === 0) {
@@ -2507,6 +2557,29 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         return dynamicHiddenNodeIds;
       }
 
+      function getNodeIdsHiddenByGroups(sourceHiddenNodeIds) {
+        const pendingGroupIds = Object.keys(foldingGraph.groupContentsByNode || {})
+          .filter((groupId) => sourceHiddenNodeIds.has(groupId))
+          .sort();
+        const processedGroupIds = new Set();
+        const hiddenByGroups = new Set();
+        for (let index = 0; index < pendingGroupIds.length; index += 1) {
+          const groupId = pendingGroupIds[index];
+          if (!groupId || processedGroupIds.has(groupId)) continue;
+          processedGroupIds.add(groupId);
+          for (const nodeId of foldingGraph.groupContentsByNode[groupId] || []) {
+            hiddenByGroups.add(nodeId);
+            if (
+              Object.prototype.hasOwnProperty.call(foldingGraph.groupContentsByNode, nodeId)
+              && !processedGroupIds.has(nodeId)
+            ) {
+              pendingGroupIds.push(nodeId);
+            }
+          }
+        }
+        return hiddenByGroups;
+      }
+
       function updateFoldingVisibility() {
         const exactImportedState = importedBaseEnabled
           && !importedStateModified
@@ -2524,13 +2597,16 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         for (const nodeId of deriveCollapsedVisibility(baseHiddenNodeIds)) {
           hiddenNodeIds.add(nodeId);
         }
+        groupHiddenNodeIds = getNodeIdsHiddenByGroups(hiddenNodeIds);
 
         if (!exactImportedState) {
-          for (const groupId of Object.keys(foldingGraph.groupMembersByNode)) {
-            hiddenNodeIds.delete(groupId);
-          }
+          for (const nodeId of groupHiddenNodeIds) hiddenNodeIds.add(nodeId);
           for (const [groupId, memberIds] of Object.entries(foldingGraph.groupMembersByNode)) {
-            if (memberIds.length > 0 && memberIds.every((memberId) => hiddenNodeIds.has(memberId))) {
+            if (
+              !connectedGroupNodeIds.has(groupId)
+              && memberIds.length > 0
+              && memberIds.every((memberId) => hiddenNodeIds.has(memberId))
+            ) {
               hiddenNodeIds.add(groupId);
             }
           }
@@ -2577,21 +2653,38 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const nodeId = control.getAttribute("data-branch-node-id") || "";
           const descendants = getDescendants(nodeId);
           const descendantCount = descendants.length;
+          const disabledByHiddenGroup = descendantCount > 0
+            && descendants.every((descendantId) => groupHiddenNodeIds.has(descendantId));
           const hasHiddenDescendant = descendants.some((descendantId) => hiddenNodeIds.has(descendantId));
           const hiddenDescendantCount = descendants
             .filter((descendantId) => hiddenNodeIds.has(descendantId) && !groupNodeIds.has(descendantId))
             .length;
+          const ownHiddenDescendantCount = collapsedNodeIds.has(nodeId)
+            ? descendants.filter((descendantId) => !groupNodeIds.has(descendantId)).length
+            : 0;
           const hiddenConnectionCount = getHiddenBranchConnectionCount(nodeId, descendants);
           const hasHiddenBranch = collapsedNodeIds.has(nodeId)
             || hasHiddenDescendant
             || hiddenConnectionCount > 0;
+          const displayedHiddenBranch = disabledByHiddenGroup
+            ? collapsedNodeIds.has(nodeId)
+            : hasHiddenBranch;
+          const displayedHiddenDescendantCount = disabledByHiddenGroup
+            ? ownHiddenDescendantCount
+            : hiddenDescendantCount;
           control.hidden = !foldingControlsEnabled || !foldingNodeControlsVisible;
-          control.textContent = hasHiddenBranch && hiddenDescendantCount > 0
-            ? String(hiddenDescendantCount)
-            : hasHiddenBranch ? "+" : "−";
-          control.classList.toggle("has-hidden-count", hasHiddenBranch && hiddenDescendantCount > 0);
-          control.setAttribute("aria-expanded", String(!hasHiddenBranch));
-          const branchControlLabel = (hasHiddenBranch ? "Expand branch" : "Collapse branch")
+          control.disabled = disabledByHiddenGroup;
+          control.textContent = displayedHiddenBranch && displayedHiddenDescendantCount > 0
+            ? String(displayedHiddenDescendantCount)
+            : displayedHiddenBranch ? "+" : "−";
+          control.classList.toggle(
+            "has-hidden-count",
+            displayedHiddenBranch && displayedHiddenDescendantCount > 0,
+          );
+          control.setAttribute("aria-expanded", String(!displayedHiddenBranch));
+          const branchControlLabel = disabledByHiddenGroup
+            ? "Branch hidden by folded group"
+            : (hasHiddenBranch ? "Expand branch" : "Collapse branch")
             + " · "
             + (hasHiddenBranch && hiddenDescendantCount > 0
               ? hiddenDescendantCount + (hiddenDescendantCount === 1 ? " hidden node" : " hidden nodes")
@@ -2605,12 +2698,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const nodeId = control.getAttribute("data-focus-node-id") || "";
           const isFocused = nodeId === focusedBranchNodeId;
           const descendantCount = getDescendants(nodeId).length;
+          const focusTarget = groupNodeIds.has(nodeId) ? "group" : "node";
           control.hidden = !foldingControlsEnabled || !focusNodeControlsVisible;
           control.classList.toggle("is-active", isFocused);
           control.setAttribute("aria-pressed", String(isFocused));
           control.setAttribute(
             "aria-label",
-            isFocused ? "Exit focus" : descendantCount > 0 ? "Focus branch" : "Focus node",
+            isFocused ? "Exit focus" : descendantCount > 0 ? "Focus branch" : "Focus " + focusTarget,
           );
           control.setAttribute(
             "title",
@@ -2618,7 +2712,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
               ? "Exit focus"
               : descendantCount > 0
                 ? "Focus branch · " + descendantCount + " descendants"
-                : "Focus node",
+                : "Focus " + focusTarget,
           );
         });
         document.querySelectorAll(".minimap-node[data-node-id]").forEach((node) => {
@@ -2695,6 +2789,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function toggleBranch(nodeId) {
         const descendants = getDescendants(nodeId);
         if (descendants.length === 0) return;
+        if (descendants.every((descendantId) => groupHiddenNodeIds.has(descendantId))) return;
         const hasHiddenBranch = branchHasHiddenContent(nodeId, descendants);
         visibleLevelLimit = null;
         syncFoldingLevelSelect();
@@ -2811,7 +2906,141 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         }
       }
 
+      function suppressZoomAreaClick() {
+        suppressNextZoomAreaClick = true;
+        window.setTimeout(() => {
+          suppressNextZoomAreaClick = false;
+        }, 100);
+      }
+
+      function cancelZoomAreaDrag(suppressClick = false) {
+        if (
+          zoomAreaDrag
+          && typeof viewport.hasPointerCapture === "function"
+          && viewport.hasPointerCapture(zoomAreaDrag.pointerId)
+        ) {
+          viewport.releasePointerCapture(zoomAreaDrag.pointerId);
+        }
+        if (suppressClick && zoomAreaDrag) suppressZoomAreaClick();
+        zoomAreaDrag = null;
+        if (zoomAreaSelection) zoomAreaSelection.hidden = true;
+        if (zoomAreaHint) zoomAreaHint.hidden = true;
+        viewport.classList.remove("is-zoom-area-selecting");
+      }
+
+      function getZoomAreaPoint(event) {
+        const rect = viewport.getBoundingClientRect();
+        return {
+          x: clamp(event.clientX, rect.left, rect.right),
+          y: clamp(event.clientY, rect.top, rect.bottom),
+        };
+      }
+
+      function renderZoomAreaSelection(endPoint) {
+        if (!zoomAreaSelection || !zoomAreaDrag || !zoomAreaDrag.active) return null;
+        const left = Math.min(zoomAreaDrag.startX, endPoint.x);
+        const top = Math.min(zoomAreaDrag.startY, endPoint.y);
+        const width = Math.abs(endPoint.x - zoomAreaDrag.startX);
+        const height = Math.abs(endPoint.y - zoomAreaDrag.startY);
+        zoomAreaSelection.hidden = false;
+        zoomAreaSelection.style.left = left + "px";
+        zoomAreaSelection.style.top = top + "px";
+        zoomAreaSelection.style.width = width + "px";
+        zoomAreaSelection.style.height = height + "px";
+        return { left, top, width, height };
+      }
+
+      function startZoomAreaSelection(event) {
+        if (event.pointerType !== "mouse" || event.button !== 0) return;
+        const target = event.target instanceof Element ? event.target : null;
+        if (target?.closest("a, button, input, select, textarea, iframe, audio, video, [contenteditable='true']")) return;
+        const point = getZoomAreaPoint(event);
+        cancelledZoomAreaPointerId = null;
+        zoomAreaDrag = {
+          pointerId: event.pointerId,
+          startX: point.x,
+          startY: point.y,
+          active: false,
+        };
+        if (zoomAreaHint) {
+          const viewportRect = viewport.getBoundingClientRect();
+          zoomAreaHint.style.left = viewportRect.left + viewportRect.width / 2 + "px";
+          zoomAreaHint.style.top = viewportRect.top + 12 + "px";
+          zoomAreaHint.hidden = false;
+        }
+      }
+
+      function moveZoomAreaSelection(event) {
+        if (!zoomAreaDrag || event.pointerId !== zoomAreaDrag.pointerId) return;
+        if ((event.buttons & 1) === 0) {
+          cancelZoomAreaDrag();
+          return;
+        }
+        const point = getZoomAreaPoint(event);
+        if (
+          !zoomAreaDrag.active
+          && Math.hypot(point.x - zoomAreaDrag.startX, point.y - zoomAreaDrag.startY) < 6
+        ) return;
+        if (!zoomAreaDrag.active) {
+          zoomAreaDrag.active = true;
+          viewport.classList.add("is-zoom-area-selecting");
+          if (typeof viewport.setPointerCapture === "function") {
+            viewport.setPointerCapture(event.pointerId);
+          }
+        }
+        renderZoomAreaSelection(point);
+        event.preventDefault();
+      }
+
+      function finishZoomAreaSelection(event) {
+        if (!zoomAreaDrag) {
+          if (event.pointerId === cancelledZoomAreaPointerId) {
+            cancelledZoomAreaPointerId = null;
+            suppressZoomAreaClick();
+          }
+          return;
+        }
+        if (event.pointerId !== zoomAreaDrag.pointerId) return;
+        if (!zoomAreaDrag.active) {
+          cancelZoomAreaDrag();
+          return;
+        }
+        const selection = renderZoomAreaSelection(getZoomAreaPoint(event));
+        const canvasRect = canvas.getBoundingClientRect();
+        const scaleBeforeZoom = currentScale;
+        const selectedCanvasArea = selection && selection.width >= 12 && selection.height >= 12
+          ? {
+            centerX: (selection.left + selection.width / 2 - canvasRect.left) / scaleBeforeZoom,
+            centerY: (selection.top + selection.height / 2 - canvasRect.top) / scaleBeforeZoom,
+            width: selection.width / scaleBeforeZoom,
+            height: selection.height / scaleBeforeZoom,
+          }
+          : null;
+        cancelZoomAreaDrag(true);
+        if (selectedCanvasArea === null) return;
+
+        const availableWidth = Math.max(100, viewport.clientWidth - 48);
+        const availableHeight = Math.max(100, viewport.clientHeight - 48);
+        currentScale = clamp(
+          Math.min(
+            availableWidth / selectedCanvasArea.width,
+            availableHeight / selectedCanvasArea.height,
+          ),
+          0.2,
+          4,
+        );
+        setCssProps(canvas, { transform: "scale(" + currentScale + ")" });
+        drawEdges();
+        scrollViewportToCanvasPoint(
+          selectedCanvasArea.centerX,
+          selectedCanvasArea.centerY,
+          "auto",
+        );
+        event.preventDefault();
+      }
+
       window.zoomBy = function(factor) {
+        cancelZoomAreaDrag();
         currentScale = Math.max(0.2, Math.min(4, currentScale * factor));
         setCssProps(canvas, { transform: "scale(" + currentScale + ")" });
         drawEdges();
@@ -2819,6 +3048,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       };
 
       window.resetZoom = function() {
+        cancelZoomAreaDrag();
         const fitPadding = 48;
         const fitBounds = getFitNodeBounds();
         const availableWidth = Math.max(100, viewport.clientWidth);
@@ -2878,6 +3108,22 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         }
       });
       viewport.addEventListener("scroll", updateMinimapViewport, { passive: true });
+      viewport.addEventListener("pointerdown", startZoomAreaSelection, true);
+      viewport.addEventListener("dragstart", (event) => {
+        if (zoomAreaDrag) event.preventDefault();
+      });
+      viewport.addEventListener("click", (event) => {
+        if (!suppressNextZoomAreaClick) return;
+        suppressNextZoomAreaClick = false;
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
+      window.addEventListener("pointermove", moveZoomAreaSelection, { passive: false });
+      window.addEventListener("pointerup", finishZoomAreaSelection);
+      window.addEventListener("pointercancel", () => {
+        cancelledZoomAreaPointerId = null;
+        cancelZoomAreaDrag();
+      });
       if (minimapDragHandle) {
         minimapDragHandle.addEventListener("pointerdown", startMinimapDrag);
       }
@@ -2993,6 +3239,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         if (!isTypingContext && event.key === "/") {
           event.preventDefault();
           openSearch();
+          return;
+        }
+        if (event.key === "Escape" && zoomAreaDrag) {
+          event.preventDefault();
+          cancelledZoomAreaPointerId = zoomAreaDrag.pointerId;
+          cancelZoomAreaDrag();
           return;
         }
         if (event.key === "Escape" && searchOverlay && !searchOverlay.hidden) {
@@ -3297,9 +3549,8 @@ async function renderNode(
 
   const content = type === "group" ? "" : await renderNodeContent(node, darkMode, highlightingTheme);
   const foldingControlHiddenAttribute = foldingControlsInitiallyHidden ? " hidden" : "";
-  const focusControl = type !== "group"
-    ? `<button class="branch-focus-control" type="button" data-focus-node-id="${escapeAttribute(node.id)}" aria-label="${descendantCount > 0 ? "Focus branch" : "Focus node"}" aria-pressed="false" title="${descendantCount > 0 ? `Focus branch · ${descendantCount} ${descendantCount === 1 ? "descendant" : "descendants"}` : "Focus node"}"${foldingControlHiddenAttribute}>${FOCUS_ICON_SVG}</button>`
-    : "";
+  const focusTarget = type === "group" ? "group" : "node";
+  const focusControl = `<button class="branch-focus-control" type="button" data-focus-node-id="${escapeAttribute(node.id)}" aria-label="${descendantCount > 0 ? "Focus branch" : `Focus ${focusTarget}`}" aria-pressed="false" title="${descendantCount > 0 ? `Focus branch · ${descendantCount} ${descendantCount === 1 ? "descendant" : "descendants"}` : `Focus ${focusTarget}`}"${foldingControlHiddenAttribute}>${FOCUS_ICON_SVG}</button>`;
   const branchControl = descendantCount > 0
     ? `<button class="branch-control" type="button" data-branch-node-id="${escapeAttribute(node.id)}" aria-expanded="true" aria-label="Collapse branch · ${descendantCount} ${descendantCount === 1 ? "descendant" : "descendants"}" title="Collapse branch · ${descendantCount} ${descendantCount === 1 ? "descendant" : "descendants"}"${foldingControlHiddenAttribute}>−</button>`
     : "";

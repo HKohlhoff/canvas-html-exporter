@@ -61,6 +61,9 @@ Every exported Canvas page keeps its original node positions and adds browser
 controls above the Canvas:
 
 - `Zoom −` and `Zoom +` change the current scale without moving nodes.
+- Area zoom is always available: drag a rectangle with the left mouse button
+  over a non-interactive part of the Canvas and release it to fit that area.
+  A short click remains unchanged; press `Esc` to cancel the current drag.
 - `Reset` fits the currently relevant graph into the available browser area.
   Hidden nodes are excluded; while a branch is focused, the dimmed surrounding
   context is excluded as well. The fit calculation uses the actual remaining
@@ -74,7 +77,7 @@ controls above the Canvas:
 
 ### Folding menu
 
-Canvases with content nodes receive a `Folding` menu in every initial folding
+Canvases with nodes or groups receive a `Folding` menu in every initial folding
 mode:
 
 - `No folding` expands the complete Canvas and hides node folding/focus
@@ -95,8 +98,8 @@ mode:
 - `Exit focus` ends the active branch focus and deliberately appears last in
   the menu because it is a focus action rather than a folding action.
 
-Every content node receives a focus control. Nodes with directed descendants
-additionally receive a branch control:
+Every node and group receives a focus control. Nodes and groups with directed
+descendants additionally receive a branch control:
 
 - the `−` control collapses that branch recursively. An expandable branch
   displays the number of its currently hidden descendant nodes instead of `+`;
@@ -104,17 +107,26 @@ additionally receive a branch control:
   Shared descendants remain visible while they are still reachable through
   another open parent branch. In that case the collapsed branch connection is
   hidden, `+` remains, and its tooltip reports the hidden connections;
+- if every descendant of a visible item is unavailable behind a folded group,
+  its branch control stays in place but is disabled with **Branch hidden by
+  folded group**. Expanding the group restores the control without changing
+  that branch's previous state;
 - the focus icon shows the selected node and, when present, its descendants at
   full opacity while keeping the rest of the Canvas visible as context at 20%
-  opacity. A node without children can therefore be focused on its own; `Reset`
-  fits it to the available viewport. Selecting the same focus icon again exits
-  focus.
+  opacity. A node or group without children can therefore be focused on its
+  own; `Reset` fits it to the available viewport. Selecting the same focus icon
+  again exits focus.
 
 Folding is non-destructive. It changes only the browser representation:
 visible nodes retain their original positions, and the source `.canvas` file
 is never changed. An edge and its label are hidden whenever at least one of its
 endpoints is hidden. The information line reports hidden content nodes and
 hidden Canvas groups separately.
+
+Connected groups follow their own directed branch. Folding a group also hides
+nodes geometrically contained by it, even when those nodes have no separate
+edge from the group. Folding a separate node branch inside that group hides
+only that node branch and does not indirectly hide the connected group frame.
 
 ## Optional Canvas Folding Integration
 

@@ -767,8 +767,9 @@ await test("renders node focus for an isolated node in both export modes", async
     assert.match(html, /id="folding-toolbar-button"/);
     assert.match(html, /id="folding-mode-button"/);
     assert.match(html, /data-focus-node-id="a"[^>]+aria-label="Focus node"[^>]+title="Focus node"><svg class="branch-focus-icon"/);
-    assert.doesNotMatch(html, /data-focus-node-id="group"/);
+    assert.match(html, /data-focus-node-id="group"[^>]+aria-label="Focus group"[^>]+title="Focus group"><svg class="branch-focus-icon"/);
     assert.doesNotMatch(html, /data-branch-node-id="a"/);
+    assert.doesNotMatch(html, /hiddenNodeIds\.delete\(groupId\)/);
     assert.match(html, /Object\.prototype\.hasOwnProperty\.call\(foldingGraph\.childrenByNode, nodeId\)/);
     assert.match(html, /applyImportedFolding\(false\)/);
   }
@@ -848,6 +849,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.doesNotMatch(html, /"descendantsByNode"/);
     assert.match(html, /function getDescendants\(nodeId\)/);
     assert.match(html, /function deriveCollapsedVisibility\(baseHiddenNodeIds\)/);
+    assert.match(html, /function getNodeIdsHiddenByGroups\(sourceHiddenNodeIds\)/);
     assert.match(html, /function updateFoldingVisibility\(\)/);
     assert.match(html, /function toggleBranch\(nodeId\)/);
     assert.match(html, /id="folding-expand-all-button"[^>]*>Expand all<\/button>/);
@@ -857,6 +859,20 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /id="folding-controls-visibility-button"[^>]+onclick="toggleFoldingControlsVisibility\(\)"[^>]*>Hide folding controls<\/button>/);
     assert.match(html, /<button id="folding-toolbar-button"[^>]*>Restore folding<\/button>\s+<hr class="folding-menu-separator folding-action-control">\s+<button id="focus-controls-visibility-button"[^>]*>Hide focus controls<\/button>\s+<button id="folding-focus-exit-button"[^>]*>Exit focus<\/button>/);
     assert.match(html, /id="folding-mode-button"[^>]+onclick="toggleFoldingMode\(\)"[^>]*>No folding<\/button>/);
+    assert.doesNotMatch(html, /id="zoom-area-button"|toggleZoomAreaMode|zoomAreaMode/);
+    assert.match(html, /id="zoom-area-selection" class="zoom-area-selection" hidden/);
+    assert.match(html, /id="zoom-area-hint"[^>]+role="status" hidden>Release to zoom · Esc to cancel<\/div>/);
+    assert.match(html, /function startZoomAreaSelection\(event\)/);
+    assert.match(html, /event\.pointerType !== "mouse" \|\| event\.button !== 0/);
+    assert.match(html, /target\?\.closest\("a, button, input, select, textarea, iframe, audio, video, \[contenteditable='true'\]"\)/);
+    assert.match(html, /Math\.hypot\(point\.x - zoomAreaDrag\.startX, point\.y - zoomAreaDrag\.startY\) < 6/);
+    assert.match(html, /zoomAreaDrag\.active = true/);
+    assert.match(html, /function finishZoomAreaSelection\(event\)/);
+    assert.match(html, /selection\.width >= 12 && selection\.height >= 12/);
+    assert.match(html, /availableWidth \/ selectedCanvasArea\.width/);
+    assert.match(html, /viewport\.addEventListener\("pointerdown", startZoomAreaSelection, true\)/);
+    assert.match(html, /event\.key === "Escape" && zoomAreaDrag/);
+    assert.match(html, /cancelZoomAreaDrag\(true\)/);
     assert.match(html, /id="folding-level-select"[^>]*>[\s\S]*<option value="2">Level 2<\/option><\/select>/);
     assert.match(html, /"levelByNode":\{"root":0,"child":1,"leaf":2\}/);
     assert.match(html, /"maxLevel":2/);
@@ -868,11 +884,19 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /let focusNodeControlsVisible = true/);
     assert.match(html, /let focusedBranchNodeId = null/);
     assert.match(html, /let focusMutedNodeIds = new Set\(\)/);
+    assert.match(html, /let groupHiddenNodeIds = new Set\(\)/);
+    assert.doesNotMatch(html, /branchStateHiddenNodeIds/);
     assert.match(html, /control\.hidden = !foldingControlsEnabled \|\| !foldingNodeControlsVisible/);
+    assert.match(html, /control\.disabled = disabledByHiddenGroup/);
+    assert.match(html, /descendants\.every\(\(descendantId\) => groupHiddenNodeIds\.has\(descendantId\)\)/);
+    assert.match(html, /"Branch hidden by folded group"/);
     assert.match(html, /control\.hidden = !foldingControlsEnabled \|\| !focusNodeControlsVisible/);
     assert.match(html, /const hiddenDescendantCount = descendants\s+\.filter\(\(descendantId\) => hiddenNodeIds\.has\(descendantId\) && !groupNodeIds\.has\(descendantId\)\)/);
-    assert.match(html, /control\.textContent = hasHiddenBranch && hiddenDescendantCount > 0\s+\? String\(hiddenDescendantCount\)/);
-    assert.match(html, /control\.classList\.toggle\("has-hidden-count", hasHiddenBranch && hiddenDescendantCount > 0\)/);
+    assert.match(html, /const ownHiddenDescendantCount = collapsedNodeIds\.has\(nodeId\)\s+\? descendants\.filter\(\(descendantId\) => !groupNodeIds\.has\(descendantId\)\)\.length\s+: 0/);
+    assert.match(html, /const displayedHiddenBranch = disabledByHiddenGroup\s+\? collapsedNodeIds\.has\(nodeId\)\s+: hasHiddenBranch/);
+    assert.match(html, /const displayedHiddenDescendantCount = disabledByHiddenGroup\s+\? ownHiddenDescendantCount\s+: hiddenDescendantCount/);
+    assert.match(html, /control\.textContent = displayedHiddenBranch && displayedHiddenDescendantCount > 0\s+\? String\(displayedHiddenDescendantCount\)/);
+    assert.match(html, /displayedHiddenBranch && displayedHiddenDescendantCount > 0/);
     assert.match(html, /const hiddenConnectionCount = getHiddenBranchConnectionCount\(nodeId, descendants\)/);
     assert.match(html, /const hasHiddenBranch = collapsedNodeIds\.has\(nodeId\)\s+\|\| hasHiddenDescendant\s+\|\| hiddenConnectionCount > 0/);
     assert.match(html, /hiddenConnectionCount === 1 \? " hidden connection" : " hidden connections"/);
@@ -880,6 +904,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /control\.setAttribute\("aria-label", branchControlLabel\)/);
     assert.match(html, /\.node-controls \{[\s\S]+display: flex;[\s\S]+gap: 6px;/);
     assert.match(html, /\.branch-control\.has-hidden-count \{[\s\S]+width: auto;[\s\S]+padding: 0 6px;/);
+    assert.match(html, /\.branch-control:disabled \{[\s\S]+cursor: not-allowed;[\s\S]+opacity: 0\.5;/);
     assert.match(html, /function focusBranch\(nodeId\)/);
     assert.match(html, /focusedBranchNodeId = focusedBranchNodeId === nodeId \? null : nodeId/);
     assert.match(html, /focusedNodeIds = new Set\(\[\s+focusedBranchNodeId,\s+\.\.\.getDescendants\(focusedBranchNodeId\)/);
@@ -891,7 +916,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /if \(focusMuted\) bg\.setAttribute\("opacity", "0\.2"\)/);
     assert.match(html, /focusedBranchNodeId !== null && focusMutedNodeIds\.has\(nodeId\)/);
     assert.match(html, /function getFitNodeBounds\(\)/);
-    assert.match(html, /!hiddenNodeIds\.has\(nodeId\)[\s\S]+&& \(focusedBranchNodeId === null \|\| \([\s\S]+!focusMutedNodeIds\.has\(nodeId\)[\s\S]+&& !groupNodeIds\.has\(nodeId\)/);
+    assert.match(html, /!hiddenNodeIds\.has\(nodeId\)[\s\S]+&& \(focusedBranchNodeId === null \|\| \([\s\S]+!focusMutedNodeIds\.has\(nodeId\)[\s\S]+&& \(!groupNodeIds\.has\(nodeId\) \|\| nodeId === focusedBranchNodeId\)/);
     assert.match(html, /const fitBounds = getFitNodeBounds\(\)/);
     assert.match(html, /scrollViewportToCanvasPoint\([\s\S]+fitBounds\.left \+ fitBounds\.width \/ 2,[\s\S]+fitBounds\.top \+ fitBounds\.height \/ 2/);
     assert.match(html, /const width = parseFloat\(target\.getAttribute\("data-canvas-width"\) \|\| "0"\)/);
@@ -907,6 +932,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /foldingMenu\.addEventListener\("mouseleave", \(\) => \{\s+foldingMenu\.removeAttribute\("open"\)/);
     assert.match(html, /foldingModeButton\.textContent = foldingControlsEnabled\s+\? "No folding"\s+: "Enable folding"/);
     assert.match(html, /collapsedNodeIds\.has\(edge\.fromId\)/);
+    assert.match(html, /!connectedGroupNodeIds\.has\(groupId\)/);
     assert.match(html, /hasVisibleAlternativeParent/);
     assert.doesNotMatch(html, /revealedNodeIdsByRestriction/);
     assert.match(html, /foldingControlsVisibilityButton\.textContent = foldingNodeControlsVisible\s+\? "Hide folding controls"\s+: "Show folding controls"/);

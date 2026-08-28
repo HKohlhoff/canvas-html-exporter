@@ -14,6 +14,8 @@ first.
   levels, imported-state restore, no-folding mode, and branch focus.
 - Add separate hidden-node and hidden-group counts to the exported page.
 - Add visibility-aware fit/reset and a stronger yellow search-result highlight.
+- Add an always-available area-zoom gesture for fitting a rectangle selected
+  with the left mouse button, including an `Esc` cancel hint while dragging.
 - Add a one-time Markdown-rendered feature update view that disappears when
   closed and leaves no note in the Vault.
 - Add **Show last update** at the bottom of the settings and keep the same
@@ -38,6 +40,13 @@ first.
 - Require a compact Windows smoke test for both export formats before release.
 - Keep shared descendants visible while another open parent branch still
   reaches them, hiding only the connections belonging to the collapsed branch.
+- Treat groups connected through directed edges like regular folding nodes and
+  provide focus controls on visible groups.
+- Align group visibility with Canvas Folding: connected group frames follow
+  their own directed branch, folded groups hide geometrically contained nodes,
+  and unrelated contained branches do not hide the group frame.
+- Keep a visible branch control in place but disabled while every descendant is
+  hidden by a folded group, preserving its state until the group is expanded.
 
 ### Development
 
