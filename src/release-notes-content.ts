@@ -10,14 +10,14 @@ This update adds interactive tree and folding tools to exported Canvas HTML page
 - **No folding by default:** pages start fully expanded with node controls switched off. The Folding menu remains available, and **Enable folding** activates the controls at any time.
 - **No required dependency:** exports remain fully usable when Canvas Folding is not installed, disabled, incompatible, or unavailable.
 - **Branch controls:** expand or collapse individual directed branches directly on their nodes.
-- **Clear branch size:** a collapsed branch shows its number of hidden descendant nodes. Multi-digit controls grow without covering the focus control. If shared descendants stay visible and only connections are hidden, the plus sign remains and its tooltip reports the hidden connections.
+- **Clear branch size:** a collapsed branch shows its number of hidden descendant nodes. If shared descendants stay visible and only connections are hidden, the plus sign remains and its tooltip reports the hidden connections.
 - **Global folding menu:** use **Expand all**, **Collapse all**, a visible level, **Restore folding**, or **No folding**.
 - **Independent controls:** use **Hide/Show folding controls** and **Hide/Show focus controls** to adjust the node controls without changing the current view state.
 - **Node and branch focus:** focus any node on its own or together with its descendants while the surrounding context remains visible at 20% opacity. Use the same focus control again or **Exit focus** to return.
 - **Stable layout:** folding changes visibility only. Visible nodes keep their Canvas positions.
 - **Consistent connections:** an edge and its label disappear whenever an endpoint is hidden.
 - **Clear status information:** the header reports hidden nodes and hidden groups separately.
-- **Visibility-aware fit:** **Reset** fits the currently relevant nodes and respects short browser windows, the header, folding, levels, and branch focus.
+- **Visibility-aware fit:** **Reset** enlarges the currently visible or focused Canvas content to fill the available page area, including in short browser windows.
 - **Improved search feedback:** the selected search result receives a strong yellow pulse highlight.
 - **Faster option for large Canvases:** prefer **Package folder** for large or media-heavy Canvases. Its small **index.html** usually becomes interactive sooner than a single HTML file with embedded assets.
 

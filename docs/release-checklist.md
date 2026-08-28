@@ -21,6 +21,10 @@ Use this checklist before publishing Canvas HTML Exporter.
   and minimum Obsidian version.
 - The embedded update-note ID matches the plugin version so this release opens
   its note once, and `Last Update.md` contains the identical Markdown.
+- Every user-facing feature release follows the shared update-note standard:
+  open a transient Markdown view once after update, mark it as read only after
+  it closes, create no Vault file, and keep **Show last update** at the bottom
+  of settings. Apply the same standard when starting a new plugin.
 - Plugin ID, name, description, author, repository and GPL metadata agree.
 - `build.mjs` deploys to the correct plugin ID.
 - Version changes were made only during explicit release preparation.
