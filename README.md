@@ -29,8 +29,8 @@ You can choose the export format and other options in the plugin settings.
 
 An **interactive export example** of the Canvas shown above is available as a
 [single HTML file](documentation/Canvas-HTML-Exporter-Documentation.html).
-It is a large file of nearly 20 MB. This README contains the current feature
-documentation.
+It is a large file of about 19.3 MB and was regenerated with version 1.2.0.
+This README contains the current feature documentation.
 
 A **demo-vault** with the complete content showcase can be downloaded from the
 `examples/demo-vault` folder.
@@ -195,8 +195,8 @@ Depending on the canvas contents, the export may also include additional HTML pa
 For large or media-heavy Canvases, this is usually the better-performing
 format. Keep the complete package folder together when moving, publishing, or
 sharing it. As a concrete example, the documentation Canvas used during
-development produced a package `index.html` of about 237 KB, while the
-equivalent single HTML file was about 19 MB. Actual sizes depend on the Canvas
+development produced a package `index.html` of about 252 KB, while the
+equivalent single HTML file was about 19.3 MB. Actual sizes depend on the Canvas
 and its embedded assets.
 
 ### Single HTML file

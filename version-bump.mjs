@@ -19,3 +19,17 @@ writeFileSync("manifest.json", JSON.stringify(manifest, null, 2) + "\n");
 const versions = JSON.parse(readFileSync("versions.json", "utf8"));
 versions[targetVersion] = minAppVersion;
 writeFileSync("versions.json", JSON.stringify(versions, null, 2) + "\n");
+
+const converterPath = "src/render/converter.ts";
+const converterSource = readFileSync(converterPath, "utf8");
+const versionDeclaration = /export const EXPORTER_VERSION = "[^"]+";/;
+if (!versionDeclaration.test(converterSource)) {
+  throw new Error(`${converterPath} is missing EXPORTER_VERSION`);
+}
+writeFileSync(
+  converterPath,
+  converterSource.replace(
+    versionDeclaration,
+    `export const EXPORTER_VERSION = "${targetVersion}";`,
+  ),
+);

@@ -49,6 +49,11 @@ first.
 - Keep a visible branch control in place but disabled while every descendant is
   hidden by a folded group, preserving its state until the group is expanded.
 
+### Fixed
+
+- Keep the exporter version embedded in generated HTML synchronized with the
+  plugin release version.
+
 ### Development
 
 - Prepare the project structure, role-based review workflow, manual test matrix

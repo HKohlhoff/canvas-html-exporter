@@ -30,7 +30,7 @@
     "build:prod:deploy": "node build.mjs --production --deploy",
     "dev:prod": "node build.mjs --watch --production",
     "dev:prod:deploy": "node build.mjs --watch --production --deploy",
-    "version": "node version-bump.mjs && git add manifest.json versions.json"
+    "version": "node version-bump.mjs && git add manifest.json versions.json src/render/converter.ts"
   },
   "keywords": [
     "obsidian",

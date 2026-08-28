@@ -19,6 +19,8 @@ Use this checklist before publishing Canvas HTML Exporter.
 
 - `manifest.json`, `package.json` and `versions.json` use the intended version
   and minimum Obsidian version.
+- The exporter version embedded in generated HTML matches the plugin version;
+  `npm run test:metadata` verifies this synchronization.
 - The embedded update-note ID matches the plugin version so this release opens
   its note once, and `Last Update.md` contains the identical Markdown.
 - Every user-facing feature release follows the shared update-note standard:
@@ -78,6 +80,8 @@ npm run build:prod
 - Test the documentation Canvas from `examples/demo-vault/`.
 - Regenerate the checked-in interactive HTML example from the current
   documentation Canvas when its content or browser runtime changed.
+- Confirm that the regenerated example contains no absolute source-Vault path
+  and reports the intended exporter version in its generator metadata.
 
 ## Canvas Folding integration
 

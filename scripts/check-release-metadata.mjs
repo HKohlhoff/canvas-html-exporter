@@ -5,6 +5,7 @@ const manifest = readJson("manifest.json");
 const packageData = readJson("package.json");
 const packageLock = readJson("package-lock.json");
 const versions = readJson("versions.json");
+const converterSource = readFileSync("src/render/converter.ts", "utf8");
 
 assert.equal(manifest.id, "canvas-html-exporter");
 assert.equal(packageData.name, manifest.id);
@@ -21,6 +22,10 @@ assert.match(manifest.id, /^[a-z][a-z-]*$/);
 assert.match(manifest.description, /[.?!)]$/);
 assert.ok(manifest.description.length <= 250);
 assert.match(
+  converterSource,
+  new RegExp(`export const EXPORTER_VERSION = ["']${escapeRegExp(manifest.version)}["'];`),
+);
+assert.match(
   readFileSync("LICENSE", "utf8"),
   /GNU GENERAL PUBLIC LICENSE\s+Version 3/,
 );
@@ -31,4 +36,8 @@ console.log(
 
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
