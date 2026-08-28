@@ -817,6 +817,27 @@ await test("starts in no-folding mode while retaining the menu and controls", as
   }
 });
 
+await test("keeps overlaid node controls opaque on hover", async () => {
+  const data: CanvasData = {
+    name: "Opaque controls",
+    nodes: [
+      { id: "node", type: "text", x: 0, y: 0, width: 200, height: 100, text: "# Heading under controls" },
+    ],
+    edges: [],
+  };
+
+  for (const [darkMode, expectedBackground] of [[false, "#f4f6f9"], [true, "#15181d"]] as const) {
+    const html = await convertCanvasToHtml(data, { ...baseOptions, darkMode });
+    const hoverRule = html.match(
+      /\.branch-control:hover,[\s\S]*?\.branch-focus-control\.is-active \{([\s\S]*?)\n {4}\}/,
+    );
+
+    assert.ok(hoverRule, "expected the shared node-control hover rule");
+    assert.match(hoverRule[1], new RegExp(`background: ${expectedBackground.replace("#", "\\#")};`));
+    assert.doesNotMatch(hoverRule[1], /background:\s*rgba\(/);
+  }
+});
+
 await test("renders cycle-safe branch controls in both export modes", async () => {
   const data: CanvasData = {
     name: "Branches",

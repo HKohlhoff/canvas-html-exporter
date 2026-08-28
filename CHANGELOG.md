@@ -56,6 +56,8 @@ first.
 
 - Keep the exporter version embedded in generated HTML synchronized with the
   plugin release version.
+- Keep node-control backgrounds opaque on hover so underlying headings do not
+  reduce the controls' contrast.
 
 ### Development
 

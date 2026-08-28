@@ -576,7 +576,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     .branch-focus-control:focus-visible,
     .branch-focus-control.is-active {
       border-color: ${theme.link};
-      background: ${theme.chipBackground};
+      background: ${theme.bodyBackground};
       outline: none;
     }
     .branch-control[hidden],
