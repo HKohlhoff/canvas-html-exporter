@@ -2577,10 +2577,14 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const nodeId = control.getAttribute("data-branch-node-id") || "";
           const descendants = getDescendants(nodeId);
           const descendantCount = descendants.length;
-          const hasHiddenBranch = branchHasHiddenContent(nodeId, descendants);
+          const hasHiddenDescendant = descendants.some((descendantId) => hiddenNodeIds.has(descendantId));
           const hiddenDescendantCount = descendants
             .filter((descendantId) => hiddenNodeIds.has(descendantId) && !groupNodeIds.has(descendantId))
             .length;
+          const hiddenConnectionCount = getHiddenBranchConnectionCount(nodeId, descendants);
+          const hasHiddenBranch = collapsedNodeIds.has(nodeId)
+            || hasHiddenDescendant
+            || hiddenConnectionCount > 0;
           control.hidden = !foldingControlsEnabled || !foldingNodeControlsVisible;
           control.textContent = hasHiddenBranch && hiddenDescendantCount > 0
             ? String(hiddenDescendantCount)
@@ -2591,6 +2595,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             + " · "
             + (hasHiddenBranch && hiddenDescendantCount > 0
               ? hiddenDescendantCount + (hiddenDescendantCount === 1 ? " hidden node" : " hidden nodes")
+              : hasHiddenBranch && hiddenConnectionCount > 0
+                ? hiddenConnectionCount + (hiddenConnectionCount === 1 ? " hidden connection" : " hidden connections")
               : descendantCount + (descendantCount === 1 ? " descendant" : " descendants"));
           control.setAttribute("aria-label", branchControlLabel);
           control.setAttribute("title", branchControlLabel);
@@ -2673,13 +2679,17 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function branchHasHiddenContent(nodeId, descendants) {
         if (collapsedNodeIds.has(nodeId)) return true;
         if (descendants.some((descendantId) => hiddenNodeIds.has(descendantId))) return true;
+        return getHiddenBranchConnectionCount(nodeId, descendants) > 0;
+      }
+
+      function getHiddenBranchConnectionCount(nodeId, descendants) {
         const branchSources = new Set([nodeId, ...descendants]);
         const branchTargets = new Set(descendants);
-        return edges.some((edge) => (
+        return edges.filter((edge) => (
           hiddenEdgeIds.has(edge.id)
           && branchSources.has(edge.fromId)
           && branchTargets.has(edge.toId)
-        ));
+        )).length;
       }
 
       function toggleBranch(nodeId) {

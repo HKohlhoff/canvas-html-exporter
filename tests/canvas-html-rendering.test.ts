@@ -873,6 +873,11 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /const hiddenDescendantCount = descendants\s+\.filter\(\(descendantId\) => hiddenNodeIds\.has\(descendantId\) && !groupNodeIds\.has\(descendantId\)\)/);
     assert.match(html, /control\.textContent = hasHiddenBranch && hiddenDescendantCount > 0\s+\? String\(hiddenDescendantCount\)/);
     assert.match(html, /control\.classList\.toggle\("has-hidden-count", hasHiddenBranch && hiddenDescendantCount > 0\)/);
+    assert.match(html, /const hiddenConnectionCount = getHiddenBranchConnectionCount\(nodeId, descendants\)/);
+    assert.match(html, /const hasHiddenBranch = collapsedNodeIds\.has\(nodeId\)\s+\|\| hasHiddenDescendant\s+\|\| hiddenConnectionCount > 0/);
+    assert.match(html, /hiddenConnectionCount === 1 \? " hidden connection" : " hidden connections"/);
+    assert.match(html, /function getHiddenBranchConnectionCount\(nodeId, descendants\)/);
+    assert.match(html, /return edges\.filter\(\(edge\) => \([\s\S]+\)\)\.length/);
     assert.match(html, /control\.setAttribute\("aria-label", branchControlLabel\)/);
     assert.match(html, /\.node-controls \{[\s\S]+display: flex;[\s\S]+gap: 6px;/);
     assert.match(html, /\.branch-control\.has-hidden-count \{[\s\S]+width: auto;[\s\S]+padding: 0 6px;/);

@@ -72,6 +72,9 @@ Every failure case must produce a normal usable export rather than aborting.
 - collapse branches with one-, two- and, where practical, three-digit hidden
   node counts; confirm the number remains readable and the focus control moves
   left without overlap;
+- collapse a shared branch whose descendants remain visible through another
+  parent; confirm `+` remains and its tooltip reports hidden connections rather
+  than the total descendant count;
 - focus one branch and exit focus;
 - focus a node without children, run reset, and confirm that the node alone is
   fitted without surrounding group bounds;
