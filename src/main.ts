@@ -8,6 +8,8 @@ import { resolveInitialCanvasFoldState } from "./integrations/canvas-folding";
 import { buildStoredPluginData, readPluginData } from "./plugin-data";
 import { CURRENT_RELEASE_NOTES_ID } from "./release-notes-content";
 import { openCurrentReleaseNotes } from "./ui/release-notes";
+import { openPluginReadme } from "./ui/readme";
+import { collectCanvasColorKeys } from "./export/canvas-data";
 
 type CanvasColorMap = Record<string, string>;
 type CalloutColorMap = Record<string, string>;
@@ -74,6 +76,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
         foldingInitiallyEnabled: this.settings.foldingInitialState !== "none",
         initialFoldState: initialFoldState ?? undefined,
       });
+      result.options.canvasColors = this.readCanvasPaletteColors(collectCanvasColorKeys(result.data));
       const html = await convertCanvasToHtml(result.data, result.options);
       await this.writeOutput(result.outputPath, result.outputKind, html);
       const label = result.outputKind === "file" ? "Self-contained canvas HTML exported" : "Canvas package exported";
@@ -109,12 +112,16 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     return file;
   }
 
-  private readCanvasPaletteColors(): CanvasColorMap {
+  private readCanvasPaletteColors(additionalColorKeys: readonly string[] = []): CanvasColorMap {
     if (typeof window === "undefined" || typeof activeDocument === "undefined" || !activeDocument.body) {
       return {};
     }
 
     const result: CanvasColorMap = {};
+    const defaultEdgeColor = this.readDefaultCanvasEdgeColor();
+    if (defaultEdgeColor) {
+      result["0"] = defaultEdgeColor;
+    }
 
     const colorMap: Record<string, string> = {
       "1": "--color-red-rgb",
@@ -132,7 +139,37 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
       }
     }
 
+    for (const colorIndex of additionalColorKeys) {
+      if (result[colorIndex] || !/^\d+$/.test(colorIndex)) continue;
+      const resolved = this.resolveCssVariable(`--canvas-color-${colorIndex}`);
+      if (resolved) {
+        result[colorIndex] = resolved;
+      }
+    }
+
     return result;
+  }
+
+  private readDefaultCanvasEdgeColor(): string {
+    const styleScope = this.getThemeStyleScope();
+    const svg = createSvg("svg");
+    const edgeGroup = createSvg("g");
+    const edgePath = createSvg("path");
+    svg.classList.add("canvas-edges", "canvas-html-exporter-hidden-probe");
+    edgePath.classList.add("canvas-display-path");
+    edgePath.setAttribute("d", "M 0 0 L 10 10");
+    edgeGroup.appendChild(edgePath);
+    svg.appendChild(edgeGroup);
+    styleScope.appendChild(svg);
+
+    try {
+      const sampledStroke = this.normalizeThemeColor(getComputedStyle(edgePath).stroke);
+      return sampledStroke
+        || this.resolveCssVariable("--canvas-color")
+        || this.resolveCssVariable("--text-muted");
+    } finally {
+      svg.remove();
+    }
   }
 
   private readCalloutColors(): CalloutColorMap {
@@ -380,6 +417,10 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
 
   showLastUpdate(): void {
     void this.openLastUpdate();
+  }
+
+  showReadme(): void {
+    openPluginReadme(this.app);
   }
 
   private async showCurrentReleaseNotesOnce(): Promise<void> {

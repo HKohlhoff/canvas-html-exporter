@@ -44,6 +44,19 @@ npm run build:prod:deploy
 - Update `CHANGELOG.md`, README and release documentation when user-facing
   behavior changes.
 
-Feature development should use a `feature/*` branch. Run the full quality gate
-before requesting a merge into `master`. Do not prepare or publish a release
-from an unreviewed feature branch.
+## Git workflow
+
+The project uses a lightweight GitFlow workflow:
+
+- Published versions live on `master`; ongoing integration happens on
+  `develop`.
+- Create `feature/*` and `release/*` branches from `develop`; create
+  `hotfix/*` branches from `master`.
+- Merge completed work branches with explicit `--no-ff` merge commits so their
+  topology remains visible in graphical Git clients. Do not squash, rebase, or
+  fast-forward these merges.
+- Merge release and hotfix results back into `develop`, and tag releases on
+  `master` with annotated version tags.
+
+Run the full quality gate before requesting a merge. Do not merge, push,
+prepare a release, or publish without explicit approval.

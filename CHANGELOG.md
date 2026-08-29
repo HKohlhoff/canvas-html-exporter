@@ -4,6 +4,37 @@ All notable user-facing changes to Canvas HTML Exporter are documented here.
 The format follows the spirit of Keep a Changelog, with the newest release
 first.
 
+## [Unreleased]
+
+### Added
+
+- Add a local, Markdown-rendered **Show readme** action to the About settings
+  without creating a Vault file or loading README images from the network;
+  retain the Ko-fi destination as a text link and omit other images without
+  placeholder notices.
+- Keep the embedded README compact, combine its Canvas comparison into one
+  sentence and omit the oversized single-HTML example link from this view.
+- Document the manually tested Windows 11 and macOS platforms.
+- Preserve supported Advanced Canvas node shapes, borders, text alignment,
+  edge paths, edge heads, palette colors, and custom colors without requiring
+  Advanced Canvas at export or viewing time.
+- Add independent browser collapse controls for saved Advanced Canvas groups,
+  including nested groups, title-only collapsed presentation, incident edges,
+  search, minimap, fit/reset, and restore behavior.
+- Add the self-contained `Advanced Canvas Attributes.canvas` to the public
+  demo vault as a complete visual and interaction example.
+
+### Changed
+
+- Remove the redundant tracked maintainer TestVault copy. The public
+  `examples/demo-vault/` remains the versioned manual-test source, while local
+  cross-plugin testing uses the shared external PluginTests Vault.
+- Sample the active Canvas default edge color during export so theme CSS,
+  Style Settings values, and enabled CSS snippets are reflected when no color
+  is explicitly stored.
+- Count hidden directed groups and their geometrically contained nodes and
+  groups consistently in browser folding controls.
+
 ## [1.2.0] – 2026-08-28
 
 ### Added

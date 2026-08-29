@@ -569,8 +569,9 @@ await test("applies canvas colors to group nodes", async () => {
     canvasColors: { "4": "rgb(12, 34, 56)" },
   });
 
-  assert.match(html, /background:var\(--canvas-color-4-bg, #56ae6c22\);border-color:var\(--canvas-color-4, #56ae6c\);--node-border-color:var\(--canvas-color-4, #56ae6c\);/);
-  assert.match(html, /<div class="group-title">Group<\/div><div class="node-content"><\/div>/);
+  assert.match(html, /background:var\(--canvas-color-4-bg, #56ae6c22\);border-color:var\(--canvas-color-4, #56ae6c\);--node-background-color:var\(--canvas-color-4-bg, #56ae6c22\);--node-border-color:var\(--canvas-color-4, #56ae6c\);/);
+  assert.match(html, /<div id="group-title-group-color-1" class="group-title" data-group-title-node-id="group-color-1"[^>]*><span class="group-title-text">Group<\/span><\/div>/);
+  assert.match(html, /id="node-group-color-1"[\s\S]*<div class="node-content"><\/div><\/div>/);
   assert.match(html, /\.group-title \{[\s\S]*color: var\(--node-border-color\);/);
 });
 
@@ -639,6 +640,295 @@ await test("renders edge marker and line style metadata into canvas script", asy
   assert.match(html, /function dashArrayFor\(style, width\)/);
   assert.match(html, /marker-start/);
   assert.match(html, /marker-end/);
+});
+
+await test("renders the Advanced Canvas long-dashed edge path", async () => {
+  const data: CanvasData = {
+    name: "Advanced edge",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+      { id: "b", type: "text", x: 260, y: 0, width: 200, height: 100, text: "B" },
+    ],
+    edges: [
+      {
+        fromNode: "a",
+        toNode: "b",
+        lineStyle: "long-dashed",
+      },
+    ],
+  };
+
+  const html = await convertCanvasToHtml(data, baseOptions);
+  assert.match(html, /"lineStyle":"long-dash"/);
+  assert.match(html, /style === "long-dash"/);
+});
+
+await test("renders every Advanced Canvas edge head without collapsing variants", async () => {
+  const arrowStyles = [
+    "triangle",
+    "triangle-outline",
+    "thin-triangle",
+    "halved-triangle",
+    "diamond",
+    "diamond-outline",
+    "circle",
+    "circle-outline",
+    "blunt",
+  ];
+  const data: CanvasData = {
+    name: "Advanced edge heads",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+      { id: "b", type: "text", x: 260, y: 0, width: 200, height: 100, text: "B" },
+    ],
+    edges: arrowStyles.map((toEnd, index) => ({
+      id: `edge-${index}`,
+      fromNode: "a",
+      toNode: "b",
+      toEnd,
+    })),
+  };
+
+  for (const exportFormat of ["package", "single-html"] as const) {
+    const html = await convertCanvasToHtml(data, { ...baseOptions, exportFormat });
+    for (const arrowStyle of arrowStyles) {
+      assert.match(html, new RegExp(`"toEnd":"${arrowStyle}"`));
+    }
+    assert.match(html, /type === "circle" \|\| type === "circle-outline"/);
+    assert.match(html, /type === "diamond" \|\| type === "diamond-outline"/);
+    assert.match(html, /type === "halved-triangle"/);
+    assert.match(html, /type === "triangle-outline" \|\| type === "thin-triangle"/);
+    assert.match(html, /type === "thin-triangle"\s+\? "M 2 1 L 11 6 L 2 11"/);
+    assert.match(html, /type === "circle-outline" \? markerBackground : color/);
+    assert.match(html, /type === "diamond-outline" \? markerBackground : color/);
+    assert.match(html, /type === "triangle-outline" \? markerBackground : "none"/);
+    assert.match(html, /type === "blunt"/);
+  }
+});
+
+await test("uses a neutral default color for uncolored edges", async () => {
+  const data: CanvasData = {
+    name: "Default edge color",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+      { id: "b", type: "text", x: 260, y: 0, width: 200, height: 100, text: "B" },
+    ],
+    edges: [{ id: "edge", fromNode: "a", toNode: "b" }],
+  };
+
+  const lightHtml = await convertCanvasToHtml(data, { ...baseOptions, darkMode: false });
+  const darkHtml = await convertCanvasToHtml(data, { ...baseOptions, darkMode: true });
+  assert.match(lightHtml, /const edgeColor = "#5f6b7a"/);
+  assert.match(darkHtml, /const edgeColor = "#aeb8c5"/);
+});
+
+await test("uses the sampled theme color for uncolored edges", async () => {
+  const data: CanvasData = {
+    name: "Sampled default edge color",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A" },
+      { id: "b", type: "text", x: 260, y: 0, width: 200, height: 100, text: "B" },
+    ],
+    edges: [{ id: "edge", fromNode: "a", toNode: "b" }],
+  };
+
+  const html = await convertCanvasToHtml(data, {
+    ...baseOptions,
+    canvasColors: { "0": "rgb(123, 124, 125)" },
+  });
+
+  assert.match(html, /const edgeColor = "rgb\(123, 124, 125\)"/);
+});
+
+await test("renders independent nested Advanced Canvas group controls in both export modes", async () => {
+  const data: CanvasData = {
+    name: "Advanced groups",
+    nodes: [
+      {
+        id: "outer",
+        type: "group",
+        x: 0,
+        y: 0,
+        width: 600,
+        height: 400,
+        label: "Outer",
+        advancedGroupCollapsed: true,
+      },
+      { id: "inner", type: "group", x: 260, y: 40, width: 280, height: 260, label: "Inner" },
+      { id: "outer-node", type: "text", x: 40, y: 80, width: 160, height: 100, text: "Outer node" },
+      { id: "inner-node", type: "text", x: 300, y: 100, width: 160, height: 100, text: "Inner node" },
+      { id: "empty", type: "group", x: 700, y: 0, width: 200, height: 160, label: "Empty" },
+    ],
+    edges: [
+      { id: "inside", fromNode: "outer-node", toNode: "inner-node" },
+      { id: "outside", fromNode: "empty", toNode: "outer" },
+    ],
+  };
+
+  for (const exportFormat of ["package", "single-html"] as const) {
+    const html = await convertCanvasToHtml(data, { ...baseOptions, exportFormat });
+
+    assert.match(html, /data-advanced-group-id="outer"[^>]+aria-expanded="false"[^>]*>3<\/button>/);
+    assert.match(html, /data-advanced-group-id="inner"[^>]+aria-expanded="true"[^>]*>−<\/button>/);
+    assert.doesNotMatch(html, /data-advanced-group-id="empty"/);
+    assert.match(html, /const initialAdvancedCollapsedGroupIds = new Set\(\["outer"\]\)/);
+    assert.match(html, /function getAdvancedGroupHiddenNodeIds\(\)/);
+    assert.match(html, /function toggleAdvancedGroup\(groupId\)/);
+    assert.match(html, /window\.toggleAdvancedGroup = toggleAdvancedGroup/);
+    assert.match(html, /advancedGroupHiddenNodeIds\.has\(edge\.fromId\) \|\| advancedGroupHiddenNodeIds\.has\(edge\.toId\)/);
+    assert.match(html, /node\.classList\.toggle\("is-folding-hidden", hiddenNodeIds\.has\(nodeId\)\)/);
+    assert.match(html, /\.node\.group\.is-advanced-group-collapsed \{\s+visibility: hidden;/);
+    assert.match(html, /groupNodeIds\.has\(nodeId\) && advancedCollapsedGroupIds\.has\(nodeId\)/);
+    assert.match(html, /el\.classList\.contains\("is-advanced-group-collapsed"\)/);
+    assert.match(html, /document\.getElementById\("group-title-" \+ nodeId\)/);
+    assert.match(html, /initialAdvancedCollapsedGroupIds\.forEach\(\(groupId\) => advancedCollapsedGroupIds\.add\(groupId\)\)/);
+    assert.match(html, /foldingGraph\.groupContentsByNode\[groupId\][\s\S]+\.includes\(nodeId\)/);
+    const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
+    assert.ok(runtime);
+    assert.doesNotThrow(() => new vm.Script(runtime));
+  }
+});
+
+await test("renders Advanced Canvas palette colors for nodes, groups and edges", async () => {
+  const data: CanvasData = {
+    name: "Advanced colors",
+    nodes: [
+      { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A", color: "7" },
+      { id: "group", type: "group", x: 240, y: -20, width: 260, height: 160, label: "Group", color: "8" },
+    ],
+    edges: [
+      { fromNode: "a", toNode: "group", color: "9" },
+    ],
+  };
+
+  const html = await convertCanvasToHtml(data, {
+    ...baseOptions,
+    canvasColors: {
+      "7": "rgb(10, 20, 30)",
+      "8": "#abcdef",
+      "9": "oklch(62% 0.2 25)",
+    },
+  });
+
+  assert.match(html, /--canvas-color-7: rgb\(10, 20, 30\)/);
+  assert.match(html, /--canvas-color-8: #abcdef/);
+  assert.match(html, /"9":"oklch\(62% 0.2 25\)"/);
+  assert.match(html, /resolveEdgeColor\(edge\.color\)/);
+});
+
+await test("rejects unsafe Advanced Canvas palette values", async () => {
+  const unsafeColor = "red; } </style><script>window.injected = true</script>";
+  const html = await convertCanvasToHtml(
+    {
+      name: "Unsafe Advanced colors",
+      nodes: [
+        { id: "a", type: "text", x: 0, y: 0, width: 200, height: 100, text: "A", color: "7" },
+      ],
+      edges: [],
+    },
+    {
+      ...baseOptions,
+      canvasColors: { "7": unsafeColor },
+    },
+  );
+
+  assert.doesNotMatch(html, /window\.injected/);
+  assert.doesNotMatch(html, /--canvas-color-7:/);
+});
+
+await test("renders all built-in Advanced Canvas node styles in both export modes", async () => {
+  const shapes = [
+    "pill",
+    "diamond",
+    "parallelogram",
+    "circle",
+    "predefined-process",
+    "document",
+    "database",
+  ] as const;
+  const data: CanvasData = {
+    name: "Advanced styles",
+    nodes: [
+      ...shapes.map((shape, index) => ({
+        id: shape,
+        type: "text",
+        x: index * 240,
+        y: 0,
+        width: 200,
+        height: 60,
+        text: shape === "diamond" ? "diamond\ncentered" : shape,
+        shape,
+      })),
+      {
+        id: "bordered",
+        type: "text",
+        x: 0,
+        y: 180,
+        width: 200,
+        height: 100,
+        text: "Bordered",
+        borderStyle: "dotted",
+        textAlign: "right",
+      },
+      {
+        id: "invisible",
+        type: "text",
+        x: 240,
+        y: 180,
+        width: 200,
+        height: 100,
+        text: "Invisible",
+        borderStyle: "invisible",
+        textAlign: "center",
+      },
+    ],
+    edges: [],
+  };
+
+  for (const exportFormat of ["package", "single-html"] as const) {
+    const html = await convertCanvasToHtml(data, { ...baseOptions, exportFormat });
+    for (const shape of shapes) {
+      assert.match(html, new RegExp(`data-node-shape="${shape}"`));
+    }
+    assert.match(html, /data-node-border="dotted"/);
+    assert.match(html, /data-node-border="invisible"/);
+    assert.match(html, /data-node-text-align="right"/);
+    assert.match(html, /data-node-text-align="center"/);
+    assert.match(html, /\.node\[data-node-shape="diamond"\]/);
+    assert.match(html, /\.node\[data-node-shape="database"\]/);
+    assert.match(
+      html,
+      /\.node\[data-node-shape="database"\]::before,\s+\.node\[data-node-shape="database"\]::after \{[^}]*z-index: 0;/,
+    );
+    assert.match(
+      html,
+      /\.node\[data-node-shape="database"\] \.node-content \{[^}]*overflow: visible;[^}]*transform: translateY\(20px\);/,
+    );
+    assert.doesNotMatch(
+      html,
+      /\.node\[data-node-shape="database"\] \{[^}]*padding-block: 20px;/,
+    );
+    assert.match(
+      html,
+      /\.node\[data-node-shape\] > \.node-title,\s+\.node\[data-node-shape\] > \.node-content \{[^}]*z-index: 2;/,
+    );
+    assert.match(
+      html,
+      /\.node\[data-node-shape\]:not\(\[data-node-shape="database"\]\) \{[^}]*padding-block: 6px;[^}]*justify-content: center;/,
+    );
+    assert.match(
+      html,
+      /\.node\[data-node-shape\]:not\(\[data-node-shape="database"\]\) > \.node-content \{[^}]*flex: 0 1 auto;[^}]*line-height: 1\.25;/,
+    );
+    assert.match(
+      html,
+      /\.node\[data-node-shape\]:not\(\[data-node-shape="database"\]\) > \.node-content > :first-child \{\s+margin-top: 0;/,
+    );
+    assert.match(html, /\.node\[data-node-border="invisible"\]/);
+    assert.match(html, /\.node\[data-node-text-align="center"\]/);
+    assert.match(html, /<polygon class="minimap-node"[^>]+data-node-id="diamond"/);
+    assert.match(html, /<ellipse class="minimap-node"[^>]+data-node-id="circle"/);
+  }
 });
 
 await test("renders minimap markup and viewport sync when enabled", async () => {
@@ -912,12 +1202,15 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /descendants\.every\(\(descendantId\) => groupHiddenNodeIds\.has\(descendantId\)\)/);
     assert.match(html, /"Branch hidden by folded group"/);
     assert.match(html, /control\.hidden = !foldingControlsEnabled \|\| !focusNodeControlsVisible/);
-    assert.match(html, /const hiddenDescendantCount = descendants\s+\.filter\(\(descendantId\) => hiddenNodeIds\.has\(descendantId\) && !groupNodeIds\.has\(descendantId\)\)/);
-    assert.match(html, /const ownHiddenDescendantCount = collapsedNodeIds\.has\(nodeId\)\s+\? descendants\.filter\(\(descendantId\) => !groupNodeIds\.has\(descendantId\)\)\.length\s+: 0/);
+    assert.match(html, /function getHiddenBranchItemCounts\(nodeId, sourceHiddenNodeIds\)/);
+    assert.match(html, /for \(const containedNodeId of foldingGraph\.groupContentsByNode\[descendantId\] \|\| \[\]\)/);
+    assert.match(html, /const hiddenItemCounts = getHiddenBranchItemCounts\(nodeId, hiddenNodeIds\)/);
+    assert.match(html, /const ownHiddenItemCounts = collapsedNodeIds\.has\(nodeId\)\s+\? getHiddenBranchItemCounts\(nodeId, new Set\(descendants\)\)\s+: getItemCounts\(\[\]\)/);
     assert.match(html, /const displayedHiddenBranch = disabledByHiddenGroup\s+\? collapsedNodeIds\.has\(nodeId\)\s+: hasHiddenBranch/);
-    assert.match(html, /const displayedHiddenDescendantCount = disabledByHiddenGroup\s+\? ownHiddenDescendantCount\s+: hiddenDescendantCount/);
-    assert.match(html, /control\.textContent = displayedHiddenBranch && displayedHiddenDescendantCount > 0\s+\? String\(displayedHiddenDescendantCount\)/);
-    assert.match(html, /displayedHiddenBranch && displayedHiddenDescendantCount > 0/);
+    assert.match(html, /const displayedHiddenItemCounts = disabledByHiddenGroup\s+\? ownHiddenItemCounts\s+: hiddenItemCounts/);
+    assert.match(html, /control\.textContent = displayedHiddenBranch && displayedHiddenItemCounts\.itemCount > 0\s+\? String\(displayedHiddenItemCounts\.itemCount\)/);
+    assert.match(html, /displayedHiddenBranch && displayedHiddenItemCounts\.itemCount > 0/);
+    assert.match(html, /function formatHiddenItemCounts\(counts\)/);
     assert.match(html, /const hiddenConnectionCount = getHiddenBranchConnectionCount\(nodeId, descendants\)/);
     assert.match(html, /const hasHiddenBranch = collapsedNodeIds\.has\(nodeId\)\s+\|\| hasHiddenDescendant\s+\|\| hiddenConnectionCount > 0/);
     assert.match(html, /hiddenConnectionCount === 1 \? " hidden connection" : " hidden connections"/);

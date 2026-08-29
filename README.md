@@ -4,6 +4,17 @@ Export your Obsidian canvas as an interactive HTML page that can be opened in an
 
 Requires Obsidian 1.13.0 or later.
 
+## Tested platforms
+
+The current plugin has been manually tested on:
+
+- Windows 11;
+- macOS.
+
+The exported HTML was checked in current desktop browsers on those systems.
+Advanced Canvas compatibility was additionally checked with the Standard,
+Minimal, and AnuPpuccin themes.
+
 If Canvas HTML Exporter is useful to you, you can support its continued
 development by buying me a coffee.
 
@@ -39,6 +50,10 @@ A **demo-vault** with the complete content showcase can be downloaded from the
 
 - Export the active `.canvas` file as an interactive HTML package or a single self-contained HTML file
 - Preserve canvas layout, node styling, groups, connection labels, line styles, and markers
+- Preserve supported Advanced Canvas shapes, borders, text alignment, edge
+  paths, edge heads, and saved colors
+- Add independent collapse controls for Advanced Canvas groups in the exported
+  page
 - Render text nodes and Markdown file nodes with Markdown formatting
 - Show Markdown file nodes with a preview and export them as standalone HTML pages or embedded single-file pages
 - Rewrite internal Markdown links, wiki links, heading links, section embeds, and block references
@@ -159,7 +174,8 @@ in the Vault.
 
 The update description is shown only once and does not reappear on every
 Obsidian start. Use **Show last update** at the bottom of the plugin settings to
-open it again at any time. The repository keeps the same text in
+open it again at any time. Use **Show readme** beside it to open this complete
+documentation locally inside Obsidian. The repository keeps the same text in
 [`Last Update.md`](Last%20Update.md).
 
 ## Supported Content
@@ -175,6 +191,30 @@ Markdown content:
 - headings, lists, tables, blockquotes, callouts, code fences, and horizontal rules
 - LaTeX math
 - internal links, wiki links, section links, embeds, and block references
+
+### Advanced Canvas compatibility
+
+Canvas HTML Exporter reads supported Advanced Canvas attributes directly from
+the saved `.canvas` file. Advanced Canvas does not need to be installed or
+enabled when you export or view the generated HTML.
+
+The exporter preserves the built-in node shapes, border styles, text
+alignment, edge path styles, edge heads, the six numbered Canvas palette
+colors, and custom colors. For items without an explicitly saved color, it
+samples the active Canvas appearance at export time. Theme CSS, Style Settings
+values, and active CSS snippets can therefore influence the exported default
+edge color.
+
+Advanced Canvas groups receive their own browser control. Collapsing a group
+keeps its title row and connected edges available while hiding its frame and
+geometrically contained content. Nested groups, search, minimap, fit/reset,
+restore, and the normal Canvas Folding controls continue to work with this
+separate group state.
+
+Open
+[`Advanced Canvas Attributes.canvas`](examples/demo-vault/Advanced%20Canvas%20Attributes.canvas)
+from the included demo vault to see the supported visual attributes and group
+behavior in one self-contained example.
 
 ## Export Formats
 
@@ -232,6 +272,11 @@ If quick startup matters more than distributing one file, use `Package folder`.
 
 You can also use the ribbon icon to trigger the export.
 
+For a quick tour of the Advanced Canvas support, open `Advanced Canvas
+Attributes.canvas` in the included demo vault and export it once in either
+format. The Canvas contains the supported shapes, borders, alignments, colors,
+edge paths, edge heads, and nested groups.
+
 ## Demo-Vault
 
 This repository includes a small demo vault with the complete content showcase
@@ -245,7 +290,11 @@ To use it:
    - from Obsidian Community Plugins, or
    - manually by copying `manifest.json`, `main.js`, and `styles.css` into `.obsidian/plugins/canvas-html-exporter/`.
 4. Open the plugin settings and choose the export format and output folder.
-5. Open `documentation/Canvas HTML Exporter - Documentation.canvas`.
+5. Open one of the included examples:
+   - `documentation/Canvas HTML Exporter - Documentation.canvas` for the full
+     content showcase;
+   - `Advanced Canvas Attributes.canvas` for the supported Advanced Canvas
+     appearance and interactive group behavior.
 6. Run `Export active canvas as HTML`.
 
 ## Installation
@@ -284,6 +333,9 @@ Install from Obsidian Community Plugins, or copy `manifest.json`, `main.js`, and
   finite.
 - Folding version 1 uses stable layout. It does not compact or automatically
   rearrange the remaining visible nodes.
+- Advanced Canvas floating edges, portals, presentation mode, custom CSS
+  styles, and the `direct`, `square`, and `a-star` pathfinding modes are not
+  reproduced by this compatibility layer.
 
 ## Development
 Install dependencies and run the checks:

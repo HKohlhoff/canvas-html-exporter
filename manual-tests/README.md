@@ -1,8 +1,7 @@
 # Manual test matrix
 
 This directory contains the versioned manual checks that complement automated
-tests. Use the public `examples/demo-vault/` or the local
-`Canvas-HTML-Exporter_TestVault/` as the source Vault.
+tests. Use the public `examples/demo-vault/` as the versioned source Vault.
 
 Record the tested Obsidian version, operating system, browser and plugin
 versions with the result.
@@ -19,6 +18,31 @@ Test both package and single-HTML export:
 - exercise zoom, pan, reset/fit, search and minimap;
 - confirm offline behavior and absence of source-Vault modifications;
 - disable/re-enable the plugin and repeat one minimal export.
+
+## Advanced Canvas compatibility
+
+Open `examples/demo-vault/Advanced Canvas Attributes.canvas` and repeat the
+complete check as a package and as single HTML:
+
+- compare every built-in shape, border style and text alignment with the
+  source Canvas and confirm that all text remains fully visible;
+- compare the dotted, short-dashed and long-dashed edge paths and every filled,
+  outline, open, halved and blunt edge head;
+- inspect items using the default Canvas color, palette colors 1 through 6 and
+  a custom color;
+- repeat with the Standard, Minimal and AnuPpuccin themes and confirm that the
+  exported default edge color follows the active Canvas appearance, including
+  active Style Settings values and CSS snippets;
+- collapse and expand the root, child and nested groups. Only the title row and
+  connected edges should remain while a group is collapsed;
+- confirm that group counts include hidden nodes and groups, and that group
+  state cooperates with branch folding, search, minimap, fit/reset and restore;
+- export an already collapsed group and confirm its saved contents are present
+  and can be restored in the generated page;
+- confirm package and single-HTML output are functionally and visually
+  equivalent and the source Canvas remains unchanged;
+- repeat one export with Advanced Canvas disabled or absent. Supported saved
+  attributes must still render from the `.canvas` data.
 
 ## Canvas Folding integration
 
@@ -44,6 +68,14 @@ Every failure case must produce a normal usable export rather than aborting.
 - Reload or restart Obsidian and confirm the description is not opened again.
 - At the bottom of settings, choose **Show last update** and confirm that the
   same description opens again whenever requested.
+- Choose **Show readme** beside it and confirm that the complete documentation
+  opens as rendered Markdown, closes cleanly, creates no Vault file and does not
+  load embedded README images or show image-placeholder notices. The Ko-fi
+  support link remains visible and opens only after an explicit click; relative
+  documentation links likewise open the repository only after a click.
+- Confirm that the embedded README has no repeated blank lines, presents the
+  Obsidian/HTML Canvas comparison as one sentence without ellipses, and omits
+  the link to the oversized single-HTML example.
 
 ### Graph cases
 

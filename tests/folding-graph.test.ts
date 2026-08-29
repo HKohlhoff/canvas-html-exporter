@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
   buildCanvasFoldingGraph,
+  countHiddenBranchItems,
+  deriveAdvancedGroupVisibility,
   deriveCollapsedVisibility,
   getCanvasBranchNodeIds,
   getCanvasDescendants,
@@ -153,6 +155,63 @@ test("keeps a connected group visible when a separate branch hides its only cont
     [...getNodeIdsHiddenByGroups(graph, new Set(["group-grandchild"]))],
     ["d1.2"],
   );
+});
+
+test("collapses Advanced Canvas groups independently of directed branches", () => {
+  const nodes: FoldingGraphNode[] = [
+    { id: "outer", type: "group", x: 0, y: 0, width: 500, height: 300 },
+    { id: "inner", type: "group", x: 200, y: 20, width: 260, height: 220 },
+    node("outer-node", 20, 20),
+    node("inner-node", 240, 60),
+    node("outside", 600, 20),
+  ];
+  const edges: FoldingGraphEdge[] = [
+    { id: "inside-edge", fromNode: "outer-node", toNode: "inner-node" },
+    { id: "outside-edge", fromNode: "outside", toNode: "outer" },
+  ];
+  const graph = buildCanvasFoldingGraph(nodes, edges);
+
+  const inner = deriveAdvancedGroupVisibility(graph, edges, ["inner"]);
+  assert.deepEqual([...inner.hiddenNodeIds], ["inner-node"]);
+  assert.deepEqual([...inner.hiddenEdgeIds], ["inside-edge"]);
+
+  const outer = deriveAdvancedGroupVisibility(graph, edges, ["outer"]);
+  assert.deepEqual(
+    [...outer.hiddenNodeIds].sort(),
+    ["inner", "inner-node", "outer-node"],
+  );
+  assert.deepEqual([...outer.hiddenEdgeIds], ["inside-edge"]);
+  assert.equal(outer.hiddenNodeIds.has("outer"), false);
+  assert.equal(outer.hiddenEdgeIds.has("outside-edge"), false);
+});
+
+test("counts hidden groups and geometrically contained nodes in branch controls", () => {
+  const nodes: FoldingGraphNode[] = [
+    { id: "root", type: "group", x: 0, y: 0, width: 100, height: 100 },
+    { id: "child-group", type: "group", x: 200, y: 0, width: 300, height: 220 },
+    { id: "inner-group", type: "group", x: 220, y: 20, width: 120, height: 120 },
+    node("direct-child", 520, 0),
+    node("inside-child", 360, 20),
+    node("inside-inner", 230, 30),
+  ];
+  const edges: FoldingGraphEdge[] = [
+    { id: "root-child", fromNode: "root", toNode: "child-group" },
+    { id: "root-direct", fromNode: "root", toNode: "direct-child" },
+  ];
+  const graph = buildCanvasFoldingGraph(nodes, edges);
+  const hiddenNodeIds = new Set([
+    "child-group",
+    "inner-group",
+    "direct-child",
+    "inside-child",
+    "inside-inner",
+  ]);
+
+  assert.deepEqual(countHiddenBranchItems(graph, "root", hiddenNodeIds), {
+    groupCount: 2,
+    itemCount: 5,
+    nodeCount: 3,
+  });
 });
 
 test("expands an entire branch including nested collapsed nodes", () => {
