@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { normalizeCanvasData, shouldRewriteInternalTarget } from "../src/export/canvas-data";
+import { collectCanvasColorKeys, normalizeCanvasData, shouldRewriteInternalTarget } from "../src/export/canvas-data";
 
 function test(name: string, fn: () => void): void {
   try {
@@ -116,4 +116,238 @@ test("preserves edge marker and line style aliases during normalization", () => 
   assert.equal(data.edges[0]?.toEnd, "diamond");
   assert.equal(data.edges[0]?.lineStyle, "short-dash");
   assert.equal(data.edges[0]?.width, 4);
+});
+
+test("normalizes supported Advanced Canvas node and group attributes", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [
+        {
+          id: "styled",
+          type: "text",
+          styleAttributes: {
+            shape: "pill",
+            border: "dashed",
+            textAlign: "center",
+          },
+        },
+        {
+          id: "collapsed-group",
+          type: "group",
+          collapsed: true,
+          styleAttributes: { border: "invisible" },
+        },
+      ],
+      edges: [],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.nodes[0]?.shape, "pill");
+  assert.equal(data.nodes[0]?.borderStyle, "dashed");
+  assert.equal(data.nodes[0]?.textAlign, "center");
+  assert.equal(data.nodes[0]?.advancedGroupCollapsed, undefined);
+  assert.equal(data.nodes[1]?.shape, undefined);
+  assert.equal(data.nodes[1]?.borderStyle, "invisible");
+  assert.equal(data.nodes[1]?.advancedGroupCollapsed, true);
+});
+
+test("ignores unsupported Advanced Canvas style values", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [
+        {
+          id: "custom",
+          type: "text",
+          styleAttributes: {
+            shape: "custom-cloud",
+            border: "double",
+            textAlign: "justify",
+            validationState: "approved",
+          },
+        },
+      ],
+      edges: [],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.nodes[0]?.shape, undefined);
+  assert.equal(data.nodes[0]?.borderStyle, undefined);
+  assert.equal(data.nodes[0]?.textAlign, undefined);
+});
+
+test("uses the Advanced Canvas edge path style when no native alias is present", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [],
+      edges: [
+        {
+          fromNode: "a",
+          toNode: "b",
+          styleAttributes: { path: "long-dashed" },
+        },
+      ],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.edges[0]?.lineStyle, "long-dashed");
+});
+
+test("normalizes every supported Advanced Canvas edge head", () => {
+  const arrowStyles = [
+    "triangle",
+    "triangle-outline",
+    "thin-triangle",
+    "halved-triangle",
+    "diamond",
+    "diamond-outline",
+    "circle",
+    "circle-outline",
+    "blunt",
+  ];
+  const data = normalizeCanvasData(
+    {
+      nodes: [],
+      edges: arrowStyles.map((arrow, index) => ({
+        id: `edge-${index}`,
+        fromNode: "a",
+        toNode: "b",
+        styleAttributes: { arrow },
+      })),
+    },
+    "Fallback",
+  );
+
+  assert.deepEqual(data.edges.map((edge) => edge.toEnd), arrowStyles);
+});
+
+test("applies an Advanced Canvas edge head to every enabled line end", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [],
+      edges: [
+        {
+          fromNode: "a",
+          fromEnd: "arrow",
+          toNode: "b",
+          toEnd: "arrow",
+          styleAttributes: { arrow: "diamond-outline" },
+        },
+        {
+          fromNode: "a",
+          fromEnd: "none",
+          toNode: "b",
+          toEnd: "none",
+          styleAttributes: { arrow: "circle" },
+        },
+      ],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.edges[0]?.fromEnd, "diamond-outline");
+  assert.equal(data.edges[0]?.toEnd, "diamond-outline");
+  assert.equal(data.edges[1]?.fromEnd, "none");
+  assert.equal(data.edges[1]?.toEnd, "none");
+});
+
+test("ignores unsupported Advanced Canvas edge heads", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [],
+      edges: [{
+        fromNode: "a",
+        toNode: "b",
+        styleAttributes: { arrow: "custom-star" },
+      }],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.edges[0]?.toEnd, undefined);
+});
+
+test("restores nodes and edges stored inside collapsed Advanced Canvas groups", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [
+        {
+          id: "group",
+          type: "group",
+          x: 100,
+          y: 200,
+          collapsed: true,
+          collapsedData: {
+            nodes: [
+              { id: "inside", type: "text", x: 20, y: 30, text: "Inside" },
+              {
+                id: "nested-group",
+                type: "group",
+                x: 80,
+                y: 90,
+                collapsed: true,
+                collapsedData: {
+                  nodes: [{ id: "nested", type: "text", x: 5, y: 7 }],
+                  edges: [{ id: "nested-edge", fromNode: "inside", toNode: "nested" }],
+                },
+              },
+            ],
+            edges: [{ id: "inside-edge", fromNode: "group", toNode: "inside" }],
+          },
+        },
+      ],
+      edges: [],
+    },
+    "Fallback",
+  );
+
+  assert.deepEqual(
+    data.nodes.map((node) => [node.id, node.x, node.y, node.advancedGroupCollapsed]),
+    [
+      ["group", 100, 200, true],
+      ["inside", 120, 230, undefined],
+      ["nested-group", 180, 290, true],
+      ["nested", 185, 297, undefined],
+    ],
+  );
+  assert.deepEqual(data.edges.map((edge) => edge.id), ["inside-edge", "nested-edge"]);
+});
+
+test("ignores unsupported Advanced Canvas edge path styles", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [],
+      edges: [
+        {
+          fromNode: "a",
+          toNode: "b",
+          styleAttributes: { path: "animated-rainbow" },
+        },
+      ],
+    },
+    "Fallback",
+  );
+
+  assert.equal(data.edges[0]?.lineStyle, undefined);
+});
+
+test("collects the numeric palette colors used by nodes, groups and edges", () => {
+  const data = normalizeCanvasData(
+    {
+      nodes: [
+        { id: "node", type: "text", color: "7" },
+        { id: "group", type: "group", color: 12 },
+        { id: "hex", type: "text", color: "#abcdef" },
+      ],
+      edges: [
+        { fromNode: "node", toNode: "group", color: "7" },
+        { fromNode: "group", toNode: "hex", color: "2" },
+      ],
+    },
+    "Fallback",
+  );
+
+  assert.deepEqual(collectCanvasColorKeys(data), ["2", "7", "12"]);
 });

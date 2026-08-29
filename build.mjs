@@ -188,6 +188,7 @@ const common = {
   format: "cjs",
   platform: "node",
   target: "es2020",
+  loader: { ".md": "text" },
   sourcemap: !isProd,
   minify: isProd,
   external: ["obsidian"],

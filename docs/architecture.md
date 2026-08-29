@@ -34,6 +34,22 @@ The first integration uses stable node positions. It does not introduce a
 shared runtime core, persistent Canvas metadata or an Advanced Canvas
 dependency.
 
+## Advanced JSON Canvas compatibility boundary
+
+Advanced Canvas appearance is read from the saved `.canvas` document rather
+than from plugin runtime state. The exporter accepts only a documented,
+explicit allowlist of built-in Advanced JSON Canvas fields and maps them into
+its own neutral node, edge and group-state model.
+
+This compatibility layer does not discover or require the Advanced Canvas
+plugin, access its DOM or private classes, copy its runtime CSS, or interpret
+arbitrary custom style attributes. Unknown fields and values are ignored, and
+ordinary JSON Canvas exports continue through the established fallback path.
+
+Saved Advanced group collapse is a geometric group state, separate from the
+exporter's directed branch-folding state. Package and single-HTML exports use
+the same normalized model and browser implementation.
+
 ## Plugin data and one-time UI
 
 Persisted plugin data uses a versioned envelope that keeps user settings and
