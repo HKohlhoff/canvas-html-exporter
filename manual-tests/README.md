@@ -44,6 +44,14 @@ Every failure case must produce a normal usable export rather than aborting.
 - Reload or restart Obsidian and confirm the description is not opened again.
 - At the bottom of settings, choose **Show last update** and confirm that the
   same description opens again whenever requested.
+- Choose **Show readme** beside it and confirm that the complete documentation
+  opens as rendered Markdown, closes cleanly, creates no Vault file and does not
+  load embedded README images or show image-placeholder notices. The Ko-fi
+  support link remains visible and opens only after an explicit click; relative
+  documentation links likewise open the repository only after a click.
+- Confirm that the embedded README has no repeated blank lines, presents the
+  Obsidian/HTML Canvas comparison as one sentence without ellipses, and omits
+  the link to the oversized single-HTML example.
 
 ### Graph cases
 

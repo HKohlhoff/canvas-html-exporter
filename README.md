@@ -4,6 +4,15 @@ Export your Obsidian canvas as an interactive HTML page that can be opened in an
 
 Requires Obsidian 1.13.0 or later.
 
+## Tested platforms
+
+The current plugin has been manually tested on:
+
+- Windows 11;
+- macOS.
+
+The exported HTML was checked in current desktop browsers on those systems.
+
 If Canvas HTML Exporter is useful to you, you can support its continued
 development by buying me a coffee.
 
@@ -159,7 +168,8 @@ in the Vault.
 
 The update description is shown only once and does not reappear on every
 Obsidian start. Use **Show last update** at the bottom of the plugin settings to
-open it again at any time. The repository keeps the same text in
+open it again at any time. Use **Show readme** beside it to open this complete
+documentation locally inside Obsidian. The repository keeps the same text in
 [`Last Update.md`](Last%20Update.md).
 
 ## Supported Content

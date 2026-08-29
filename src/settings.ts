@@ -81,6 +81,7 @@ type SettingsHost = Plugin & {
   settings: PluginSettings;
   saveSettings(): Promise<void>;
   showLastUpdate(): void;
+  showReadme(): void;
 };
 
 type PluginSettingKey = keyof PluginSettings;
@@ -214,6 +215,17 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
                 button
                   .setButtonText("Show last update")
                   .onClick(() => this.plugin.showLastUpdate());
+              });
+            },
+          },
+          {
+            name: "README",
+            desc: "Open the complete plugin documentation without leaving Obsidian.",
+            render: (setting) => {
+              setting.addButton((button) => {
+                button
+                  .setButtonText("Show readme")
+                  .onClick(() => this.plugin.showReadme());
               });
             },
           },

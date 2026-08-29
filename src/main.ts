@@ -8,6 +8,7 @@ import { resolveInitialCanvasFoldState } from "./integrations/canvas-folding";
 import { buildStoredPluginData, readPluginData } from "./plugin-data";
 import { CURRENT_RELEASE_NOTES_ID } from "./release-notes-content";
 import { openCurrentReleaseNotes } from "./ui/release-notes";
+import { openPluginReadme } from "./ui/readme";
 import { collectCanvasColorKeys } from "./export/canvas-data";
 
 type CanvasColorMap = Record<string, string>;
@@ -390,6 +391,10 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
 
   showLastUpdate(): void {
     void this.openLastUpdate();
+  }
+
+  showReadme(): void {
+    openPluginReadme(this.app);
   }
 
   private async showCurrentReleaseNotesOnce(): Promise<void> {

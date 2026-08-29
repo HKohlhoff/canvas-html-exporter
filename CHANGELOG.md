@@ -4,6 +4,18 @@ All notable user-facing changes to Canvas HTML Exporter are documented here.
 The format follows the spirit of Keep a Changelog, with the newest release
 first.
 
+## [Unreleased]
+
+### Added
+
+- Add a local, Markdown-rendered **Show readme** action to the About settings
+  without creating a Vault file or loading README images from the network;
+  retain the Ko-fi destination as a text link and omit other images without
+  placeholder notices.
+- Keep the embedded README compact, combine its Canvas comparison into one
+  sentence and omit the oversized single-HTML example link from this view.
+- Document the manually tested Windows 11 and macOS platforms.
+
 ## [1.2.0] – 2026-08-28
 
 ### Added

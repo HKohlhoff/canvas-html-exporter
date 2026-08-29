@@ -62,6 +62,13 @@ npm run build:prod
   Vault file, and a restart does not reopen it.
 - Use **Show last update** at the bottom of settings and confirm that the same
   version 1.2.0 description can be reopened at any time.
+- Use **Show readme** beside it and confirm that the embedded repository README
+  renders locally, closes cleanly, creates no Vault file and performs no
+  automatic image request. Confirm that no image-placeholder notice remains and
+  that the Ko-fi text link is visible and opens only after a click.
+- Confirm that this view has no repeated blank lines, combines the Canvas
+  comparison into one sentence without ellipses, and omits the oversized
+  single-HTML example link.
 - Export to a Vault folder and an allowed absolute desktop folder.
 - With **Obsidian Settings → Files and links → Detect all file extensions**
   disabled for the test Vault, confirm that completed HTML exists on disk but
