@@ -11,12 +11,8 @@ const CANVAS_COMPARISON_SOURCE = [
 const CANVAS_COMPARISON_DISPLAY =
   "The canvas showing the documentation of this plugin, seen in Obsidian, " +
   "looks (nearly) the same in the exported interactive HTML page.";
-const SINGLE_HTML_EXAMPLE_SOURCE = [
-  "An **interactive export example** of the Canvas shown above is available as a",
-  "[single HTML file](documentation/Canvas-HTML-Exporter-Documentation.html).",
-  "It is a large file of about 19.3 MB and was regenerated with version 1.2.0.",
-  "This README contains the current feature documentation.",
-].join("\n");
+const SINGLE_HTML_EXAMPLE_PATTERN =
+  /An \*\*interactive export example\*\* of the Canvas shown above is available as a\n\[single HTML file\]\(documentation\/Canvas-HTML-Exporter-Documentation\.html\)\.\nIt is a large file[^\n]*\nThis README contains the current feature documentation\./u;
 
 export function prepareReadmeMarkdown(
   markdown: string,
@@ -24,7 +20,7 @@ export function prepareReadmeMarkdown(
 ): string {
   const displayMarkdown = markdown
     .replace(CANVAS_COMPARISON_SOURCE, CANVAS_COMPARISON_DISPLAY)
-    .replace(SINGLE_HTML_EXAMPLE_SOURCE, "");
+    .replace(SINGLE_HTML_EXAMPLE_PATTERN, "");
   return normalizeBlankLines(
     rewriteRelativeLinks(removeImages(displayMarkdown), repositoryUrl),
   );

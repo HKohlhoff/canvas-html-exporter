@@ -40,7 +40,7 @@ You can choose the export format and other options in the plugin settings.
 
 An **interactive export example** of the Canvas shown above is available as a
 [single HTML file](documentation/Canvas-HTML-Exporter-Documentation.html).
-It is a large file of about 19.3 MB and was regenerated with version 1.2.0.
+It is a large file of about 19.3 MB and was regenerated with version 1.3.0.
 This README contains the current feature documentation.
 
 A **demo-vault** with the complete content showcase can be downloaded from the
@@ -196,7 +196,10 @@ Markdown content:
 
 Canvas HTML Exporter reads supported Advanced Canvas attributes directly from
 the saved `.canvas` file. Advanced Canvas does not need to be installed or
-enabled when you export or view the generated HTML.
+enabled when you export or view the generated HTML. Disabling Advanced Canvas
+does not remove these stored attributes. Standard Obsidian does not render all
+of them, so the generated HTML can intentionally retain an Advanced Canvas
+appearance that is not currently visible in Obsidian.
 
 The exporter preserves the built-in node shapes, border styles, text
 alignment, edge path styles, edge heads, the six numbered Canvas palette
