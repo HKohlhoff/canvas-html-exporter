@@ -40,7 +40,7 @@ You can choose the export format and other options in the plugin settings.
 
 An **interactive export example** of the Canvas shown above is available as a
 [single HTML file](documentation/Canvas-HTML-Exporter-Documentation.html).
-It is a large file of about 19.3 MB and was regenerated with version 1.2.0.
+It is a large file of about 19.3 MB and was regenerated with version 1.3.0.
 This README contains the current feature documentation.
 
 A **demo-vault** with the complete content showcase can be downloaded from the
