@@ -1,9 +1,15 @@
 # Canvas HTML Exporter 1.3.0: Advanced Canvas compatibility
 
-This update brings the appearance and group behavior saved by Advanced Canvas
-into portable HTML exports. Package folders and single HTML files use the same
-implementation, and Advanced Canvas is not required when exporting or viewing
-the result.
+This update brings supported appearance and group behavior saved by Advanced
+Canvas into portable HTML exports. Package folders and single HTML files use
+the same implementation. The exporter reads these attributes from the saved
+`.canvas` file, so Advanced Canvas is not required during export or when the
+HTML is viewed.
+
+This also means that an export can retain the saved Advanced Canvas appearance
+even when the same file currently looks simpler in Obsidian with Advanced
+Canvas disabled. Disabling Advanced Canvas does not remove its stored
+attributes; standard Obsidian simply does not render all of them.
 
 ## More of your Canvas appearance in HTML
 
@@ -28,9 +34,8 @@ it as a package or single HTML file. It provides a self-contained overview of
 the supported shapes, borders, alignments, colors, edge paths, edge heads, and
 nested group behavior.
 
-Advanced Canvas does not need to be installed for saved supported attributes
-to be exported. Floating edges, portals, presentation mode, custom CSS styles,
-and the `direct`, `square`, and `a-star` pathfinding modes are outside this
+Floating edges, portals, presentation mode, custom CSS styles, and the
+`direct`, `square`, and `a-star` pathfinding modes are outside this
 compatibility layer.
 
 This update description appears automatically once. You can reopen it at any

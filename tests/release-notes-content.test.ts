@@ -16,6 +16,9 @@ assert.ok(
 );
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Advanced Canvas compatibility/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Advanced Canvas is not required/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /\.canvas.*file/su);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /currently looks simpler in Obsidian/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /does not remove its stored/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /## More of your Canvas appearance in HTML/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Built-in shapes/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Borders and alignment/);
