@@ -6,6 +6,8 @@ first.
 
 ## [Unreleased]
 
+## [1.3.0] – 2026-08-29
+
 ### Added
 
 - Add a local, Markdown-rendered **Show readme** action to the About settings

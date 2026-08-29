@@ -209,7 +209,7 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
         items: [
           {
             name: "Last update",
-            desc: "Review the features and usage notes for version 1.2.0.",
+            desc: `Review the features and usage notes for version ${this.plugin.manifest.version}.`,
             render: (setting) => {
               setting.addButton((button) => {
                 button
