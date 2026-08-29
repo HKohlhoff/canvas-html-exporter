@@ -1,8 +1,7 @@
 # Manual test matrix
 
 This directory contains the versioned manual checks that complement automated
-tests. Use the public `examples/demo-vault/` or the local
-`Canvas-HTML-Exporter_TestVault/` as the source Vault.
+tests. Use the public `examples/demo-vault/` as the versioned source Vault.
 
 Record the tested Obsidian version, operating system, browser and plugin
 versions with the result.

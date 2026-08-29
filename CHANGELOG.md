@@ -16,6 +16,12 @@ first.
   sentence and omit the oversized single-HTML example link from this view.
 - Document the manually tested Windows 11 and macOS platforms.
 
+### Changed
+
+- Remove the redundant tracked maintainer TestVault copy. The public
+  `examples/demo-vault/` remains the versioned manual-test source, while local
+  cross-plugin testing uses the shared external PluginTests Vault.
+
 ## [1.2.0] – 2026-08-28
 
 ### Added
