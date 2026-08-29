@@ -30,6 +30,12 @@ export interface CanvasFoldingVisibility {
   readonly hiddenNodeIds: ReadonlySet<string>;
 }
 
+export interface HiddenBranchItemCounts {
+  readonly groupCount: number;
+  readonly itemCount: number;
+  readonly nodeCount: number;
+}
+
 export function buildCanvasFoldingGraph(
   nodes: readonly FoldingGraphNode[],
   edges: readonly FoldingGraphEdge[],
@@ -164,6 +170,49 @@ export function deriveCollapsedVisibility(
     groupHiddenNodeIds,
     hiddenEdgeIds: hiddenEdges,
     hiddenNodeIds: hiddenNodes,
+  });
+}
+
+export function deriveAdvancedGroupVisibility(
+  graph: Pick<CanvasFoldingGraph, "groupContentsByNode">,
+  edges: readonly FoldingGraphEdge[],
+  collapsedGroupIds: Iterable<string>,
+): Pick<CanvasFoldingVisibility, "hiddenEdgeIds" | "hiddenNodeIds"> {
+  const hiddenNodeIds = new Set<string>();
+  for (const groupId of [...collapsedGroupIds].sort()) {
+    for (const nodeId of graph.groupContentsByNode[groupId] ?? []) {
+      hiddenNodeIds.add(nodeId);
+    }
+  }
+  const hiddenEdgeIds = new Set<string>();
+  for (const edge of edges) {
+    if (!edge.id) continue;
+    if (hiddenNodeIds.has(edge.fromNode) || hiddenNodeIds.has(edge.toNode)) {
+      hiddenEdgeIds.add(edge.id);
+    }
+  }
+  return Object.freeze({ hiddenEdgeIds, hiddenNodeIds });
+}
+
+export function countHiddenBranchItems(
+  graph: Pick<CanvasFoldingGraph, "childrenByNode" | "groupContentsByNode">,
+  nodeId: string,
+  hiddenNodeIds: ReadonlySet<string>,
+): HiddenBranchItemCounts {
+  const groupNodeIds = new Set(Object.keys(graph.groupContentsByNode));
+  const hiddenDescendantIds = collectDescendants(nodeId, graph.childrenByNode)
+    .filter((descendantId) => hiddenNodeIds.has(descendantId));
+  const hiddenContainedIds = getNodeIdsHiddenByGroups(
+    graph,
+    new Set(hiddenDescendantIds.filter((descendantId) => groupNodeIds.has(descendantId))),
+  );
+  const hiddenItemIds = new Set([...hiddenDescendantIds, ...hiddenContainedIds]);
+  const groupCount = [...hiddenItemIds]
+    .filter((hiddenId) => groupNodeIds.has(hiddenId)).length;
+  return Object.freeze({
+    groupCount,
+    itemCount: hiddenItemIds.size,
+    nodeCount: hiddenItemIds.size - groupCount,
   });
 }
 

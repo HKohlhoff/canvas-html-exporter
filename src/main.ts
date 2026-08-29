@@ -118,6 +118,10 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     }
 
     const result: CanvasColorMap = {};
+    const defaultEdgeColor = this.readDefaultCanvasEdgeColor();
+    if (defaultEdgeColor) {
+      result["0"] = defaultEdgeColor;
+    }
 
     const colorMap: Record<string, string> = {
       "1": "--color-red-rgb",
@@ -144,6 +148,28 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     }
 
     return result;
+  }
+
+  private readDefaultCanvasEdgeColor(): string {
+    const styleScope = this.getThemeStyleScope();
+    const svg = createSvg("svg");
+    const edgeGroup = createSvg("g");
+    const edgePath = createSvg("path");
+    svg.classList.add("canvas-edges", "canvas-html-exporter-hidden-probe");
+    edgePath.classList.add("canvas-display-path");
+    edgePath.setAttribute("d", "M 0 0 L 10 10");
+    edgeGroup.appendChild(edgePath);
+    svg.appendChild(edgeGroup);
+    styleScope.appendChild(svg);
+
+    try {
+      const sampledStroke = this.normalizeThemeColor(getComputedStyle(edgePath).stroke);
+      return sampledStroke
+        || this.resolveCssVariable("--canvas-color")
+        || this.resolveCssVariable("--text-muted");
+    } finally {
+      svg.remove();
+    }
   }
 
   private readCalloutColors(): CalloutColorMap {

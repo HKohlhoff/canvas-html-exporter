@@ -91,6 +91,15 @@ npm run build:prod
   and short or interactive clicks retain their normal behavior.
 - Internal links, anchors, embeds and missing-target fallbacks work.
 - Test the documentation Canvas from `examples/demo-vault/`.
+- Test `Advanced Canvas Attributes.canvas` from the same demo vault as package
+  and single HTML. Compare all supported shapes, borders, alignments, colors,
+  edge paths and edge heads, then exercise nested group controls, counts,
+  search, minimap, fit/reset and restore.
+- Repeat the Advanced Canvas example with the Standard, Minimal and AnuPpuccin
+  themes. Confirm that uncolored edges reflect the active Canvas appearance,
+  including Style Settings values and enabled CSS snippets.
+- Disable Advanced Canvas and confirm that supported attributes already saved
+  in the `.canvas` file still export normally.
 - Regenerate the checked-in interactive HTML example from the current
   documentation Canvas when its content or browser runtime changed.
 - Confirm that the regenerated example contains no absolute source-Vault path

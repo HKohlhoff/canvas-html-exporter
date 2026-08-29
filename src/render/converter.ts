@@ -43,6 +43,20 @@ export type CanvasNodeShape =
 
 export type CanvasNodeBorderStyle = "dashed" | "dotted" | "invisible";
 export type CanvasNodeTextAlign = "center" | "right";
+type CanvasEdgeEnd =
+  | "none"
+  | "arrow"
+  | "triangle"
+  | "triangle-outline"
+  | "thin-triangle"
+  | "halved-triangle"
+  | "circle"
+  | "circle-outline"
+  | "diamond"
+  | "diamond-outline"
+  | "square"
+  | "bar"
+  | "blunt";
 
 export interface CanvasNode {
   id: string;
@@ -359,6 +373,17 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       ),
     ),
   )).join("\n");
+  const groupTitleHtml = nodes
+    .filter((node) => node.type.toLowerCase() === "group")
+    .map((node) => renderGroupTitle(
+      node,
+      bounds.offsetX,
+      bounds.offsetY,
+      theme,
+      options.canvasColors,
+      foldingGraph.groupContentsByNode[node.id]?.length ?? 0,
+    ))
+    .join("\n");
 
   const edgesData = edges.map((edge) => ({
     id: edge.id ?? "",
@@ -602,11 +627,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       z-index: 0;
       background: var(--node-background-color);
     }
-    .node[data-node-shape="diamond"] > :not(.node-controls),
-    .node[data-node-shape="document"] > :not(.node-controls),
-    .node[data-node-shape="database"] > :not(.node-controls) {
+    .node[data-node-shape] > .node-title,
+    .node[data-node-shape] > .node-content {
       position: relative;
-      z-index: 1;
+      z-index: 2;
     }
     .node[data-node-shape="predefined-process"] {
       padding-inline: 28px;
@@ -627,11 +651,25 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       right: 12px;
     }
     .node[data-node-shape="document"] {
-      padding-bottom: 24px;
+      padding-bottom: 6px;
     }
     .node[data-node-shape="document"]::before,
     .node[data-node-shape="document"]::after {
       clip-path: polygon(0 0, 100% 0, 100% 82%, 76% 94%, 50% 84%, 24% 94%, 0 82%);
+    }
+    .node[data-node-shape]:not([data-node-shape="database"]) {
+      padding-block: 6px;
+      justify-content: center;
+    }
+    .node[data-node-shape]:not([data-node-shape="database"]) > .node-content {
+      flex: 0 1 auto;
+      line-height: 1.25;
+    }
+    .node[data-node-shape]:not([data-node-shape="database"]) > .node-content > :first-child {
+      margin-top: 0;
+    }
+    .node[data-node-shape]:not([data-node-shape="database"]) > .node-content > :last-child {
+      margin-bottom: 0;
     }
     .node[data-node-shape="database"] {
       overflow: visible;
@@ -742,21 +780,64 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       z-index: 0;
       overflow: visible;
     }
+    .node.group.is-advanced-group-collapsed {
+      visibility: hidden;
+    }
     .node.group .node-content {
       display: none;
     }
     .group-title {
       position: absolute;
-      left: 0;
-      top: -1.55em;
-      max-width: 100%;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      gap: 6px;
       color: var(--node-border-color);
       font-weight: 600;
       line-height: 1.2;
       white-space: nowrap;
+      pointer-events: none;
+      transform: translateY(-1.55em);
+    }
+    .group-title.is-folding-hidden {
+      display: none;
+    }
+    .group-title.is-focus-muted {
+      opacity: 0.2;
+    }
+    .group-title-text {
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
-      pointer-events: none;
+    }
+    .advanced-group-control {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      border: 1px solid var(--node-border-color);
+      border-radius: 999px;
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      pointer-events: auto;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.14);
+    }
+    .advanced-group-control:hover,
+    .advanced-group-control:focus-visible {
+      border-color: ${theme.link};
+      background: ${theme.bodyBackground};
+      outline: none;
+    }
+    .advanced-group-control.has-hidden-count {
+      min-width: 24px;
     }
     .node.audio,
     .node.video,
@@ -1737,6 +1818,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     <div id="canvas">
       <svg id="edge-layer"></svg>
       ${nodeHtml}
+      ${groupTitleHtml}
     </div>
   </div>
   ${minimapHtml}
@@ -1776,8 +1858,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const searchSummary = document.getElementById("search-summary");
       const searchCloseButton = document.getElementById("search-close-button");
       const embeddedPageTemplates = Array.from(document.querySelectorAll("#embedded-pages-store template"));
-      const edgeColor = ${JSON.stringify(theme.edge)};
+      const edgeColor = ${JSON.stringify(
+        normalizeCssColorValue(options.canvasColors?.["0"] || "") || theme.edge,
+      )};
       const textColor = ${JSON.stringify(theme.text)};
+      const markerBackground = ${JSON.stringify(theme.canvasBackground)};
       const inlineBlobCache = new Map();
       const obsidianColors = ${JSON.stringify(edgePaletteColors)};
       const edges = ${JSON.stringify(edgesData)};
@@ -1788,6 +1873,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       const descendantsCache = new Map();
       const importedHiddenNodeIds = new Set(${JSON.stringify(initialFoldState?.hiddenNodeIds ?? [])});
       const importedHiddenEdgeIds = new Set(${JSON.stringify(initialFoldState?.hiddenEdgeIds ?? [])});
+      const initialAdvancedCollapsedGroupIds = new Set(${JSON.stringify(
+        nodes.filter((node) => node.advancedGroupCollapsed).map((node) => node.id),
+      )});
+      const advancedCollapsedGroupIds = new Set(initialAdvancedCollapsedGroupIds);
       const collapsedNodeIds = new Set();
       let workingImportedHiddenNodeIds = new Set();
       let hiddenNodeIds = new Set();
@@ -1834,10 +1923,23 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       }
 
       function getAnchor(el, side) {
-        const left = parseFloat(el.getAttribute("data-canvas-left") || "0");
-        const top = parseFloat(el.getAttribute("data-canvas-top") || "0");
-        const width = el.offsetWidth;
-        const height = el.offsetHeight;
+        let left = parseFloat(el.getAttribute("data-canvas-left") || "0");
+        let top = parseFloat(el.getAttribute("data-canvas-top") || "0");
+        let width = el.offsetWidth;
+        let height = el.offsetHeight;
+        if (el.classList.contains("is-advanced-group-collapsed")) {
+          const nodeId = el.getAttribute("data-node-id") || "";
+          const title = document.getElementById("group-title-" + nodeId);
+          if (title && canvas) {
+            const titleRect = title.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+            const scale = Math.max(currentScale, 0.0001);
+            left = (titleRect.left - canvasRect.left) / scale;
+            top = (titleRect.top - canvasRect.top) / scale;
+            width = titleRect.width / scale;
+            height = titleRect.height / scale;
+          }
+        }
 
         switch (side) {
           case "top": return { x: left + width / 2, y: top };
@@ -1858,17 +1960,21 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         marker.setAttribute("refY", "6");
         marker.setAttribute("orient", "auto");
         marker.setAttribute("markerUnits", "userSpaceOnUse");
-        if (type === "circle") {
+        if (type === "circle" || type === "circle-outline") {
           const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
           circle.setAttribute("cx", "6");
           circle.setAttribute("cy", "6");
           circle.setAttribute("r", "3.25");
-          circle.setAttribute("fill", color);
+          circle.setAttribute("fill", type === "circle-outline" ? markerBackground : color);
+          circle.setAttribute("stroke", color);
+          if (type === "circle-outline") circle.setAttribute("stroke-width", "1.5");
           marker.appendChild(circle);
-        } else if (type === "diamond") {
+        } else if (type === "diamond" || type === "diamond-outline") {
           const diamond = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
           diamond.setAttribute("points", "1 6, 6 1, 11 6, 6 11");
-          diamond.setAttribute("fill", color);
+          diamond.setAttribute("fill", type === "diamond-outline" ? markerBackground : color);
+          diamond.setAttribute("stroke", color);
+          if (type === "diamond-outline") diamond.setAttribute("stroke-width", "1.5");
           marker.appendChild(diamond);
         } else if (type === "square") {
           const square = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -1878,16 +1984,36 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           square.setAttribute("height", "8");
           square.setAttribute("fill", color);
           marker.appendChild(square);
-        } else if (type === "bar") {
+        } else if (type === "bar" || type === "blunt") {
           const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          line.setAttribute("d", "M 6 1 L 6 11");
+          line.setAttribute("d", type === "blunt" ? "M 10 1 L 10 11" : "M 6 1 L 6 11");
           line.setAttribute("stroke", color);
-          line.setAttribute("stroke-width", "2");
+          line.setAttribute("stroke-width", type === "blunt" ? "3" : "2");
           line.setAttribute("fill", "none");
           marker.appendChild(line);
+        } else if (type === "triangle-outline" || type === "thin-triangle") {
+          const triangle = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          triangle.setAttribute(
+            "d",
+            type === "thin-triangle"
+              ? "M 2 1 L 11 6 L 2 11"
+              : "M 2 1 L 11 6 L 2 11 Z",
+          );
+          triangle.setAttribute(
+            "fill",
+            type === "triangle-outline" ? markerBackground : "none",
+          );
+          triangle.setAttribute("stroke", color);
+          triangle.setAttribute("stroke-width", type === "thin-triangle" ? "1.75" : "1.5");
+          marker.appendChild(triangle);
         } else {
           const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-          polygon.setAttribute("points", "2 1, 11 6, 2 11");
+          polygon.setAttribute(
+            "points",
+            type === "halved-triangle"
+              ? "2 6, 11 6, 2 11"
+              : "2 1, 11 6, 2 11",
+          );
           polygon.setAttribute("fill", color);
           marker.appendChild(polygon);
         }
@@ -2112,6 +2238,14 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
       function focusNode(nodeId) {
         const target = document.getElementById("node-" + nodeId);
         if (!target) return;
+        let expandedContainingGroup = false;
+        for (const groupId of [...advancedCollapsedGroupIds]) {
+          if ((foldingGraph.groupContentsByNode[groupId] || []).includes(nodeId)) {
+            advancedCollapsedGroupIds.delete(groupId);
+            expandedContainingGroup = true;
+          }
+        }
+        if (expandedContainingGroup) updateFoldingVisibility();
         if (focusedBranchNodeId !== null && focusMutedNodeIds.has(nodeId)) {
           focusedBranchNodeId = null;
           updateFoldingVisibility();
@@ -2637,6 +2771,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
 
       function applyImportedFolding(applied) {
         collapsedNodeIds.clear();
+        advancedCollapsedGroupIds.clear();
+        initialAdvancedCollapsedGroupIds.forEach((groupId) => advancedCollapsedGroupIds.add(groupId));
         focusedBranchNodeId = null;
         visibleLevelLimit = null;
         importedBaseEnabled = Boolean(applied) && (
@@ -2749,6 +2885,51 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         return hiddenByGroups;
       }
 
+      function getAdvancedGroupHiddenNodeIds() {
+        const hiddenByAdvancedGroups = new Set();
+        for (const groupId of [...advancedCollapsedGroupIds].sort()) {
+          for (const nodeId of foldingGraph.groupContentsByNode[groupId] || []) {
+            hiddenByAdvancedGroups.add(nodeId);
+          }
+        }
+        return hiddenByAdvancedGroups;
+      }
+
+      function getItemCounts(itemIds) {
+        const uniqueItemIds = new Set(itemIds);
+        const groupCount = [...uniqueItemIds]
+          .filter((itemId) => groupNodeIds.has(itemId)).length;
+        return {
+          groupCount,
+          itemCount: uniqueItemIds.size,
+          nodeCount: uniqueItemIds.size - groupCount,
+        };
+      }
+
+      function getHiddenBranchItemCounts(nodeId, sourceHiddenNodeIds) {
+        const hiddenDescendantIds = getDescendants(nodeId)
+          .filter((descendantId) => sourceHiddenNodeIds.has(descendantId));
+        const hiddenItemIds = new Set(hiddenDescendantIds);
+        for (const descendantId of hiddenDescendantIds) {
+          if (!groupNodeIds.has(descendantId)) continue;
+          for (const containedNodeId of foldingGraph.groupContentsByNode[descendantId] || []) {
+            hiddenItemIds.add(containedNodeId);
+          }
+        }
+        return getItemCounts(hiddenItemIds);
+      }
+
+      function formatHiddenItemCounts(counts) {
+        const parts = [];
+        if (counts.nodeCount > 0) {
+          parts.push(counts.nodeCount + (counts.nodeCount === 1 ? " hidden node" : " hidden nodes"));
+        }
+        if (counts.groupCount > 0) {
+          parts.push(counts.groupCount + (counts.groupCount === 1 ? " hidden group" : " hidden groups"));
+        }
+        return parts.join(" and ");
+      }
+
       function updateFoldingVisibility() {
         const exactImportedState = importedBaseEnabled
           && !importedStateModified
@@ -2781,6 +2962,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           }
         }
 
+        const advancedGroupHiddenNodeIds = getAdvancedGroupHiddenNodeIds();
+        for (const nodeId of advancedGroupHiddenNodeIds) hiddenNodeIds.add(nodeId);
+
         focusMutedNodeIds = new Set();
         if (focusedBranchNodeId !== null) {
           const focusedNodeIds = getFocusedNodeIds(focusedBranchNodeId);
@@ -2804,11 +2988,28 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
             }
           }
         }
+        for (const edge of edges) {
+          if (
+            edge.id
+            && (advancedGroupHiddenNodeIds.has(edge.fromId) || advancedGroupHiddenNodeIds.has(edge.toId))
+          ) {
+            hiddenEdgeIds.add(edge.id);
+          }
+        }
 
         document.querySelectorAll(".node[data-node-id]").forEach((node) => {
           const nodeId = node.getAttribute("data-node-id") || "";
           node.classList.toggle("is-folding-hidden", hiddenNodeIds.has(nodeId));
           node.classList.toggle("is-focus-muted", focusMutedNodeIds.has(nodeId));
+          node.classList.toggle(
+            "is-advanced-group-collapsed",
+            groupNodeIds.has(nodeId) && advancedCollapsedGroupIds.has(nodeId),
+          );
+        });
+        document.querySelectorAll(".group-title[data-group-title-node-id]").forEach((title) => {
+          const nodeId = title.getAttribute("data-group-title-node-id") || "";
+          title.classList.toggle("is-folding-hidden", hiddenNodeIds.has(nodeId));
+          title.classList.toggle("is-focus-muted", focusMutedNodeIds.has(nodeId));
         });
         document.querySelectorAll(".branch-control[data-branch-node-id]").forEach((control) => {
           const nodeId = control.getAttribute("data-branch-node-id") || "";
@@ -2817,12 +3018,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const disabledByHiddenGroup = descendantCount > 0
             && descendants.every((descendantId) => groupHiddenNodeIds.has(descendantId));
           const hasHiddenDescendant = descendants.some((descendantId) => hiddenNodeIds.has(descendantId));
-          const hiddenDescendantCount = descendants
-            .filter((descendantId) => hiddenNodeIds.has(descendantId) && !groupNodeIds.has(descendantId))
-            .length;
-          const ownHiddenDescendantCount = collapsedNodeIds.has(nodeId)
-            ? descendants.filter((descendantId) => !groupNodeIds.has(descendantId)).length
-            : 0;
+          const hiddenItemCounts = getHiddenBranchItemCounts(nodeId, hiddenNodeIds);
+          const ownHiddenItemCounts = collapsedNodeIds.has(nodeId)
+            ? getHiddenBranchItemCounts(nodeId, new Set(descendants))
+            : getItemCounts([]);
           const hiddenConnectionCount = getHiddenBranchConnectionCount(nodeId, descendants);
           const hasHiddenBranch = collapsedNodeIds.has(nodeId)
             || hasHiddenDescendant
@@ -2830,30 +3029,50 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           const displayedHiddenBranch = disabledByHiddenGroup
             ? collapsedNodeIds.has(nodeId)
             : hasHiddenBranch;
-          const displayedHiddenDescendantCount = disabledByHiddenGroup
-            ? ownHiddenDescendantCount
-            : hiddenDescendantCount;
+          const displayedHiddenItemCounts = disabledByHiddenGroup
+            ? ownHiddenItemCounts
+            : hiddenItemCounts;
           control.hidden = !foldingControlsEnabled || !foldingNodeControlsVisible;
           control.disabled = disabledByHiddenGroup;
-          control.textContent = displayedHiddenBranch && displayedHiddenDescendantCount > 0
-            ? String(displayedHiddenDescendantCount)
+          control.textContent = displayedHiddenBranch && displayedHiddenItemCounts.itemCount > 0
+            ? String(displayedHiddenItemCounts.itemCount)
             : displayedHiddenBranch ? "+" : "−";
           control.classList.toggle(
             "has-hidden-count",
-            displayedHiddenBranch && displayedHiddenDescendantCount > 0,
+            displayedHiddenBranch && displayedHiddenItemCounts.itemCount > 0,
           );
           control.setAttribute("aria-expanded", String(!displayedHiddenBranch));
           const branchControlLabel = disabledByHiddenGroup
             ? "Branch hidden by folded group"
             : (hasHiddenBranch ? "Expand branch" : "Collapse branch")
             + " · "
-            + (hasHiddenBranch && hiddenDescendantCount > 0
-              ? hiddenDescendantCount + (hiddenDescendantCount === 1 ? " hidden node" : " hidden nodes")
+            + (hasHiddenBranch && hiddenItemCounts.itemCount > 0
+              ? formatHiddenItemCounts(hiddenItemCounts)
               : hasHiddenBranch && hiddenConnectionCount > 0
                 ? hiddenConnectionCount + (hiddenConnectionCount === 1 ? " hidden connection" : " hidden connections")
               : descendantCount + (descendantCount === 1 ? " descendant" : " descendants"));
           control.setAttribute("aria-label", branchControlLabel);
           control.setAttribute("title", branchControlLabel);
+        });
+        document.querySelectorAll(".advanced-group-control[data-advanced-group-id]").forEach((control) => {
+          const groupId = control.getAttribute("data-advanced-group-id") || "";
+          const containedItemIds = foldingGraph.groupContentsByNode[groupId] || [];
+          const counts = getItemCounts(containedItemIds);
+          const isCollapsed = advancedCollapsedGroupIds.has(groupId);
+          control.textContent = isCollapsed ? String(counts.itemCount) : "−";
+          control.classList.toggle("has-hidden-count", isCollapsed);
+          control.setAttribute("aria-expanded", String(!isCollapsed));
+          const countParts = [];
+          if (counts.nodeCount > 0) {
+            countParts.push(counts.nodeCount + (counts.nodeCount === 1 ? " contained node" : " contained nodes"));
+          }
+          if (counts.groupCount > 0) {
+            countParts.push(counts.groupCount + (counts.groupCount === 1 ? " contained group" : " contained groups"));
+          }
+          const label = (isCollapsed ? "Expand group" : "Collapse group")
+            + (countParts.length > 0 ? " · " + countParts.join(" and ") : "");
+          control.setAttribute("aria-label", label);
+          control.setAttribute("title", label);
         });
         document.querySelectorAll(".branch-focus-control[data-focus-node-id]").forEach((control) => {
           const nodeId = control.getAttribute("data-focus-node-id") || "";
@@ -2964,6 +3183,24 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
         if (importedBaseEnabled) importedStateModified = true;
         updateFoldingVisibility();
       }
+
+      function toggleAdvancedGroup(groupId) {
+        if (!groupId || !Object.prototype.hasOwnProperty.call(foldingGraph.groupContentsByNode, groupId)) return;
+        if (advancedCollapsedGroupIds.has(groupId)) {
+          advancedCollapsedGroupIds.delete(groupId);
+        } else {
+          advancedCollapsedGroupIds.add(groupId);
+          if (
+            focusedBranchNodeId !== null
+            && (foldingGraph.groupContentsByNode[groupId] || []).includes(focusedBranchNodeId)
+          ) {
+            focusedBranchNodeId = null;
+          }
+        }
+        updateFoldingVisibility();
+      }
+
+      window.toggleAdvancedGroup = toggleAdvancedGroup;
 
       window.expandAllBranches = function() {
         clearImportedFoldingBase();
@@ -3298,6 +3535,13 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
           event.preventDefault();
           event.stopPropagation();
           toggleBranch(control.getAttribute("data-branch-node-id") || "");
+        });
+      });
+      document.querySelectorAll(".advanced-group-control[data-advanced-group-id]").forEach((control) => {
+        control.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          toggleAdvancedGroup(control.getAttribute("data-advanced-group-id") || "");
         });
       });
       document.querySelectorAll(".branch-focus-control[data-focus-node-id]").forEach((control) => {
@@ -3711,12 +3955,9 @@ async function renderNode(
     node.borderStyle ? `data-node-border="${escapeAttribute(node.borderStyle)}"` : "",
     node.textAlign ? `data-node-text-align="${escapeAttribute(node.textAlign)}"` : "",
   ].filter(Boolean).join("\n    ");
-  const groupName = type === "group" ? (node.label || node.text || "").trim() : "";
 
   let title = "";
-  if (groupName) {
-    title = `<div class="group-title">${escapeHtml(groupName)}</div>`;
-  } else if (type !== "link" && node.label) {
+  if (type !== "group" && type !== "link" && node.label) {
     title = `<div class="node-title">${await markdownToHtml(node.label, { darkMode, highlightingTheme })}</div>`;
   }
 
@@ -3742,6 +3983,23 @@ async function renderNode(
     ${advancedStyleAttributes}
     style="left:${frame.left}px;top:${frame.top}px;width:${frame.width}px;height:${frame.height}px;background:${renderedBackground};border-color:${renderedBorder};--node-background-color:${colors.background};--node-border-color:${colors.border};"
   >${nodeControls}${title}<div class="node-content">${content}</div></div>`;
+}
+
+function renderGroupTitle(
+  node: CanvasNode,
+  offsetX: number,
+  offsetY: number,
+  theme: ReturnType<typeof getTheme>,
+  canvasColors: Record<string, string> | undefined,
+  groupContentCount: number,
+): string {
+  const frame = getNodeFrame(node, offsetX, offsetY);
+  const colors = resolveNodeColors(node, theme, canvasColors);
+  const groupName = (node.label || node.text || "").trim() || "Group";
+  const groupControl = groupContentCount > 0
+    ? `<button class="advanced-group-control${node.advancedGroupCollapsed ? " has-hidden-count" : ""}" type="button" data-advanced-group-id="${escapeAttribute(node.id)}" aria-expanded="${String(!node.advancedGroupCollapsed)}" aria-label="${node.advancedGroupCollapsed ? "Expand" : "Collapse"} group · ${groupContentCount} contained ${groupContentCount === 1 ? "item" : "items"}" title="${node.advancedGroupCollapsed ? "Expand" : "Collapse"} group · ${groupContentCount} contained ${groupContentCount === 1 ? "item" : "items"}">${node.advancedGroupCollapsed ? String(groupContentCount) : "−"}</button>`
+    : "";
+  return `<div id="group-title-${escapeAttribute(node.id)}" class="group-title" data-group-title-node-id="${escapeAttribute(node.id)}" style="left:${frame.left}px;top:${frame.top}px;max-width:${frame.width}px;--node-border-color:${colors.border};"><span class="group-title-text">${escapeHtml(groupName)}</span>${groupControl}</div>`;
 }
 
 function renderMinimapNode(
@@ -4809,7 +5067,7 @@ function getTheme(darkMode: boolean) {
         groupBackground: "rgba(255,255,255,0.03)",
         groupBorder: "#596273",
         link: "#7cb7ff",
-        edge: "#7cb7ff",
+        edge: "#aeb8c5",
         rule: "#404855",
         inlineCodeBackground: "rgba(255,255,255,0.08)",
         codeBlockBackground: "rgba(0,0,0,0.28)",
@@ -4827,7 +5085,7 @@ function getTheme(darkMode: boolean) {
         groupBackground: "rgba(0,0,0,0.03)",
         groupBorder: "#aab5c4",
         link: "#1967d2",
-        edge: "#1967d2",
+        edge: "#5f6b7a",
         rule: "#d6dde7",
         inlineCodeBackground: "rgba(0,0,0,0.06)",
         codeBlockBackground: "rgba(0,0,0,0.05)",
@@ -4842,10 +5100,25 @@ function normalizeSide(side: string | undefined): "top" | "bottom" | "left" | "r
   return "right";
 }
 
-function normalizeEdgeEnd(end: string | undefined, fallback: "none" | "arrow"): "none" | "arrow" | "triangle" | "circle" | "diamond" | "square" | "bar" {
+function normalizeEdgeEnd(end: string | undefined, fallback: "none" | "arrow"): CanvasEdgeEnd {
   const value = String(end || "").trim().toLowerCase();
   if (!value) return fallback;
-  if (value === "none") return "none";
+  const exactValues: readonly CanvasEdgeEnd[] = [
+    "none",
+    "arrow",
+    "triangle",
+    "triangle-outline",
+    "thin-triangle",
+    "halved-triangle",
+    "circle",
+    "circle-outline",
+    "diamond",
+    "diamond-outline",
+    "square",
+    "bar",
+    "blunt",
+  ];
+  if (exactValues.includes(value as CanvasEdgeEnd)) return value as CanvasEdgeEnd;
   if (value.includes("diamond")) return "diamond";
   if (value.includes("square")) return "square";
   if (value.includes("circle") || value.includes("dot")) return "circle";
