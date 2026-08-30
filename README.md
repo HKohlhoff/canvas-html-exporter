@@ -40,7 +40,7 @@ You can choose the export format and other options in the plugin settings.
 
 An **interactive export example** of the Canvas shown above is available as a
 [single HTML file](documentation/Canvas-HTML-Exporter-Documentation.html).
-It is a large file of about 19.3 MB and was regenerated with version 1.3.0.
+It is a large file of about 19.3 MB and was refreshed for version 1.3.1.
 This README contains the current feature documentation.
 
 A **demo-vault** with the complete content showcase can be downloaded from the
@@ -118,7 +118,9 @@ descendants additionally receive a branch control:
 
 - the `−` control collapses that branch recursively. An expandable branch
   displays the number of its currently hidden descendant nodes instead of `+`;
-  the control grows for multi-digit counts while the focus control moves left.
+  the focus control is hidden until the branch is expanded again, leaving the
+  complete control area to the folding count. The control grows for
+  multi-digit counts as needed.
   Shared descendants remain visible while they are still reachable through
   another open parent branch. In that case the collapsed branch connection is
   hidden, `+` remains, and its tooltip reports the hidden connections;

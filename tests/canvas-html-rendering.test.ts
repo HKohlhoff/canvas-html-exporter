@@ -1201,7 +1201,7 @@ await test("renders cycle-safe branch controls in both export modes", async () =
     assert.match(html, /control\.disabled = disabledByHiddenGroup/);
     assert.match(html, /descendants\.every\(\(descendantId\) => groupHiddenNodeIds\.has\(descendantId\)\)/);
     assert.match(html, /"Branch hidden by folded group"/);
-    assert.match(html, /control\.hidden = !foldingControlsEnabled \|\| !focusNodeControlsVisible/);
+    assert.match(html, /control\.hidden = !foldingControlsEnabled\s+\|\| !focusNodeControlsVisible\s+\|\| collapsedNodeIds\.has\(nodeId\)/);
     assert.match(html, /function getHiddenBranchItemCounts\(nodeId, sourceHiddenNodeIds\)/);
     assert.match(html, /for \(const containedNodeId of foldingGraph\.groupContentsByNode\[descendantId\] \|\| \[\]\)/);
     assert.match(html, /const hiddenItemCounts = getHiddenBranchItemCounts\(nodeId, hiddenNodeIds\)/);
