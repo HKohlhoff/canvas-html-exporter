@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="generator" content="canvas-html-exporter v1.3.0">
-  <meta name="canvas-html-exporter-build" content="1.3.0-catppuccin">
+  <meta name="generator" content="canvas-html-exporter v1.3.1">
+  <meta name="canvas-html-exporter-build" content="1.3.1-catppuccin">
   <base href="./">
   <title>Canvas HTML Exporter - Documentation</title>
-  <!-- Exported by canvas-html-exporter v1.3.0 -->
+  <!-- Exported by canvas-html-exporter v1.3.1 -->
   <style>
     :root { --canvas-color-0: rgb(117, 117, 117); --canvas-color-0-bg: rgba(117, 117, 117, 0.18); --canvas-color-1: rgb(208,66,85); --canvas-color-1-bg: rgba(208, 66, 85, 0.18); --canvas-color-2: rgb(213,118,63); --canvas-color-2-bg: rgba(213, 118, 63, 0.18); --canvas-color-3: rgb(229,181,103); --canvas-color-3-bg: rgba(229, 181, 103, 0.18); --canvas-color-4: rgb(168,195,115); --canvas-color-4-bg: rgba(168, 195, 115, 0.18); --canvas-color-5: rgb(115,187,178); --canvas-color-5-bg: rgba(115, 187, 178, 0.18); --canvas-color-6: rgb(158,134,200); --canvas-color-6-bg: rgba(158, 134, 200, 0.18); }
     * { box-sizing: border-box; }
@@ -3614,7 +3614,9 @@ As a result: when following the link to the corresponding note, the referenced p
           const isFocused = nodeId === focusedBranchNodeId;
           const descendantCount = getDescendants(nodeId).length;
           const focusTarget = groupNodeIds.has(nodeId) ? "group" : "node";
-          control.hidden = !foldingControlsEnabled || !focusNodeControlsVisible;
+          control.hidden = !foldingControlsEnabled
+            || !focusNodeControlsVisible
+            || collapsedNodeIds.has(nodeId);
           control.classList.toggle("is-active", isFocused);
           control.setAttribute("aria-pressed", String(isFocused));
           control.setAttribute(
