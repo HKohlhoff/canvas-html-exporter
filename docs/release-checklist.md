@@ -21,8 +21,10 @@ Use this checklist before publishing Canvas HTML Exporter.
   and minimum Obsidian version.
 - The exporter version embedded in generated HTML matches the plugin version;
   `npm run test:metadata` verifies this synchronization.
-- The embedded update-note ID matches the plugin version so this release opens
-  its note once, and `Last Update.md` contains the identical Markdown.
+- The embedded update-note ID matches the plugin version so a feature release
+  opens its note once, and `Last Update.md` contains the identical Markdown.
+  A maintenance release may retain the preceding feature note only through an
+  explicit version-specific automated-test exception.
 - Every user-facing feature release follows the shared update-note standard:
   open a transient Markdown view once after update, mark it as read only after
   it closes, create no Vault file, and keep **Show last update** at the bottom

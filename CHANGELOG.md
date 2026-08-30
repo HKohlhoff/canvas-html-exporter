@@ -6,6 +6,19 @@ first.
 
 ## [Unreleased]
 
+## [1.3.1] – 2026-08-30
+
+### Fixed
+
+- Hide a collapsed parent's focus control until its branch is expanded again,
+  matching Canvas Folding and leaving the complete node-control area to the
+  folding count.
+
+### Changed
+
+- Keep the 1.3.0 Advanced Canvas feature description as **Show last update**
+  for this maintenance release instead of reopening it after the update.
+
 ## [1.3.0] – 2026-08-29
 
 ### Added

@@ -105,8 +105,8 @@ Every failure case must produce a normal usable export rather than aborting.
 - confirm the separator visually distinguishes folding actions from the focus
   section;
 - collapse branches with one-, two- and, where practical, three-digit hidden
-  node counts; confirm the number remains readable and the focus control moves
-  left without overlap;
+  node counts; confirm the number remains readable, the collapsed parent's
+  focus control disappears, and expanding the branch restores it;
 - collapse `A1` in `TestCanvas`; confirm `A2` and both of its branch
   connections to `B2` disappear, while the complete `B1` branch from `B1`
   through `B2` remains visible;

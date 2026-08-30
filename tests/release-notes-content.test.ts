@@ -8,10 +8,16 @@ import {
 const manifest = JSON.parse(readFileSync("manifest.json", "utf8")) as {
   version: string;
 };
-assert.equal(CURRENT_RELEASE_NOTES_ID, `release-${manifest.version}`);
+const releaseNoteIdExceptions: Readonly<Record<string, string>> = {
+  "1.3.1": "release-1.3.0",
+};
+const expectedReleaseNoteId = releaseNoteIdExceptions[manifest.version]
+  ?? `release-${manifest.version}`;
+const releaseNoteVersion = expectedReleaseNoteId.replace(/^release-/, "");
+assert.equal(CURRENT_RELEASE_NOTES_ID, expectedReleaseNoteId);
 assert.ok(
   CURRENT_RELEASE_NOTES_MARKDOWN.includes(
-    `Canvas HTML Exporter ${manifest.version}`,
+    `Canvas HTML Exporter ${releaseNoteVersion}`,
   ),
 );
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Advanced Canvas compatibility/);
