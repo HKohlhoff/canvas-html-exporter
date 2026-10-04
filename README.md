@@ -40,7 +40,7 @@ You can choose the export format and other options in the plugin settings.
 
 An **interactive export example** of the Canvas shown above is available as a
 [single HTML file](documentation/Canvas-HTML-Exporter-Documentation.html).
-It is a large file of about 19.3 MB and was refreshed for version 1.3.2.
+It is a large file of about 19.3 MB and was refreshed for version 1.4.0.
 This README contains the current feature documentation.
 
 A **demo-vault** with the complete content showcase can be downloaded from the
@@ -101,7 +101,7 @@ mode:
   controls. `Enable folding` turns the controls back on.
 - `Hide/Show folding controls` changes only the visibility of the branch
   controls on nodes; the current folded state remains unchanged.
-- `Expand all` reveals all branches.
+- `Expand all` reveals all branches and groups.
 - `Collapse all` collapses every rooted branch while safely handling multiple
   roots, shared descendants, cross-links, and cycles.
 - `Level N` shows nodes through the selected shortest root level. Nodes in
@@ -213,11 +213,13 @@ samples the active Canvas appearance at export time. Theme CSS, Style Settings
 values, and active CSS snippets can therefore influence the exported default
 edge color.
 
-Advanced Canvas groups receive their own browser control. Collapsing a group
-keeps its title row and connected edges available while hiding its frame and
-geometrically contained content. Nested groups, search, minimap, fit/reset,
-restore, and the normal Canvas Folding controls continue to work with this
-separate group state.
+Every Canvas group receives its own browser control directly to the right of
+the group name, including empty groups. Collapsing a group reduces its active
+bounds to that compact title row and hides its frame and geometrically
+contained content. Connected edges therefore remain attached to the visible
+group label without a separate edge-routing exception. Nested groups, search,
+minimap, fit/reset, restore, and the normal Canvas Folding controls continue to
+work with this separate group state.
 
 Open
 [`Advanced Canvas Attributes.canvas`](examples/demo-vault/Advanced%20Canvas%20Attributes.canvas)

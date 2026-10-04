@@ -6,6 +6,17 @@ first.
 
 ## [Unreleased]
 
+## [1.4.0] – 2026-10-04
+
+### Changed
+
+- Align exported group folding with Canvas Folding 1.2.8: place the group
+  control directly after its name, allow empty groups to collapse, reduce a
+  collapsed group's bounds to its compact label for natural edge attachment,
+  and let **Expand all** expand groups as well as branches.
+- Keep every Canvas node above the edge layer while retaining groups below
+  their contained content nodes.
+
 ## [1.3.2] – 2026-09-08
 
 ### Fixed

@@ -16,15 +16,18 @@ assert.ok(
     `Canvas HTML Exporter ${releaseNoteVersion}`,
   ),
 );
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /More reliable exports/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Text nodes/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Recursive section embeds/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /PDFs/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Windows drive roots/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /export the original Canvas again/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Tab and Shift\+Tab/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /marked as read\s+only after you close/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /source .*\.canvas.* file\s+is not modified/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Consistent group folding/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /aligns group folding[\s\S]*latest Canvas[\s\S]*Folding release, version 1\.2\.8/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /consistently in Obsidian and\s+in the exported page/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /directly to the right of its name/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Empty groups/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /only its name and control remain visible/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Other groups remain independent/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /above crossing connections/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Export the original Canvas again/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /connections are hidden together/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /marked as\s+read\s+only after you close/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /never modifies the source[\s\S]*\.canvas[\s\S]*file/);
 assert.doesNotMatch(CURRENT_RELEASE_NOTES_MARKDOWN, /API v1/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /leaves no note or other content file in your Vault/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Show last update/);
