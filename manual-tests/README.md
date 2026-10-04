@@ -12,6 +12,8 @@ Test both package and single-HTML export:
 
 - open the documentation Canvas and export through command and ribbon;
 - inspect text, headings, lists, callouts, code, math and tables;
+- confirm that crossing connections remain hidden behind every colored content
+  node while transparent group backgrounds still show the surrounding graph;
 - follow web links, internal note links, heading links and block references;
 - open embedded notes and return to the Canvas;
 - inspect images, PDFs, audio, video and missing-asset fallbacks;
