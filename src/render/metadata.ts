@@ -1,6 +1,6 @@
 import type { HighlightingThemeChoice } from "./types";
 
-export const EXPORTER_VERSION = "1.3.2";
+export const EXPORTER_VERSION = "1.4.0";
 
 export const EXPORTER_SIGNATURE = `canvas-html-exporter v${EXPORTER_VERSION}`;
 

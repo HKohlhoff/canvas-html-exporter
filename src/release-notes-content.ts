@@ -1,46 +1,39 @@
-export const CURRENT_RELEASE_NOTES_ID = "release-1.3.2";
+export const CURRENT_RELEASE_NOTES_ID = "release-1.4.0";
 
-export const CURRENT_RELEASE_NOTES_MARKDOWN = `# Canvas HTML Exporter 1.3.2: More reliable exports
+export const CURRENT_RELEASE_NOTES_MARKDOWN = `# Canvas HTML Exporter 1.4.0: Consistent group folding
 
-This maintenance update improves links, assets, keyboard navigation and the
-automatic update description. Your existing export settings remain in place.
-Package folders and single HTML files continue to support the same Canvas
-content and folding controls.
+This update aligns group folding in exported pages with the latest Canvas
+Folding release, version 1.2.8. Groups now behave consistently in Obsidian and
+in the exported page.
+Your existing export settings remain in place, and package folders and single
+HTML files continue to use the same browser controls.
 
-## Links and files arrive where they belong
+## Group controls where you expect them
 
-- **Text nodes:** internal note links and image embeds now resolve in exported
-  text nodes as they do in Markdown file nodes.
-- **Linked notes:** links between notes that reference each other remain usable
-  in single HTML. Recursive section embeds finish with a readable fallback.
-- **PDFs:** PDFs with the same name in different folders receive separate
-  viewer pages, including when names contain spaces or \`#\`.
-- **Output folders:** copied assets stay in the selected absolute folder.
-  Vault-root output, Windows drive roots and network-share paths are preserved.
-- **Safer output:** literal script-closing text remains content, and executable
-  link schemes are blocked in Markdown links and link-node previews.
+- Every group now has a collapse control directly to the right of its name.
+- Empty groups can be collapsed and expanded as well.
+- A collapsed empty group shows \`+\`; groups with hidden contents continue to
+  show the number of contained nodes and groups.
+- **Expand all** now expands separately collapsed groups as well as directed
+  branches.
 
-To use these fixes, export the original Canvas again. Choose **Package folder**
-or **Single HTML file** in settings as usual; existing exported files do not
-update themselves. To export into the Vault root, choose it with **Choose vault
-folder** or enter \`.\` as the output folder.
+## Clearer collapsed groups
 
-## Smoother controls
+When you collapse a group, only its name and control remain visible. Nodes
+inside the group and their connections are hidden together and return when you
+expand it. Other groups remain independent. Nodes and group names also stay
+clearly visible above crossing connections.
 
-- In **Search**, Tab and Shift+Tab stay inside the dialog. Closing it returns
-  keyboard focus to the control that opened it.
-- Cancelling the folder picker now ends the selection cleanly.
-- The **Folding** menu is also available on Canvases containing only groups.
-- Repeated export commands no longer start overlapping exports.
+Folding changes only the exported view and never modifies the source \`.canvas\`
+file.
 
-Folding continues to change only the exported view; the source \`.canvas\` file
-is not modified.
+Export the original Canvas again to apply these improvements. Existing HTML
+exports do not update themselves.
 
-## Update descriptions after every version change
+## Update description
 
-This description opens automatically once for version 1.3.2, including when
-you have already read an earlier version's description. It is marked as read
-only after you close it and does not open again on every Obsidian start.
+This description opens automatically once for version 1.4.0. It is marked as
+read only after you close it and does not open again on every Obsidian start.
 
 Use **Show last update** at the bottom of the Canvas HTML Exporter settings to
 reopen it at any time, or **Show readme** for the full documentation. Closing it
