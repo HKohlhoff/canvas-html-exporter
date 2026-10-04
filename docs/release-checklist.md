@@ -48,6 +48,9 @@ npm run build:prod
 
 - All focused tests pass.
 - The release workflow verifies that its tag equals the manifest version.
+- The tag workflow creates a missing GitHub release and safely refreshes the
+  three reviewed assets when the release already exists; reruns must not fail
+  merely because the release was created earlier.
 - TypeScript test compilation passes.
 - ESLint passes without warnings.
 - `release/main.js`, `release/manifest.json` and `release/styles.css` are created.
