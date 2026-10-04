@@ -1,6 +1,6 @@
-export const CURRENT_RELEASE_NOTES_ID = "release-1.4.0";
+export const CURRENT_RELEASE_NOTES_ID = "release-1.4.1";
 
-export const CURRENT_RELEASE_NOTES_MARKDOWN = `# Canvas HTML Exporter 1.4.0: Consistent group folding
+export const CURRENT_RELEASE_NOTES_MARKDOWN = `# Canvas HTML Exporter 1.4.1: Consistent group folding
 
 This update aligns group folding in exported pages with the latest Canvas
 Folding release, version 1.2.8. Groups now behave consistently in Obsidian and
@@ -32,7 +32,7 @@ exports do not update themselves.
 
 ## Update description
 
-This description opens automatically once for version 1.4.0. It is marked as
+This description opens automatically once for version 1.4.1. It is marked as
 read only after you close it and does not open again on every Obsidian start.
 
 Use **Show last update** at the bottom of the Canvas HTML Exporter settings to

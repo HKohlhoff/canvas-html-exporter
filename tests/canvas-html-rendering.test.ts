@@ -603,6 +603,43 @@ await test("applies canvas colors to group nodes", async () => {
   assert.match(html, /\.group-title \{[\s\S]*color: var\(--node-border-color\);/);
 });
 
+await test("keeps colored content nodes opaque above edges in both export modes", async () => {
+  const data: CanvasData = {
+    name: "Opaque colored nodes",
+    nodes: [
+      { id: "source", type: "text", x: 0, y: 0, width: 180, height: 100, text: "Source" },
+      { id: "colored", type: "text", x: 260, y: 0, width: 220, height: 120, text: "Readable", color: "2" },
+      { id: "group", type: "group", x: 240, y: -20, width: 260, height: 160, label: "Area", color: "4" },
+    ],
+    edges: [{ id: "crossing", fromNode: "source", toNode: "colored" }],
+  };
+
+  for (const exportFormat of ["package", "single-html"] as const) {
+    for (const [darkMode, solidBackground] of [[false, "#ffffff"], [true, "#2b2f36"]] as const) {
+      const html = await convertCanvasToHtml(data, {
+        ...baseOptions,
+        darkMode,
+        exportFormat,
+        canvasColors: {
+          "2": "rgb(236, 117, 0)",
+          "4": "rgb(8, 185, 78)",
+        },
+      });
+
+      assert.match(
+        html,
+        new RegExp(`id="node-colored"[\\s\\S]*?background:linear-gradient\\(var\\(--canvas-color-2-bg, #fa8d3e22\\), var\\(--canvas-color-2-bg, #fa8d3e22\\)\\), ${solidBackground};`),
+      );
+      assert.match(
+        html,
+        /id="node-group"[\s\S]*?background:var\(--canvas-color-4-bg, #56ae6c22\);/,
+      );
+      assert.match(html, /#edge-layer \{[\s\S]*?z-index: 0;/);
+      assert.match(html, /\.node \{[\s\S]*?z-index: 2;/);
+    }
+  }
+});
+
 await test("renders default canvas bounds for empty canvases", async () => {
   const html = await convertCanvasToHtml({ name: "Leer", nodes: [], edges: [] }, baseOptions);
   assert.match(html, /id="canvas"/);
