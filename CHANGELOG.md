@@ -6,6 +6,8 @@ first.
 
 ## [Unreleased]
 
+## [1.4.0] – 2026-10-04
+
 ### Changed
 
 - Align exported group folding with Canvas Folding 1.2.8: place the group
