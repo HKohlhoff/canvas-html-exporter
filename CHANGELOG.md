@@ -12,6 +12,13 @@ first.
   exists, refreshing only the reviewed plugin assets without replacing its
   release notes.
 
+## [1.4.1] – 2026-10-04
+
+### Fixed
+
+- Keep connections visually behind colored content nodes while preserving the
+  transparent overview provided by Canvas groups.
+
 ## [1.4.0] – 2026-10-04
 
 ### Changed

@@ -63,8 +63,11 @@ export function resolveNodeColors(
     const bgVar = `--canvas-color-${colorKey}-bg`;
     const borderVar = `--canvas-color-${colorKey}`;
     const fallbackPalette = OBSIDIAN_COLORS[colorKey] || { background: fallbackBackground, border: fallbackBorder };
+    const softBackground = `var(${bgVar}, ${fallbackPalette.background})`;
     return {
-      background: `var(${bgVar}, ${fallbackPalette.background})`,
+      background: type === "group"
+        ? softBackground
+        : buildOpaqueNodeBackground(softBackground, theme.nodeBackground),
       border: `var(${borderVar}, ${fallbackPalette.border})`,
       minimapFill: toSoftBackground(customPaletteColor),
       minimapStroke: customPaletteColor,
@@ -74,7 +77,9 @@ export function resolveNodeColors(
   if (isNumericColor) {
     const palette = OBSIDIAN_COLORS[colorKey] || { background: fallbackBackground, border: fallbackBorder };
     return {
-      background: palette.background,
+      background: type === "group"
+        ? palette.background
+        : buildOpaqueNodeBackground(palette.background, theme.nodeBackground),
       border: palette.border,
       minimapFill: palette.background,
       minimapStroke: palette.border,
@@ -82,8 +87,11 @@ export function resolveNodeColors(
   }
 
   if (colorKey.startsWith("#")) {
+    const softBackground = `${colorKey}22`;
     return {
-      background: `${colorKey}22`,
+      background: type === "group"
+        ? softBackground
+        : buildOpaqueNodeBackground(softBackground, theme.nodeBackground),
       border: colorKey,
       minimapFill: toSoftBackground(colorKey),
       minimapStroke: colorKey,
@@ -96,6 +104,10 @@ export function resolveNodeColors(
     minimapFill: fallbackMinimapFill,
     minimapStroke: fallbackBorder,
   };
+}
+
+function buildOpaqueNodeBackground(softBackground: string, solidBackground: string): string {
+  return `linear-gradient(${softBackground}, ${softBackground}), ${solidBackground}`;
 }
 
 export function buildCanvasColorVariables(canvasColors?: Record<string, string>): string {
