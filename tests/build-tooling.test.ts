@@ -46,3 +46,21 @@ for (const tag of [manifest.version, "invalid-tag"]) {
   assert.equal(result.status === 0, tag === manifest.version, result.stderr);
 }
 console.log("PASS release metadata rejects a mismatched publication tag");
+
+const releaseWorkflow = fs.readFileSync(".github/workflows/release.yml", "utf8");
+assert.match(
+  releaseWorkflow,
+  /if gh release view "\$tag" >\/dev\/null 2>&1; then/,
+  "release reruns must detect an existing GitHub release",
+);
+assert.match(
+  releaseWorkflow,
+  /gh release upload "\$tag" \\\n+\s+--clobber \\\n+\s+release\/main\.js \\\n+\s+release\/manifest\.json \\\n+\s+release\/styles\.css/,
+  "release reruns must refresh all reviewed assets without replacing release notes",
+);
+assert.match(
+  releaseWorkflow,
+  /gh release create "\$tag" \\\n+\s+--verify-tag/,
+  "first publication must create a release only for the pushed tag",
+);
+console.log("PASS release workflow safely reuses an existing GitHub release");

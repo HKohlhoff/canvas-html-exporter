@@ -6,6 +6,12 @@ first.
 
 ## [Unreleased]
 
+### Development
+
+- Make the tag release workflow safe to rerun when a GitHub release already
+  exists, refreshing only the reviewed plugin assets without replacing its
+  release notes.
+
 ## [1.4.0] – 2026-10-04
 
 ### Changed
