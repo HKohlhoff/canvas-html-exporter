@@ -23,23 +23,10 @@ export function buildBrowserEdges(): string {
       }
 
       function getAnchor(el, side) {
-        let left = parseFloat(el.getAttribute("data-canvas-left") || "0");
-        let top = parseFloat(el.getAttribute("data-canvas-top") || "0");
-        let width = el.offsetWidth;
-        let height = el.offsetHeight;
-        if (el.classList.contains("is-advanced-group-collapsed")) {
-          const nodeId = el.getAttribute("data-node-id") || "";
-          const title = document.getElementById("group-title-" + nodeId);
-          if (title && canvas) {
-            const titleRect = title.getBoundingClientRect();
-            const canvasRect = canvas.getBoundingClientRect();
-            const scale = Math.max(currentScale, 0.0001);
-            left = (titleRect.left - canvasRect.left) / scale;
-            top = (titleRect.top - canvasRect.top) / scale;
-            width = titleRect.width / scale;
-            height = titleRect.height / scale;
-          }
-        }
+        const left = parseFloat(el.getAttribute("data-canvas-left") || "0");
+        const top = parseFloat(el.getAttribute("data-canvas-top") || "0");
+        const width = el.offsetWidth;
+        const height = el.offsetHeight;
 
         switch (side) {
           case "top": return { x: left + width / 2, y: top };
@@ -135,6 +122,7 @@ export function buildBrowserEdges(): string {
       }
 
       function drawEdges() {
+        syncAdvancedGroupGeometry();
         clearChildren(edgeLayer);
         const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         edgeLayer.appendChild(defs);

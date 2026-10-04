@@ -104,7 +104,7 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       height: 100%;
       pointer-events: none;
       overflow: visible;
-      z-index: 1;
+      z-index: 0;
     }
     .node {
       position: absolute;
@@ -340,11 +340,20 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     }
     .node.group {
       background: ${theme.groupBackground};
-      z-index: 0;
+      z-index: 1;
       overflow: visible;
     }
     .node.group.is-advanced-group-collapsed {
-      visibility: hidden;
+      background: transparent !important;
+      border-color: transparent !important;
+      box-shadow: none;
+      min-height: 1px;
+      min-width: 1px;
+      padding: 0;
+      pointer-events: none;
+    }
+    .node.group.is-advanced-group-collapsed > .node-controls {
+      display: none;
     }
     .node.group .node-content {
       display: none;

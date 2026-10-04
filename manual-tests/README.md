@@ -33,8 +33,10 @@ complete check as a package and as single HTML:
 - repeat with the Standard, Minimal and AnuPpuccin themes and confirm that the
   exported default edge color follows the active Canvas appearance, including
   active Style Settings values and CSS snippets;
-- collapse and expand the root, child and nested groups. Only the title row and
-  connected edges should remain while a group is collapsed;
+- collapse and expand the root, child, nested and empty groups. The `−`/`+`
+  control must sit directly to the right of the group name. Only the compact
+  title row and connected edges should remain while a group is collapsed, and
+  the edges must attach to the reduced title-row bounds;
 - confirm that group counts include hidden nodes and groups, and that group
   state cooperates with branch folding, search, minimap, fit/reset and restore;
 - export an already collapsed group and confirm its saved contents are present
@@ -140,6 +142,7 @@ Every failure case must produce a normal usable export rather than aborting.
   their normal behavior;
 - confirm the focused branch remains at full opacity and its context at 20%;
 - confirm hidden nodes, incident edges and labels disappear together;
+- confirm visible nodes and group labels always paint above crossing edges;
 - confirm hidden content nodes and hidden groups are counted separately;
 - confirm visible node positions do not change;
 - fit/reset uses the visible graph appropriately;

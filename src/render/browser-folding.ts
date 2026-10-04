@@ -128,6 +128,58 @@ export function buildBrowserFolding({ hasImportedFolding }: Pick<BrowserRuntimeP
         return hiddenByAdvancedGroups;
       }
 
+      function getExpandedGroupGeometry(node) {
+        if (!node.dataset.expandedCanvasLeft) {
+          node.dataset.expandedCanvasLeft = node.getAttribute("data-canvas-left") || "0";
+          node.dataset.expandedCanvasTop = node.getAttribute("data-canvas-top") || "0";
+          node.dataset.expandedCanvasWidth = node.getAttribute("data-canvas-width") || "1";
+          node.dataset.expandedCanvasHeight = node.getAttribute("data-canvas-height") || "1";
+        }
+        return {
+          left: node.dataset.expandedCanvasLeft,
+          top: node.dataset.expandedCanvasTop,
+          width: node.dataset.expandedCanvasWidth,
+          height: node.dataset.expandedCanvasHeight,
+        };
+      }
+
+      function setGroupGeometry(node, geometry) {
+        node.setAttribute("data-canvas-left", geometry.left);
+        node.setAttribute("data-canvas-top", geometry.top);
+        node.setAttribute("data-canvas-width", geometry.width);
+        node.setAttribute("data-canvas-height", geometry.height);
+        node.style.left = geometry.left + "px";
+        node.style.top = geometry.top + "px";
+        node.style.width = geometry.width + "px";
+        node.style.height = geometry.height + "px";
+      }
+
+      function syncAdvancedGroupGeometry() {
+        if (!canvas) return;
+        const canvasRect = canvas.getBoundingClientRect();
+        const scale = Math.max(currentScale, 0.0001);
+        document.querySelectorAll(".node.group[data-node-id]").forEach((node) => {
+          const expandedGeometry = getExpandedGroupGeometry(node);
+          const groupId = node.getAttribute("data-node-id") || "";
+          if (!advancedCollapsedGroupIds.has(groupId) || hiddenNodeIds.has(groupId)) {
+            setGroupGeometry(node, expandedGeometry);
+            return;
+          }
+          const title = document.getElementById("group-title-" + groupId);
+          if (!title || title.hidden || title.classList.contains("is-folding-hidden")) {
+            setGroupGeometry(node, expandedGeometry);
+            return;
+          }
+          const titleRect = title.getBoundingClientRect();
+          setGroupGeometry(node, {
+            left: String((titleRect.left - canvasRect.left) / scale),
+            top: String((titleRect.top - canvasRect.top) / scale),
+            width: String(Math.max(1, titleRect.width / scale)),
+            height: String(Math.max(1, titleRect.height / scale)),
+          });
+        });
+      }
+
       function getItemCounts(itemIds) {
         const uniqueItemIds = new Set(itemIds);
         const groupCount = [...uniqueItemIds]
@@ -292,8 +344,10 @@ export function buildBrowserFolding({ hasImportedFolding }: Pick<BrowserRuntimeP
           const containedItemIds = foldingGraph.groupContentsByNode[groupId] || [];
           const counts = getItemCounts(containedItemIds);
           const isCollapsed = advancedCollapsedGroupIds.has(groupId);
-          control.textContent = isCollapsed ? String(counts.itemCount) : "−";
-          control.classList.toggle("has-hidden-count", isCollapsed);
+          control.textContent = isCollapsed
+            ? counts.itemCount > 0 ? String(counts.itemCount) : "+"
+            : "−";
+          control.classList.toggle("has-hidden-count", isCollapsed && counts.itemCount > 0);
           control.setAttribute("aria-expanded", String(!isCollapsed));
           const countParts = [];
           if (counts.nodeCount > 0) {
@@ -440,6 +494,7 @@ export function buildBrowserFolding({ hasImportedFolding }: Pick<BrowserRuntimeP
       window.expandAllBranches = function() {
         clearImportedFoldingBase();
         collapsedNodeIds.clear();
+        advancedCollapsedGroupIds.clear();
         focusedBranchNodeId = null;
         visibleLevelLimit = null;
         syncFoldingLevelSelect();

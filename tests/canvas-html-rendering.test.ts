@@ -598,7 +598,7 @@ await test("applies canvas colors to group nodes", async () => {
   });
 
   assert.match(html, /background:var\(--canvas-color-4-bg, #56ae6c22\);border-color:var\(--canvas-color-4, #56ae6c\);--node-background-color:var\(--canvas-color-4-bg, #56ae6c22\);--node-border-color:var\(--canvas-color-4, #56ae6c\);/);
-  assert.match(html, /<div id="group-title-group-color-1" class="group-title" data-group-title-node-id="group-color-1"[^>]*><span class="group-title-text">Group<\/span><\/div>/);
+  assert.match(html, /<div id="group-title-group-color-1" class="group-title" data-group-title-node-id="group-color-1"[^>]*><span class="group-title-text">Group<\/span><button class="advanced-group-control"[^>]+aria-label="Collapse group"[^>]*>−<\/button><\/div>/);
   assert.match(html, /id="node-group-color-1"[\s\S]*<div class="node-content"><\/div><\/div>/);
   assert.match(html, /\.group-title \{[\s\S]*color: var\(--node-border-color\);/);
 });
@@ -798,19 +798,27 @@ await test("renders independent nested Advanced Canvas group controls in both ex
 
     assert.match(html, /data-advanced-group-id="outer"[^>]+aria-expanded="false"[^>]*>3<\/button>/);
     assert.match(html, /data-advanced-group-id="inner"[^>]+aria-expanded="true"[^>]*>−<\/button>/);
-    assert.doesNotMatch(html, /data-advanced-group-id="empty"/);
+    assert.match(html, /<span class="group-title-text">Empty<\/span><button class="advanced-group-control"[^>]+data-advanced-group-id="empty"[^>]+aria-label="Collapse group"[^>]*>−<\/button>/);
     assert.match(html, /const initialAdvancedCollapsedGroupIds = new Set\(\["outer"\]\)/);
     assert.match(html, /function getAdvancedGroupHiddenNodeIds\(\)/);
     assert.match(html, /function toggleAdvancedGroup\(groupId\)/);
     assert.match(html, /window\.toggleAdvancedGroup = toggleAdvancedGroup/);
     assert.match(html, /advancedGroupHiddenNodeIds\.has\(edge\.fromId\) \|\| advancedGroupHiddenNodeIds\.has\(edge\.toId\)/);
     assert.match(html, /node\.classList\.toggle\("is-folding-hidden", hiddenNodeIds\.has\(nodeId\)\)/);
-    assert.match(html, /\.node\.group\.is-advanced-group-collapsed \{\s+visibility: hidden;/);
+    assert.match(html, /\.node\.group\.is-advanced-group-collapsed \{\s+background: transparent !important;[\s\S]+pointer-events: none;/);
     assert.match(html, /groupNodeIds\.has\(nodeId\) && advancedCollapsedGroupIds\.has\(nodeId\)/);
-    assert.match(html, /el\.classList\.contains\("is-advanced-group-collapsed"\)/);
-    assert.match(html, /document\.getElementById\("group-title-" \+ nodeId\)/);
+    assert.match(html, /function syncAdvancedGroupGeometry\(\)/);
+    assert.match(html, /const titleRect = title\.getBoundingClientRect\(\)/);
+    assert.match(html, /node\.setAttribute\("data-canvas-width", geometry\.width\)/);
+    assert.match(html, /function drawEdges\(\) \{\s+syncAdvancedGroupGeometry\(\)/);
+    assert.doesNotMatch(html, /el\.classList\.contains\("is-advanced-group-collapsed"\)/);
+    assert.match(html, /advancedCollapsedGroupIds\.clear\(\)/);
     assert.match(html, /initialAdvancedCollapsedGroupIds\.forEach\(\(groupId\) => advancedCollapsedGroupIds\.add\(groupId\)\)/);
     assert.match(html, /foldingGraph\.groupContentsByNode\[groupId\][\s\S]+\.includes\(nodeId\)/);
+    assert.match(html, /counts\.itemCount > 0 \? String\(counts\.itemCount\) : "\+"/);
+    assert.match(html, /#edge-layer \{[\s\S]+z-index: 0;/);
+    assert.match(html, /\.node \{[\s\S]+z-index: 2;/);
+    assert.match(html, /\.node\.group \{[\s\S]+z-index: 1;/);
     const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
     assert.ok(runtime);
     assert.doesNotThrow(() => new vm.Script(runtime));

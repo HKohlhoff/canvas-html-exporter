@@ -77,9 +77,10 @@ export function renderGroupTitle(
   const frame = getNodeFrame(node, offsetX, offsetY);
   const colors = resolveNodeColors(node, theme, canvasColors);
   const groupName = (node.label || node.text || "").trim() || "Group";
-  const groupControl = groupContentCount > 0
-    ? `<button class="advanced-group-control${node.advancedGroupCollapsed ? " has-hidden-count" : ""}" type="button" data-advanced-group-id="${escapeAttribute(node.id)}" aria-expanded="${String(!node.advancedGroupCollapsed)}" aria-label="${node.advancedGroupCollapsed ? "Expand" : "Collapse"} group · ${groupContentCount} contained ${groupContentCount === 1 ? "item" : "items"}" title="${node.advancedGroupCollapsed ? "Expand" : "Collapse"} group · ${groupContentCount} contained ${groupContentCount === 1 ? "item" : "items"}">${node.advancedGroupCollapsed ? String(groupContentCount) : "−"}</button>`
+  const groupCountLabel = groupContentCount > 0
+    ? ` · ${groupContentCount} contained ${groupContentCount === 1 ? "item" : "items"}`
     : "";
+  const groupControl = `<button class="advanced-group-control${node.advancedGroupCollapsed && groupContentCount > 0 ? " has-hidden-count" : ""}" type="button" data-advanced-group-id="${escapeAttribute(node.id)}" aria-expanded="${String(!node.advancedGroupCollapsed)}" aria-label="${node.advancedGroupCollapsed ? "Expand" : "Collapse"} group${groupCountLabel}" title="${node.advancedGroupCollapsed ? "Expand" : "Collapse"} group${groupCountLabel}">${node.advancedGroupCollapsed ? groupContentCount > 0 ? String(groupContentCount) : "+" : "−"}</button>`;
   return `<div id="group-title-${escapeAttribute(node.id)}" class="group-title" data-group-title-node-id="${escapeAttribute(node.id)}" style="left:${frame.left}px;top:${frame.top}px;max-width:${frame.width}px;--node-border-color:${colors.border};"><span class="group-title-text">${escapeHtml(groupName)}</span>${groupControl}</div>`;
 }
 
