@@ -30,6 +30,9 @@ first.
   panel-internal **Close** button.
 - Preserve per-page Navigation choices across package Back/Forward history and
   synchronize embedded single-HTML canvases only after their runtime is ready.
+- Present embedded single-HTML canvases as full-page Canvas views without a
+  surrounding page card, and route parent Canvas links through the outer page
+  so local files do not open a file chooser.
 - Add **Back** beside **Canvas** on HTML pages owned by a subcanvas, returning
   to that subcanvas while **Canvas** continues to open the main overview.
 

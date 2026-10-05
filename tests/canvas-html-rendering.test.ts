@@ -117,10 +117,14 @@ await test("renders an accessible fixed navigation panel with global root and lo
   assert.match(html, /type: "canvas-html-navigation-state"/);
   assert.match(html, /type: "canvas-html-navigation-page-state"/);
   assert.match(html, /type: "canvas-html-navigation-ready"/);
+  assert.match(html, /type: "canvas-html-parent-navigation"/);
+  assert.match(html, /parentLink\.getAttribute\("href"\) \|\| "#"/);
   assert.match(html, /const navigationWindowStatePrefix = "canvas-html-exporter-navigation:"/);
   assert.match(html, /window\.name = navigationWindowStatePrefix \+ JSON\.stringify/);
   assert.match(html, /readPackageNavigationState\(\);\s+readPackageWindowState\(\);/);
   assert.match(html, /window\.addEventListener\("pageshow", \(\) => \{/);
+  assert.match(html, /\.single-page-view\.is-canvas-page \{[\s\S]*?max-width: none;[\s\S]*?height: 100dvh;[\s\S]*?margin: 0;[\s\S]*?border: 0;/);
+  assert.match(html, /singlePageView\.classList\.toggle\("is-canvas-page", template\.dataset\.pageKind === "canvas"\)/);
   assert.match(html, /function restoreContentsForCanvasView\(\) \{\s+applyContentsVisibility\(getStoredNavigationState\(getActiveNavigationPageId\(\)\)\)/);
   const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
   assert.doesNotThrow(() => new vm.Script(runtime));

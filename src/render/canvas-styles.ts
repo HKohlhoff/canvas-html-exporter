@@ -871,6 +871,16 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     .single-page-view[hidden] {
       display: none;
     }
+    .single-page-view.is-canvas-page {
+      width: 100%;
+      max-width: none;
+      height: 100vh;
+      height: 100dvh;
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
     .single-page-toolbar {
       position: sticky;
       top: 0;
@@ -928,6 +938,15 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       height: calc(100vh - 112px);
       min-height: 560px;
       margin: 0 -32px -32px;
+    }
+    .single-page-view.is-canvas-page .single-page-body,
+    .single-page-view.is-canvas-page .single-canvas-page {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
     }
     .single-page-body .single-canvas-frame {
       display: block;

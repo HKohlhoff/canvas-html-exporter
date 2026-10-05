@@ -124,6 +124,7 @@ export function buildBrowserPages(): string {
 
       function renderCanvasShell() {
         if (!canvasShell || !singlePageView) return;
+        singlePageView.classList.remove("is-canvas-page");
         canvasShell.hidden = false;
         singlePageView.hidden = true;
         restoreContentsForCanvasView();
@@ -217,6 +218,7 @@ export function buildBrowserPages(): string {
         if (singlePageToolbar) {
           singlePageToolbar.hidden = template.dataset.pageKind === "canvas";
         }
+        singlePageView.classList.toggle("is-canvas-page", template.dataset.pageKind === "canvas");
         materializeInlineAssets(singlePageBody);
         applySearchHighlights(singlePageBody, parsePageSearchQuery(window.location.hash));
         canvasShell.hidden = true;

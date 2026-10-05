@@ -74,6 +74,10 @@ receive newer choices on `pageshow`. Package links
 remain relative files, while links from an embedded single-HTML subcanvas to a
 Canvas target navigate its parent page; local page entries remain inside that
 subcanvas's isolated virtual-page scope.
+The iframe used as the isolation boundary for a subcanvas is styled as a
+borderless full-page surface. Parent-target Canvas links are intercepted inside
+that frame and sent to the outer runtime, which validates and applies the hash
+instead of letting a `file:` browser resolve `#` as a directory target.
 
 Package HTML pages exported from a subcanvas receive two explicit destinations:
 **Back** is calculated relative to their owning Canvas page, while **Canvas**

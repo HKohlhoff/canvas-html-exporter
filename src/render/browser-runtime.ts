@@ -216,6 +216,17 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
         });
       }
       document.addEventListener("click", (event) => {
+        const parentLink = event.target instanceof Element
+          ? event.target.closest('a[target="_parent"][href^="#"]')
+          : null;
+        if (parentLink && exportFormat === "single-html" && !isRootCanvas) {
+          event.preventDefault();
+          window.parent.postMessage({
+            type: "canvas-html-parent-navigation",
+            href: parentLink.getAttribute("href") || "#",
+          }, "*");
+          return;
+        }
         const link = event.target instanceof Element ? event.target.closest("[data-inline-page]") : null;
         if (!link) return;
         const pageId = link.getAttribute("data-inline-page") || "";

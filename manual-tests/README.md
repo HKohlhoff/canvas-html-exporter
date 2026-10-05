@@ -53,6 +53,9 @@ single HTML:
   embedded page, leave each page, and confirm its state returns when reopened;
 - repeat the same local-state check with browser Back and Forward in a package
   export;
+- in single HTML, confirm every linked Canvas fills the page like the overview,
+  without a surrounding card or reduced-height frame, and that its upper-right
+  **Canvas** link returns to the overview without opening a file chooser;
 - use **Navigation** itself to open and close the panel like **Minimap**;
   confirm there is no separate Close button and keyboard Tab navigation can
   move naturally between the panel and the page;

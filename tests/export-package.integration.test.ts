@@ -1042,7 +1042,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       } else {
         assert.match(childPage?.outputPath || "", /^out\/root\/canvas-\d{3}-child\.html$/);
         assert.match(grandPage?.outputPath || "", /^out\/root\/canvas-\d{3}-grand\.html$/);
-        assert.doesNotMatch(childHtml, /target="_parent"/);
+        assert.doesNotMatch(childHtml, /<a[^>]+target="_parent"/);
         assert.match(childHtml, /class="canvas-return-link" href="index\.html">Canvas<\/a>/);
         const chapterHtml = files.get(`out/root/${chapter?.exportHtmlPath || ""}`)?.text || "";
         assert.match(chapterHtml, /class="md-page-back-link" href="\.\.\/\.\.\/canvas-\d{3}-child\.html">Back<\/a>/);

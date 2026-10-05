@@ -212,6 +212,20 @@ export function buildBrowserContents(): string {
           sendNavigationStateToCanvasFrame(activeFrame);
           return;
         }
+        if (message.type === "canvas-html-parent-navigation") {
+          if (!isRootCanvas || exportFormat !== "single-html") return;
+          const activeFrame = singlePageBody?.querySelector(".single-canvas-frame");
+          if (!activeFrame || event.source !== activeFrame.contentWindow || typeof message.href !== "string") return;
+          if (message.href === "#") {
+            if (window.location.hash) window.location.hash = "";
+            else renderCanvasShell();
+            return;
+          }
+          if (!parsePageHash(message.href)) return;
+          if (window.location.hash === message.href) syncEmbeddedPageFromHash();
+          else window.location.hash = message.href;
+          return;
+        }
         if (message.type !== "canvas-html-navigation-state") return;
         if (isRootCanvas || exportFormat !== "single-html" || event.source !== window.parent) return;
         if (typeof message.globalOpen === "boolean") globalNavigationOpen = message.globalOpen;
