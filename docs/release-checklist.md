@@ -101,6 +101,8 @@ npm run build:prod
   the redundant source return card stays hidden, the upper-right **Canvas**
   control returns to the overview, and browser history, shared targets, cycles,
   and invalid target fallback work in package and single HTML.
+- Canvas cards show the linked diagram preview in both formats without an
+  **Open canvas** label or external preview asset.
 - Test the documentation Canvas from `examples/demo-vault/`.
 - Test `Advanced Canvas Attributes.canvas` from the same demo vault as package
   and single HTML. Compare all supported shapes, borders, alignments, colors,

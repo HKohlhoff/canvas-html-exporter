@@ -831,9 +831,9 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       box-sizing: border-box;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 16px;
+      justify-content: flex-start;
+      gap: 8px;
+      padding: 10px;
       color: ${theme.text};
       text-align: center;
       text-decoration: none;
@@ -843,13 +843,27 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       text-decoration: none;
     }
     .canvas-card-title {
+      flex: 0 0 auto;
       font-weight: 650;
       overflow-wrap: anywhere;
     }
-    .canvas-card-action {
-      color: ${theme.link};
-      font-size: 0.88em;
-      font-weight: 600;
+    .canvas-card-preview {
+      display: block;
+      width: 100%;
+      min-height: 0;
+      flex: 1 1 auto;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 8px;
+      background: ${theme.canvasBackground};
+    }
+    .canvas-card-preview-edges line {
+      vector-effect: non-scaling-stroke;
+      stroke-width: 1.25;
+      opacity: 0.75;
+    }
+    .canvas-card-preview-nodes .minimap-node {
+      vector-effect: non-scaling-stroke;
+      stroke-width: 1.25;
     }
     .single-page-body .md-page {
       max-width: none;

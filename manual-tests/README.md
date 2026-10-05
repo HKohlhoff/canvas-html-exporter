@@ -30,6 +30,9 @@ single HTML:
 
 - open every subcanvas card with one click and compare its node, group and edge
   layout with Obsidian;
+- compare each card preview with the target Canvas: groups, node positions,
+  colors, connections, and overall aspect ratio should remain recognizable;
+  the obsolete **Open canvas** text must not appear;
 - confirm the source return card is not rendered in the HTML, then use the
   upper-right **Canvas** control once and confirm that the overview opens
   immediately;

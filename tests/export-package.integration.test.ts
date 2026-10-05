@@ -930,7 +930,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
           path: "root.canvas",
           text: JSON.stringify({
             nodes: [
-              { id: "child-card", type: "file", file: "nested/child.canvas", x: 0, y: 0, width: 320, height: 180 },
+              { id: "child-card", type: "file", file: "nested/child.canvas", label: "Child canvas", x: 0, y: 0, width: 320, height: 180 },
               { id: "child-link", type: "text", text: "[[nested/child.canvas|Child link]]", x: 360, y: 0, width: 320, height: 180 },
             ],
             edges: [],
@@ -944,7 +944,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
               { id: "grand-card", type: "file", file: "nested/grand.canvas", x: 360, y: 0, width: 320, height: 180 },
               { id: "root-link", type: "text", text: "[[root.canvas|Root link]]", x: 720, y: 0, width: 320, height: 180 },
             ],
-            edges: [],
+            edges: [{ id: "child-edge", fromNode: "grand-card", toNode: "root-link", color: "4" }],
           }),
         },
         {
@@ -973,6 +973,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       const rootText = result.data.nodes.find((node) => node.id === "child-link");
       assert.equal(rootCard?.fileKind, "canvas");
       assert.equal(rootCard?.canvasNavigationTarget, undefined);
+      assert.equal(rootCard?.canvasPreview?.edges.length, 1);
+      assert.ok(rootCard?.canvasPreview?.nodes.some((node) => node.id === "grand-card"));
       assert.match(rootCard?.canvasHref || "", exportFormat === "single-html" ? /^#page-canvas-c\d+$/ : /^canvas-\d{3}-child\.html$/);
       assert.match(rootText?.renderedTextHtml || "", exportFormat === "single-html" ? /data-inline-page="canvas-c\d+"/ : /href="canvas-\d{3}-child\.html"/);
 
@@ -986,6 +988,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       assert.equal(backToRoot, undefined);
       assert.equal(childPage.options.canvasHomeHref, exportFormat === "package" ? "index.html" : undefined);
       assert.equal(grandCard?.canvasNavigationTarget, exportFormat === "single-html" ? "_parent" : undefined);
+      assert.ok(grandCard?.canvasPreview?.nodes.some((node) => node.id === "child-card"));
       assert.equal(grandPage.data.nodes[0].canvasHref, rootCard?.canvasHref);
       assert.match(
         rootLink?.renderedTextHtml || "",
@@ -993,8 +996,13 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       );
 
       const childHtml = await convertCanvasToHtml(childPage.data, childPage.options);
+      const rootPreviewHtml = await convertCanvasToHtml(result.data, result.options);
       assert.match(childHtml, /class="canvas-card-link"/);
-      assert.match(childHtml, /<span class="canvas-card-action">Open canvas<\/span>/);
+      assert.match(childHtml, /class="canvas-card-preview"/);
+      assert.match(rootPreviewHtml, /class="canvas-card-preview-edges"><line /);
+      assert.match(rootPreviewHtml, /class="canvas-card-title">Child canvas<\/span>/);
+      assert.doesNotMatch(childHtml, /Open canvas/);
+      assert.doesNotMatch(rootPreviewHtml, /Open canvas/);
       if (exportFormat === "single-html") {
         assert.doesNotMatch(childHtml, /class="toolbar-canvas-link"/);
         for (const page of result.canvasPages) {

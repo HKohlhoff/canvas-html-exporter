@@ -60,6 +60,7 @@ type CanvasRegistryEntry = {
   href: string;
   outputPath?: string;
   pageId?: string;
+  data?: PreparedCanvasData;
   status: "preparing" | "complete";
 };
 
@@ -247,7 +248,11 @@ export async function exportCanvasPackage(
   });
   const root = await prepareCanvasDocument(ctx, canvasFile, settings.initialFoldState, rootParsed);
   const rootEntry = ctx.canvasRegistry.get(canvasFile.path);
-  if (rootEntry) rootEntry.status = "complete";
+  if (rootEntry) {
+    rootEntry.data = root.data;
+    rootEntry.status = "complete";
+  }
+  attachCanvasPreviews(ctx, [root.data, ...ctx.canvasPages.map((page) => page.data)]);
   if (useSingleHtml && ctx.canvasPages.length > 0) {
     root.options.embeddedPages = [
       ...(root.options.embeddedPages || []),
@@ -375,6 +380,7 @@ async function exportCanvasTarget(ctx: MarkdownContext, canvasFile: TFile): Prom
       outputPath,
       pageId,
     });
+    entry.data = prepared.data;
     entry.status = "complete";
     return entry;
   } catch (error) {
@@ -442,6 +448,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
         exportHtmlPath: target.outputPath ? target.href : undefined,
         canvasHref: target.href,
         canvasNavigationTarget: canvasNavigationTarget(ctx),
+        canvasSourcePath: file.path,
       };
     } catch (error) {
       console.error(`[canvas-html-exporter] Subcanvas export failed for ${file.path}`, error);
@@ -572,6 +579,45 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
     displayName: file.name,
     fileKind: "file" as const,
     exportPath,
+  };
+}
+
+function attachCanvasPreviews(ctx: MarkdownContext, documents: PreparedCanvasData[]): void {
+  const previewCache = new Map<string, CanvasData>();
+  for (const document of documents) {
+    for (const node of document.nodes) {
+      if (node.fileKind !== "canvas" || !node.canvasSourcePath) continue;
+      let preview = previewCache.get(node.canvasSourcePath);
+      if (!preview) {
+        const target = ctx.canvasRegistry.get(node.canvasSourcePath)?.data;
+        if (!target) continue;
+        preview = projectCanvasPreview(target);
+        previewCache.set(node.canvasSourcePath, preview);
+      }
+      node.canvasPreview = preview;
+    }
+  }
+}
+
+function projectCanvasPreview(data: PreparedCanvasData): CanvasData {
+  return {
+    nodes: data.nodes.map((node) => ({
+      id: node.id,
+      type: node.type,
+      x: node.x,
+      y: node.y,
+      width: node.width,
+      height: node.height,
+      color: node.color,
+      shape: node.shape,
+      borderStyle: node.borderStyle,
+    })),
+    edges: data.edges.map((edge) => ({
+      id: edge.id,
+      fromNode: edge.fromNode,
+      toNode: edge.toNode,
+      color: edge.color,
+    })),
   };
 }
 

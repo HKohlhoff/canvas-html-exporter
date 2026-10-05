@@ -47,6 +47,13 @@ use their saved graph and start with the exporter's normal expanded state.
 Invalid linked Canvas data falls back to the established generic-file export
 and does not abort otherwise valid output.
 
+After recursive preparation completes, Canvas file nodes receive a compact,
+non-recursive preview projection of the resolved target: node/group geometry,
+supported shapes and colors, plus connection endpoints and colors. The
+renderer turns this projection into inline SVG. This keeps previews identical
+in package and single HTML, offline-capable, cycle-safe, and independent of
+screenshots or browser automation.
+
 ## Canvas Folding boundary
 
 Canvas Folding is an optional provider. The exporter may discover the plugin by

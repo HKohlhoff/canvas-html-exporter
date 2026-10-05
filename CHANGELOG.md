@@ -12,7 +12,9 @@ first.
   create navigable Canvas HTML pages, while single-HTML exports embed matching
   virtual pages; shared targets and cycles are handled once by canonical Vault
   path. Linked pages use the upper-right **Canvas** control for the return to
-  the overview, so a redundant source return card is not rendered.
+  the overview, so a redundant source return card is not rendered. Canvas
+  cards show an offline diagram preview instead of a separate **Open canvas**
+  action label.
 
 ### Development
 

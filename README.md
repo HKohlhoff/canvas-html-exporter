@@ -57,6 +57,7 @@ A **demo-vault** with the complete content showcase can be downloaded from the
 - Render text nodes and Markdown file nodes with Markdown formatting
 - Show Markdown file nodes with a preview and export them as standalone HTML pages or embedded single-file pages
 - Follow linked Canvas file nodes and Canvas wiki links recursively, with cycle-safe navigation between overview and subcanvases
+- Show linked Canvas cards with an offline diagram preview of their groups, nodes, colors, and connections
 - Rewrite internal Markdown links, wiki links, heading links, section embeds, and block references
 - Copy assets into package exports or inline them into single HTML exports
 - Support image, PDF, audio, video, and generic file nodes
@@ -232,11 +233,14 @@ behavior in one self-contained example.
 
 Canvas file nodes and Markdown or wiki links whose target is another `.canvas`
 file are exported recursively. Clicking a Canvas card opens the linked Canvas
-with the same layout and interactive controls as the overview. In a linked
-Canvas, the **Canvas** control at the upper right returns to the overview with
-one click. A source Canvas file card that points straight back to the overview
-is omitted from the exported subcanvas because this control already provides
-that navigation; the source `.canvas` file remains unchanged.
+with the same layout and interactive controls as the overview. Each card shows
+a lightweight diagram preview derived from the target Canvas geometry,
+including groups, nodes, saved colors, and connections. The title and preview
+form one clickable area; no separate action label is needed. In a linked Canvas,
+the **Canvas** control at the upper right returns to the overview with one
+click. A source Canvas file card that points straight back to the overview is
+omitted from the exported subcanvas because this control already provides that
+navigation; the source `.canvas` file remains unchanged.
 
 The exporter identifies each referenced Canvas by its Vault path. Shared
 subcanvases are exported once, and references that form a cycle remain finite

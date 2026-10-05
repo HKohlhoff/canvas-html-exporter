@@ -44,6 +44,8 @@ export interface CanvasNode {
   exportHtmlPath?: string;
   canvasHref?: string;
   canvasNavigationTarget?: "_parent";
+  canvasSourcePath?: string;
+  canvasPreview?: CanvasData;
   displayName?: string;
   fileKind?: "image" | "markdown" | "canvas" | "pdf" | "audio" | "video" | "file";
   previewText?: string;
