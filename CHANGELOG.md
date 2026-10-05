@@ -38,9 +38,11 @@ first.
 - Add the **Navigation** toggle and panel to package Markdown, PDF, and link
   pages. File pages start with Navigation closed on their first visit in both
   formats, independent of the global default, while remembering later local
-  choices and highlighting the active file page.
+  choices and highlighting the active file page. The package toggle uses the
+  same plain-link appearance as **Back** and **Canvas**.
 - Restore each package Canvas's zoom level and visible position after visiting
-  another Canvas or file page.
+  another Canvas or file page. Save the view before following a package link
+  and do not replace the restored view with an automatic resize fit.
 - Keep the search overlay inside the remaining Canvas area while the fixed
   **Navigation** panel is open, so the panel no longer covers the search field.
 - Add **Back** beside **Canvas** on HTML pages owned by a subcanvas, returning

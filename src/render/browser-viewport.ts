@@ -55,6 +55,23 @@ export function buildBrowserViewport({ bounds }: Pick<BrowserRuntimeParameters, 
         writePackageWindowState();
       }
 
+      function storePackageViewportBeforeNavigation(event) {
+        if (exportFormat !== "package") return;
+        const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+        if (!link) return;
+        const href = link.getAttribute("href") || "";
+        if (!href || href.startsWith("#")) return;
+        try {
+          const url = new URL(href, window.location.href);
+          const isLocalHtml = url.protocol === window.location.protocol
+            && (url.protocol === "file:" || url.origin === window.location.origin)
+            && url.pathname.toLowerCase().endsWith(".html");
+          if (isLocalHtml) storePackageViewportState();
+        } catch {
+          // The normal link handler remains responsible for malformed links.
+        }
+      }
+
       function restorePackageViewportState() {
         if (exportFormat !== "package" || !viewport) return false;
         const state = packageViewportStates[navigationPageId];

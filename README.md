@@ -267,9 +267,10 @@ finite hierarchy; shared targets and cycles are listed only once, and the
 current Canvas is highlighted. **Pages in this canvas** lists the Markdown,
 PDF-viewer, and link-node HTML pages directly represented by cards in the
 current Canvas. Selecting an entry opens the same portable target used by its
-Canvas card. These file pages also provide the **Navigation** toggle and panel.
-The highlight follows the opened file page and returns to its owning Canvas
-when that page is closed.
+Canvas card. These file pages also provide the **Navigation** toggle in the same
+plain-link style as **Back** and **Canvas**, plus the full panel. The highlight
+follows the opened file page and returns to its owning Canvas when that page is
+closed.
 
 The drawer uses real relative links in a package and virtual page links in a
 single HTML export. Each embedded subcanvas keeps its own local page list, so

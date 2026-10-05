@@ -29,23 +29,18 @@ export function buildPackagePageNavigation(
     body { transition: padding-left 0.16s ease; }
     body.contents-open { padding-left: var(--contents-panel-width); }
     .page-navigation-button {
-      border: 1px solid ${theme.canvasBorder};
-      border-radius: 7px;
-      padding: 6px 10px;
-      background: ${theme.nodeBackground};
-      color: ${theme.text};
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: ${theme.link};
       font: inherit;
-      font-size: 0.9rem;
+      font-size: 0.95em;
       font-weight: 600;
       cursor: pointer;
     }
     .page-navigation-button:hover,
     .page-navigation-button.is-active {
-      border-color: ${theme.link};
-      background: ${theme.chipBackground};
-    }
-    .page-navigation-button.is-active {
-      box-shadow: 0 0 0 3px rgba(25, 103, 210, 0.14);
+      text-decoration: underline;
     }
     .contents-overlay {
       position: fixed;

@@ -1056,6 +1056,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         assert.match(chapterHtml, /class="md-page-back-link" href="\.\.\/\.\.\/canvas-\d{3}-child\.html">Back<\/a>/);
         assert.match(chapterHtml, /class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
         assert.match(chapterHtml, /id="page-navigation-button"[^>]*>Navigation<\/button>/);
+        assert.match(chapterHtml, /\.page-navigation-button \{\s+border: 0;\s+padding: 0;\s+background: transparent;\s+color: #1967d2;/);
         assert.match(chapterHtml, /id="contents-panel"[\s\S]*?<h3>Canvases<\/h3>/);
         assert.match(chapterHtml, /class="contents-link is-current" aria-current="page">Chapter One<\/span>/);
         assert.doesNotMatch(chapterHtml, /data-contents-current-canvas/);

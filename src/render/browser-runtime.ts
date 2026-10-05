@@ -99,12 +99,15 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
       syncLinkOfflineState();
       if (!restorePackageViewportState()) window.resetZoom();
       if (exportFormat === "package") {
+        document.addEventListener("click", storePackageViewportBeforeNavigation, true);
+        window.addEventListener("beforeunload", storePackageViewportState);
         window.addEventListener("pagehide", storePackageViewportState);
         window.addEventListener("pageshow", restorePackageViewportState);
       }
       window.addEventListener("resize", () => {
         drawEdges();
-        window.resetZoom();
+        if (exportFormat === "package") updateMinimapViewport();
+        else window.resetZoom();
         if (minimapPanel) {
           if (minimapPanel.dataset.positionMode === "custom") {
             const rect = minimapPanel.getBoundingClientRect();

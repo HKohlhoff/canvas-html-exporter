@@ -133,6 +133,10 @@ await test("renders an accessible fixed navigation panel with global root and lo
   assert.match(html, /function restorePackageViewportState\(\)/);
   assert.match(html, /viewport\.scrollTo\(\{ left: state\.left, top: state\.top, behavior: "auto" \}\)/);
   assert.match(html, /window\.addEventListener\("pagehide", storePackageViewportState\)/);
+  assert.match(html, /document\.addEventListener\("click", storePackageViewportBeforeNavigation, true\)/);
+  assert.match(html, /window\.addEventListener\("beforeunload", storePackageViewportState\)/);
+  assert.match(html, /if \(isLocalHtml\) storePackageViewportState\(\)/);
+  assert.match(html, /if \(exportFormat === "package"\) updateMinimapViewport\(\);\s+else window\.resetZoom\(\);/);
   assert.match(html, /if \(!restorePackageViewportState\(\)\) window\.resetZoom\(\)/);
   assert.match(html, /readPackageNavigationState\(\);\s+readPackageWindowState\(\);/);
   assert.match(html, /window\.addEventListener\("pageshow", \(\) => \{/);

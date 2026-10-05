@@ -53,7 +53,9 @@ single HTML:
   embedded page, leave each page, and confirm its state returns when reopened;
 - repeat the same local-state check with browser Back and Forward in a package
   export; confirm its Markdown, PDF, and link pages contain the same
-  **Navigation** toggle and panel and highlight the opened file page;
+  **Navigation** toggle and panel and highlight the opened file page; confirm
+  the toggle looks like the plain **Back** and **Canvas** links rather than an
+  outlined button;
 - in single HTML, confirm every linked Canvas fills the page like the overview,
   without a surrounding card or reduced-height frame, and that its upper-right
   **Canvas** link returns to the overview without opening a file chooser;
