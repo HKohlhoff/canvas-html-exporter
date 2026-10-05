@@ -28,6 +28,8 @@ first.
   each Canvas or embedded page remembers and restores its own later state.
 - Make **Navigation** a toolbar toggle like **Minimap** and remove the redundant
   panel-internal **Close** button.
+- Preserve per-page Navigation choices across package Back/Forward history and
+  synchronize embedded single-HTML canvases only after their runtime is ready.
 - Add **Back** beside **Canvas** on HTML pages owned by a subcanvas, returning
   to that subcanvas while **Canvas** continues to open the main overview.
 

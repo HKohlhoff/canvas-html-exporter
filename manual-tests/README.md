@@ -51,6 +51,8 @@ single HTML:
 - change the panel state on the main Canvas and confirm pages without an
   individual choice inherit it; choose a different state on a subcanvas and an
   embedded page, leave each page, and confirm its state returns when reopened;
+- repeat the same local-state check with browser Back and Forward in a package
+  export;
 - use **Navigation** itself to open and close the panel like **Minimap**;
   confirm there is no separate Close button and keyboard Tab navigation can
   move naturally between the panel and the page;

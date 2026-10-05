@@ -116,6 +116,11 @@ await test("renders an accessible fixed navigation panel with global root and lo
   assert.match(html, /url\.searchParams\.set\("navigationPages", JSON\.stringify/);
   assert.match(html, /type: "canvas-html-navigation-state"/);
   assert.match(html, /type: "canvas-html-navigation-page-state"/);
+  assert.match(html, /type: "canvas-html-navigation-ready"/);
+  assert.match(html, /const navigationWindowStatePrefix = "canvas-html-exporter-navigation:"/);
+  assert.match(html, /window\.name = navigationWindowStatePrefix \+ JSON\.stringify/);
+  assert.match(html, /readPackageNavigationState\(\);\s+readPackageWindowState\(\);/);
+  assert.match(html, /window\.addEventListener\("pageshow", \(\) => \{/);
   assert.match(html, /function restoreContentsForCanvasView\(\) \{\s+applyContentsVisibility\(getStoredNavigationState\(getActiveNavigationPageId\(\)\)\)/);
   const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
   assert.doesNotThrow(() => new vm.Script(runtime));

@@ -2,6 +2,14 @@
 export function buildBrowserContents(): string {
   return `      let globalNavigationOpen = navigationInitiallyOpen;
       let navigationPageStates = {};
+      const navigationWindowStatePrefix = "canvas-html-exporter-navigation:";
+
+      function normalizeNavigationPageStates(value) {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+        return Object.fromEntries(
+          Object.entries(value).filter((entry) => typeof entry[0] === "string" && typeof entry[1] === "boolean"),
+        );
+      }
 
       function getActiveNavigationPageId() {
         if (exportFormat === "single-html" && singlePageView && !singlePageView.hidden) {
@@ -28,13 +36,39 @@ export function buildBrowserContents(): string {
         if (!pageValue) return;
         try {
           const parsed = JSON.parse(pageValue);
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
-          navigationPageStates = Object.fromEntries(
-            Object.entries(parsed).filter((entry) => typeof entry[0] === "string" && typeof entry[1] === "boolean"),
-          );
+          navigationPageStates = normalizeNavigationPageStates(parsed);
         } catch {
           navigationPageStates = {};
         }
+      }
+
+      function getPackageNavigationScope() {
+        try {
+          return new URL(".", window.location.href).href;
+        } catch {
+          return "";
+        }
+      }
+
+      function readPackageWindowState() {
+        if (exportFormat !== "package" || !window.name.startsWith(navigationWindowStatePrefix)) return;
+        try {
+          const stored = JSON.parse(window.name.slice(navigationWindowStatePrefix.length));
+          if (!stored || stored.scope !== getPackageNavigationScope()) return;
+          if (typeof stored.globalOpen === "boolean") globalNavigationOpen = stored.globalOpen;
+          navigationPageStates = normalizeNavigationPageStates(stored.pageStates);
+        } catch {
+          // Ignore unrelated or malformed window state.
+        }
+      }
+
+      function writePackageWindowState() {
+        if (exportFormat !== "package") return;
+        window.name = navigationWindowStatePrefix + JSON.stringify({
+          scope: getPackageNavigationScope(),
+          globalOpen: globalNavigationOpen,
+          pageStates: navigationPageStates,
+        });
       }
 
       function applyNavigationParams(url) {
@@ -67,6 +101,7 @@ export function buildBrowserContents(): string {
 
       function storePackageNavigationState() {
         if (exportFormat !== "package") return;
+        writePackageWindowState();
         const url = new URL(window.location.href);
         applyNavigationParams(url);
         try {
@@ -147,8 +182,17 @@ export function buildBrowserContents(): string {
       window.toggleContents = toggleContents;
 
       readPackageNavigationState();
+      readPackageWindowState();
       storePackageNavigationState();
       restoreContentsForCanvasView();
+
+      if (exportFormat === "package") {
+        window.addEventListener("pageshow", () => {
+          readPackageWindowState();
+          storePackageNavigationState();
+          restoreContentsForCanvasView();
+        });
+      }
 
       window.addEventListener("message", (event) => {
         const message = event.data;
@@ -161,15 +205,24 @@ export function buildBrowserContents(): string {
           navigationPageStates[message.pageId] = message.open;
           return;
         }
+        if (message.type === "canvas-html-navigation-ready") {
+          if (!isRootCanvas || exportFormat !== "single-html") return;
+          const activeFrame = singlePageBody?.querySelector(".single-canvas-frame");
+          if (!activeFrame || event.source !== activeFrame.contentWindow) return;
+          sendNavigationStateToCanvasFrame(activeFrame);
+          return;
+        }
         if (message.type !== "canvas-html-navigation-state") return;
         if (isRootCanvas || exportFormat !== "single-html" || event.source !== window.parent) return;
         if (typeof message.globalOpen === "boolean") globalNavigationOpen = message.globalOpen;
         if (message.pageStates && typeof message.pageStates === "object" && !Array.isArray(message.pageStates)) {
-          navigationPageStates = Object.fromEntries(
-            Object.entries(message.pageStates).filter((entry) => typeof entry[0] === "string" && typeof entry[1] === "boolean"),
-          );
+          navigationPageStates = normalizeNavigationPageStates(message.pageStates);
         }
         restoreContentsForCanvasView();
       });
+
+      if (!isRootCanvas && exportFormat === "single-html") {
+        window.parent.postMessage({ type: "canvas-html-navigation-ready" }, "*");
+      }
 `;
 }
