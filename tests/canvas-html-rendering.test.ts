@@ -1446,8 +1446,8 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /event\.key === "\/"/);
   assert.match(html, /"title":"Alpha Beta Gamma"/);
   assert.match(html, /"openHref":"assets\/files\/suche-notiz\.html"|"openHref":"assets\/files\//);
-  assert.match(html, /title\.setAttribute\("data-search-open", "true"\)/);
-  assert.match(html, /search-result-title-link/);
+  assert.match(html, /title\.className = "search-result-title"/);
+  assert.match(html, /result\.append\(title, metaEl, snippetEl\)/);
   assert.match(html, /function applyLinkAttrs\(link, href, query, target, nodeId, pageHref\)/);
   assert.match(html, /link\.setAttribute\("href", appendSearchQueryToHref\(href, query, nodeId, pageHref\)\)/);
   assert.match(html, /"kindLabel":"Markdown"/);

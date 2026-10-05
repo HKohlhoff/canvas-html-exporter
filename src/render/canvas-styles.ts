@@ -1295,13 +1295,11 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       background: ${theme.chipBackground};
     }
     .search-result-title {
-      display: inline-block;
+      display: block;
+      margin-bottom: 3px;
       font-weight: 700;
       color: ${theme.text};
       text-decoration: none;
-    }
-    .search-result-title-link:hover {
-      text-decoration: underline;
     }
     .search-result-meta,
     .search-result-snippet {

@@ -99,19 +99,6 @@ export function buildBrowserSearch(): string {
         for (const entry of matches) {
           const item = document.createElement("li");
           item.className = "search-result-item";
-          if (entry.openHref && entry.focusNodeId) {
-            const title = document.createElement("a");
-            title.className = "search-result-title search-result-title-link";
-            applyLinkAttrs(title, entry.openHref, query, entry.openTarget);
-            title.setAttribute("data-search-open", "true");
-            appendHighlightedText(title, entry.title, query);
-            item.appendChild(title);
-          } else {
-            const title = document.createElement("span");
-            title.className = "search-result-title";
-            appendHighlightedText(title, entry.title, query);
-            item.appendChild(title);
-          }
           const result = entry.openHref ? document.createElement("a") : document.createElement("button");
           if (entry.openHref) {
             applyLinkAttrs(result, entry.openHref, query, entry.openTarget, entry.openNodeId, entry.openPageHref);
@@ -122,13 +109,16 @@ export function buildBrowserSearch(): string {
             result.setAttribute("data-node-id", entry.focusNodeId);
           }
           result.className = "search-result";
+          const title = document.createElement("span");
+          title.className = "search-result-title";
+          appendHighlightedText(title, entry.title, query);
           const metaEl = document.createElement("span");
           metaEl.className = "search-result-meta";
           metaEl.textContent = entry.kindLabel + " · " + entry.positionLabel;
           const snippetEl = document.createElement("span");
           snippetEl.className = "search-result-snippet";
           appendHighlightedText(snippetEl, getSearchResultSnippet(entry, query), query);
-          result.append(metaEl, snippetEl);
+          result.append(title, metaEl, snippetEl);
           item.appendChild(result);
           searchResults.appendChild(item);
         }

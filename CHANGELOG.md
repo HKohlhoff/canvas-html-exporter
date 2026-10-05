@@ -69,6 +69,8 @@ first.
   HTML target use the result area to focus the Canvas node.
 - Show the active Canvas search scope directly below the Search heading and
   state when recursively subordinate Canvases are included.
+- Keep every result title inside its bordered clickable result card so it
+  remains visible when Search is restored after **Back**.
 
 ### Development
 
