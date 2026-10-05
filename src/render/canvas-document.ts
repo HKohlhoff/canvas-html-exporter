@@ -16,7 +16,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const foldingInitiallyEnabled = options.foldingInitiallyEnabled === true;
   const exportFormat = options.exportFormat || "package";
   const canvasHomeLink = options.canvasHomeHref
-    ? `<a class="canvas-return-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a>`
+    ? `<span class="canvas-return-label">(back to: <a class="canvas-return-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a>)</span>`
     : "";
   const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
   const initialFoldState = foldingInitiallyEnabled ? options.initialFoldState : undefined;

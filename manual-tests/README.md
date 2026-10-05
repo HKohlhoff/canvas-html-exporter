@@ -34,10 +34,10 @@ single HTML:
   colors, connections, and overall aspect ratio should remain recognizable;
   the obsolete **Open canvas** text must not appear;
 - confirm the source return card is not rendered in the HTML, then use the
-  upper-right **Canvas** control once and confirm that the overview opens
-  immediately; in both formats it must appear as the same plain blue text link,
+  **Canvas** link once and confirm that the overview opens immediately; in both
+  formats it must appear as **(back to: Canvas)**, with only **Canvas** linked,
   not as an outlined button, directly after the node/group/connection status
-  with a small gap;
+  with a 20 px gap;
 - follow a Canvas wiki link from a text or Markdown node as well as a Canvas
   file-node card;
 - use browser Back and Forward across overview and subcanvas transitions;

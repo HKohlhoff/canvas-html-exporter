@@ -1004,8 +1004,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       assert.match(rootPreviewHtml, /class="canvas-card-title">Child canvas<\/span>/);
       assert.doesNotMatch(childHtml, /Open canvas/);
       assert.doesNotMatch(rootPreviewHtml, /Open canvas/);
-      assert.match(childHtml, /<div class="page-header-meta">\s+<p>[\s\S]*?<\/p>\s+<a class="canvas-return-link"[\s\S]*?<\/a>\s+<\/div>/);
-      assert.match(childHtml, /\.page-header-meta \{[\s\S]*?align-items: baseline;\s+gap: 8px;[\s\S]*?\}/);
+      assert.match(childHtml, /<div class="page-header-meta">\s+<p>[\s\S]*?<\/p>\s+<span class="canvas-return-label">\(back to: <a class="canvas-return-link"[\s\S]*?<\/a>\)<\/span>\s+<\/div>/);
+      assert.match(childHtml, /\.page-header-meta \{[\s\S]*?align-items: baseline;\s+gap: 20px;[\s\S]*?\}/);
       if (exportFormat === "single-html") {
         assert.match(childHtml, /class="canvas-return-link" href="#" target="_parent">Canvas<\/a>/);
         for (const page of result.canvasPages) {

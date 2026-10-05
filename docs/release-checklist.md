@@ -99,8 +99,9 @@ npm run build:prod
 - Internal links, anchors, embeds and missing-target fallbacks work.
 - Linked Canvas file nodes and wiki links open recursively in one click;
   the redundant source return card stays hidden, the upper-right **Canvas**
-  link follows the node/group/connection status with a small gap, returns to
-  the overview, and browser history, shared targets, cycles, and invalid
+  **(back to: Canvas)** label follows the node/group/connection status with a
+  20 px gap, only **Canvas** is linked and returns to the overview, and browser
+  history, shared targets, cycles, and invalid
   target fallback work in package and single HTML.
 - Canvas cards show the linked diagram preview in both formats without an
   **Open canvas** label or external preview asset.

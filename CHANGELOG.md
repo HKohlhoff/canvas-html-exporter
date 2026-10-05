@@ -15,8 +15,9 @@ first.
   the overview, so a redundant source return card is not rendered. Canvas
   cards show an offline diagram preview instead of a separate **Open canvas**
   action label. Package subpages present the return as the same plain text link
-  used by single HTML rather than as an extra outlined button; both place it
-  directly after the node/group/connection status with a small gap.
+  used by single HTML rather than as an extra outlined button; both render
+  **(back to: Canvas)** directly after the node/group/connection status with a
+  20 px gap, with only **Canvas** linked.
 
 ### Development
 
