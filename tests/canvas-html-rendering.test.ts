@@ -1494,8 +1494,9 @@ await test("renders descendant search results as navigable page entries", async 
 
   assert.match(html, /"id":"child\.canvas:note"/);
   assert.match(html, /"text":"Untergeordnete Notiz Kurzer Ausschnitt Volltextbegriff"/);
-  assert.match(html, /const result = entry\.focusNodeId \? document\.createElement\("button"\) : document\.createElement\("a"\)/);
+  assert.match(html, /const result = entry\.openHref \? document\.createElement\("a"\) : document\.createElement\("button"\)/);
   assert.match(html, /result\.setAttribute\("data-search-open", "true"\)/);
+  assert.match(html, /result\.setAttribute\("aria-label", "Open " \+ entry\.title\)/);
   assert.match(html, /function getSearchResultSnippet\(entry, query\)/);
   assert.match(html, /type: "canvas-html-search-query"/);
   assert.match(html, /"openNodeId":"note-1"/);

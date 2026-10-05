@@ -112,13 +112,14 @@ export function buildBrowserSearch(): string {
             appendHighlightedText(title, entry.title, query);
             item.appendChild(title);
           }
-          const result = entry.focusNodeId ? document.createElement("button") : document.createElement("a");
-          if (entry.focusNodeId) {
-            result.type = "button";
-            result.setAttribute("data-node-id", entry.focusNodeId);
-          } else if (entry.openHref) {
+          const result = entry.openHref ? document.createElement("a") : document.createElement("button");
+          if (entry.openHref) {
             applyLinkAttrs(result, entry.openHref, query, entry.openTarget, entry.openNodeId, entry.openPageHref);
             result.setAttribute("data-search-open", "true");
+            result.setAttribute("aria-label", "Open " + entry.title);
+          } else if (entry.focusNodeId) {
+            result.type = "button";
+            result.setAttribute("data-node-id", entry.focusNodeId);
           }
           result.className = "search-result";
           const metaEl = document.createElement("span");

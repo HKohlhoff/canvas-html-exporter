@@ -64,6 +64,9 @@ first.
 - Deduplicate Search results by their referenced Vault file, preferring a card
   in the current Canvas over copies in subordinate Canvases while keeping
   independent text cards as separate results.
+- Make the complete Search result area open a card's HTML target, including
+  local results shown after returning with **Back**; only cards without an
+  HTML target use the result area to focus the Canvas node.
 
 ### Development
 

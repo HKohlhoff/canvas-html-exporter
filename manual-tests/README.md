@@ -77,7 +77,8 @@ single HTML:
   appears only once in Search, with a current-Canvas result taking precedence;
 - from a deeply found Markdown page, use **Back** and **Canvas** separately in
   both formats; confirm the destination Canvas is normally fitted and Search
-  reopens with the original query;
+  reopens with the original query; click the same local result again and
+  confirm the complete result area reopens its file page;
 - from a subcanvas open a Markdown page, PDF viewer, and link page; confirm
   **Back** returns to that subcanvas and **Canvas** returns to the root
   overview. Repeat in single HTML and confirm a root-owned page has no
