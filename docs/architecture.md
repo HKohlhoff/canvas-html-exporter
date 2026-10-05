@@ -59,14 +59,16 @@ renderer turns this projection into inline SVG. This keeps previews identical
 in package and single HTML, offline-capable, cycle-safe, and independent of
 screenshots or browser automation.
 
-The export layer also derives a read-only contents model after recursive
+The export layer also derives a read-only navigation model after recursive
 preparation. A deterministic first-visit traversal turns the Canvas graph into
 a finite navigation hierarchy; shared targets and cycles are not expanded a
 second time. Every Canvas document receives the same hierarchy plus the
 Markdown, PDF-viewer, and link-node pages directly represented by nodes in
 that document. The renderer owns the fixed side-panel DOM and interaction;
 opening it adds page padding equal to the panel width so the current view stays
-visible beside it, and closing it restores the full width. Package links
+visible beside it, and closing it restores the full width. The main Canvas owns
+the global open/closed state; subcanvas changes are local and the next page
+again applies the global state. Package links
 remain relative files, while links from an embedded single-HTML subcanvas to a
 Canvas target navigate its parent page; local page entries remain inside that
 subcanvas's isolated virtual-page scope.

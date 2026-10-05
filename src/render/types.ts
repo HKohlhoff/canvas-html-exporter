@@ -88,6 +88,7 @@ export interface ExportOptions {
   showMinimap?: boolean;
   showSearch?: boolean;
   foldingInitiallyEnabled?: boolean;
+  navigationInitiallyOpen?: boolean;
   exportFormat?: "package" | "single-html";
   canvasHomeHref?: string;
   canvasHomeTarget?: "_parent";

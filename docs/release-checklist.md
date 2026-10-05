@@ -105,11 +105,14 @@ npm run build:prod
   target fallback work in package and single HTML.
 - Canvas cards show the linked diagram preview in both formats without an
   **Open canvas** label or external preview asset.
-- **Contents** opens as a fixed left panel on every Canvas page, keeps the page
+- **Navigation** opens as a fixed left panel on every Canvas page, keeps the page
   visible beside it, restores full width on close, shows each shared/cyclic Canvas only
   once, highlights the current Canvas, and opens its directly contained
   Markdown, PDF-viewer, and link-node pages in the correct package or embedded
   single-HTML scope. Close, `Esc`, and keyboard focus work.
+- The configured initial Navigation state is respected. Toggling it on the
+  main Canvas persists across following pages, while a subcanvas toggle remains
+  local and the next page returns to the main Canvas state.
 - HTML pages owned by a subcanvas show **Back** to that subcanvas and **Canvas**
   to the root overview in both formats; root-owned pages omit redundant
   **Back** navigation.

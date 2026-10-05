@@ -100,6 +100,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
         headingColors,
         inlineStyleColors,
         foldingInitiallyEnabled: settings.foldingInitialState !== "none",
+        navigationInitiallyOpen: settings.navigationInitialState === "open",
         initialFoldState: initialFoldState ?? undefined,
       });
       const canvasColorKeys = new Set<string>();

@@ -27,8 +27,8 @@ export function renderContents(navigation: ContentsNavigation | undefined): stri
   return `<div id="contents-overlay" class="contents-overlay" hidden>
     <aside id="contents-panel" class="contents-panel" role="dialog" aria-modal="true" aria-labelledby="contents-title">
       <header class="contents-header">
-        <h2 id="contents-title">Contents</h2>
-        <button id="contents-close-button" class="contents-close-button" type="button" aria-label="Close contents">Close</button>
+        <h2 id="contents-title">Navigation</h2>
+        <button id="contents-close-button" class="contents-close-button" type="button" aria-label="Close navigation">Close</button>
       </header>
       <nav class="contents-navigation" aria-label="Exported pages">
         ${canvasSection}

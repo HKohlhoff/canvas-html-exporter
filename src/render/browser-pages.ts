@@ -126,6 +126,7 @@ export function buildBrowserPages(): string {
         if (!canvasShell || !singlePageView) return;
         canvasShell.hidden = false;
         singlePageView.hidden = true;
+        restoreContentsForCanvasView();
         document.title = baseDocumentTitle;
       }
 
@@ -220,6 +221,16 @@ export function buildBrowserPages(): string {
         applySearchHighlights(singlePageBody, parsePageSearchQuery(window.location.hash));
         canvasShell.hidden = true;
         singlePageView.hidden = false;
+        if (template.dataset.pageKind === "canvas") {
+          hideContentsForEmbeddedCanvas();
+          const frame = singlePageBody.querySelector(".single-canvas-frame");
+          if (frame) {
+            frame.addEventListener("load", () => sendNavigationStateToCanvasFrame(frame), { once: true });
+            window.setTimeout(() => sendNavigationStateToCanvasFrame(frame), 0);
+          }
+        } else {
+          restoreContentsForCanvasView();
+        }
         document.title = (template.dataset.pageTitle || "Page") + " - " + baseDocumentTitle;
         window.scrollTo({ top: 0, behavior: "auto" });
         const anchor = parsePageAnchorHash(window.location.hash);

@@ -178,7 +178,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     </div></details>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
-    ${contentsHtml ? `<button id="contents-toolbar-button" type="button" onclick="openContents()">Contents</button>` : ""}
+    ${contentsHtml ? `<button id="contents-toolbar-button" type="button" onclick="openContents()">Navigation</button>` : ""}
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>
@@ -198,8 +198,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   </div>
   ${minimapHtml}
   ${searchHtml}
-  ${contentsHtml}
   </div>
+  ${contentsHtml}
   ${embeddedPagesHtml}
   <script>${buildBrowserRuntime({ exportFormat, options, theme, edgePaletteColors, edgesData, searchEntries, foldingGraph, groupNodeIds, initialFoldState, nodes, foldingInitiallyEnabled, bounds, hasImportedFolding })}  </script>
 </body>

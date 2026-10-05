@@ -24,6 +24,7 @@ const settings: PluginSettings = {
   highlightingTheme: "shiki",
   showMinimap: true,
   showSearch: true,
+  navigationInitialState: "closed",
 };
 
 test("reads legacy top-level settings without losing the migration source", () => {

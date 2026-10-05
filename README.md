@@ -58,7 +58,7 @@ A **demo-vault** with the complete content showcase can be downloaded from the
 - Show Markdown file nodes with a preview and export them as standalone HTML pages or embedded single-file pages
 - Follow linked Canvas file nodes and Canvas wiki links recursively, with cycle-safe navigation between overview and subcanvases
 - Show linked Canvas cards with an offline diagram preview of their groups, nodes, colors, and connections
-- Open a portable fixed contents panel with the Canvas hierarchy and the HTML pages directly contained in the current Canvas
+- Open a portable fixed Navigation panel with the Canvas hierarchy and the HTML pages directly contained in the current Canvas
 - Rewrite internal Markdown links, wiki links, heading links, section embeds, and block references
 - Copy assets into package exports or inline them into single HTML exports
 - Support image, PDF, audio, video, and generic file nodes
@@ -256,9 +256,9 @@ the navigation history.
 If a linked Canvas cannot be parsed, the normal generic-file fallback is used
 for that target and the rest of the export continues.
 
-### Exported page contents
+### Exported page navigation
 
-Use **Contents** in the Canvas toolbar to open a fixed navigation panel on the
+Use **Navigation** in the Canvas toolbar to open a fixed panel on the
 left. The current page remains visible beside it and returns to the full width
 when the panel is closed. The
 **Canvases** section shows the overview and recursively linked subcanvases as a
@@ -273,6 +273,11 @@ single HTML export. Each embedded subcanvas keeps its own local page list, so
 its Markdown and other HTML pages open inside the correct embedded page scope.
 Close the panel with **Close** or `Esc`; keyboard focus remains inside it while
 it is open.
+
+The plugin setting **Navigation** chooses whether this panel starts open or
+closed. Opening or closing it on the main Canvas changes the global state used
+for the next page. A subcanvas may open or close its panel locally without
+changing that global choice; the next page again follows the main Canvas state.
 
 HTML pages opened from a linked subcanvas show **Back** and **Canvas** together.
 **Back** returns to the owning subcanvas, while **Canvas** returns directly to
@@ -337,7 +342,7 @@ If quick startup matters more than distributing one file, use `Package folder`.
    - `Canvas_Name.html` for `Single HTML file`
 4. Use the `Folding` menu to enable or disable node controls, collapse branches,
    choose a level, focus a branch, or restore the imported state.
-5. Use `Contents` to move between the Canvas overview, linked subcanvases, and
+5. Use `Navigation` to move between the Canvas overview, linked subcanvases, and
    HTML pages directly contained in the current Canvas.
 
 You can also use the ribbon icon to trigger the export.

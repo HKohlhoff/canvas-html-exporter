@@ -35,6 +35,7 @@ export type ExportSettings = {
   showMinimap?: boolean;
   showSearch?: boolean;
   foldingInitiallyEnabled?: boolean;
+  navigationInitiallyOpen?: boolean;
   initialFoldState?: CanvasFoldState;
 };
 
@@ -340,6 +341,7 @@ async function prepareCanvasDocument(
       showMinimap: ctx.settings.showMinimap,
       showSearch: ctx.settings.showSearch,
       foldingInitiallyEnabled: ctx.settings.foldingInitiallyEnabled === true,
+      navigationInitiallyOpen: ctx.settings.navigationInitiallyOpen === true,
       canvasColors: ctx.settings.canvasColors,
       calloutColors: ctx.settings.calloutColors,
       headingColors: ctx.settings.headingColors,
@@ -586,7 +588,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
     iframe{display:block;width:100%;height:calc(100vh - 53px);border:none;}
   </style>
 </head>
-<body><div class="pdf-viewer-toolbar">${backHrefForViewer ? `<a class="pdf-viewer-back-link" href="${escapeHtmlAttr(backHrefForViewer)}">Back</a>` : ""}<a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHrefForViewer)}">Canvas</a></div><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
+<body><div class="pdf-viewer-toolbar">${backHrefForViewer ? `<a class="pdf-viewer-back-link" href="${escapeHtmlAttr(backHrefForViewer)}">Back</a>` : ""}<a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHrefForViewer)}">Canvas</a></div><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe><script>${buildPackageNavigationLinkScript()}</script></body>
 </html>`;
     if (ctx.exportFormat !== "single-html") {
       await writeTextFile(ctx.app, viewerPath, viewerHtml, ctx.outputMode);
@@ -1360,6 +1362,28 @@ function buildMarkdownAnchorSuffix(section: string): string {
   return headingId ? `#${headingId}` : "";
 }
 
+function buildPackageNavigationLinkScript(): string {
+  return `(() => {
+    const navigation = new URLSearchParams(window.location.search).get("navigation");
+    if (navigation !== "open" && navigation !== "closed") return;
+    document.querySelectorAll('a[href]').forEach((link) => {
+      const href = link.getAttribute("href") || "";
+      if (!href || href.startsWith("#")) return;
+      try {
+        const url = new URL(href, window.location.href);
+        const isLocalTarget = url.protocol === window.location.protocol
+          && (url.protocol === "file:" || url.origin === window.location.origin);
+        if (!isLocalTarget) return;
+        if (!url.pathname.toLowerCase().endsWith(".html")) return;
+        url.searchParams.set("navigation", navigation);
+        link.setAttribute("href", url.href);
+      } catch {
+        // Leave malformed or unsupported links unchanged.
+      }
+    });
+  })();`;
+}
+
 function buildLinkDocumentHtml(
   title: string,
   url: string,
@@ -1531,6 +1555,7 @@ function buildLinkDocumentHtml(
   </div>
   <script>
     (() => {
+      ${buildPackageNavigationLinkScript()}
       const status = document.getElementById("link-status");
       const preview = document.getElementById("link-preview");
       const fallback = document.getElementById("link-fallback");

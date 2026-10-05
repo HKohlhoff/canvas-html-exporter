@@ -964,8 +964,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         darkMode: false,
         outputDir: "out",
         exportFormat,
+        navigationInitiallyOpen: true,
       });
       assert.equal(result.canvasPages.length, 2);
+      assert.equal(result.options.navigationInitiallyOpen, true);
+      assert.ok(result.canvasPages.every((page) => page.options.navigationInitiallyOpen === true));
       assert.deepEqual(
         new Set(result.canvasPages.map((page) => page.sourcePath)),
         new Set(["nested/child.canvas", "nested/grand.canvas"]),
@@ -1005,7 +1008,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       assert.match(childHtml, /class="canvas-card-preview"/);
       assert.match(rootPreviewHtml, /class="canvas-card-preview-edges"><line /);
       assert.match(rootPreviewHtml, /class="canvas-card-title">Child canvas<\/span>/);
-      assert.match(rootPreviewHtml, /id="contents-toolbar-button"[^>]*>Contents<\/button>/);
+      assert.match(rootPreviewHtml, /id="contents-toolbar-button"[^>]*>Navigation<\/button>/);
       assert.match(rootPreviewHtml, /id="contents-panel"[\s\S]*?<h3>Canvases<\/h3>/);
       assert.match(rootPreviewHtml, /class="contents-link is-current" aria-current="page">root<\/span>/);
       assert.doesNotMatch(childHtml, /Open canvas/);

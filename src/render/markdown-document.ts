@@ -189,6 +189,24 @@ export function buildMarkdownDocumentHtml(
     (() => {
       const params = new URLSearchParams(window.location.search);
       const query = (params.get("q") || "").trim();
+      const navigation = params.get("navigation");
+      if (navigation === "open" || navigation === "closed") {
+        document.querySelectorAll('a[href]').forEach((link) => {
+          const href = link.getAttribute("href") || "";
+          if (!href || href.startsWith("#")) return;
+          try {
+            const url = new URL(href, window.location.href);
+            const isLocalTarget = url.protocol === window.location.protocol
+              && (url.protocol === "file:" || url.origin === window.location.origin);
+            if (!isLocalTarget) return;
+            if (!url.pathname.toLowerCase().endsWith(".html")) return;
+            url.searchParams.set("navigation", navigation);
+            link.setAttribute("href", url.href);
+          } catch {
+            // Leave malformed or unsupported links unchanged.
+          }
+        });
+      }
       const root = document.querySelector(".md-page");
       if (!root) return;
 

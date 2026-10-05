@@ -16,6 +16,8 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
     (() => {
       const exportFormat = ${serializeScriptData(exportFormat)};
       const baseDocumentTitle = ${serializeScriptData(options.title)};
+      const isRootCanvas = ${serializeScriptData(!options.canvasHomeHref)};
+      const navigationInitiallyOpen = ${serializeScriptData(options.navigationInitiallyOpen === true)};
       const toolbar = document.querySelector(".toolbar");
       const canvasShell = document.getElementById("canvas-shell");
       const edgeLayer = document.getElementById("edge-layer");

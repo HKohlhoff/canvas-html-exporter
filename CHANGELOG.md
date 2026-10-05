@@ -18,11 +18,14 @@ first.
   used by single HTML rather than as an extra outlined button; both render
   **(back to: Canvas)** directly after the node/group/connection status with a
   20 px gap, with only **Canvas** linked.
-- Add a fixed **Contents** panel to exported Canvas pages. It keeps the current
+- Add a fixed **Navigation** panel to exported Canvas pages. It keeps the current
   page visible beside the navigation, shows a cycle-safe
   Canvas hierarchy, highlights the current Canvas, and lists the Markdown,
   PDF-viewer, and link-node HTML pages directly contained in that Canvas in
   both package and single-HTML exports.
+- Add a **Navigation** setting for the initial open/closed state. Changes made
+  on the main Canvas become the global state for following pages; subcanvases
+  can temporarily open or close their panel without changing it.
 - Add **Back** beside **Canvas** on HTML pages owned by a subcanvas, returning
   to that subcanvas while **Canvas** continues to open the main overview.
 
