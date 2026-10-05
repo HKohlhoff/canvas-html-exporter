@@ -123,7 +123,7 @@ export function buildSearchEntry(
   node: CanvasNode,
   offsetX: number,
   offsetY: number,
-): { id: string; title: string; snippet: string; text: string; kindLabel: string; positionLabel: string; openHref?: string } {
+): { id: string; title: string; snippet: string; text: string; kindLabel: string; positionLabel: string; openHref?: string; openTarget?: "_parent" } {
   const frame = getNodeFrame(node, offsetX, offsetY);
   const previewText = node.previewHtml
     ? normalizeSearchText(htmlToSearchText(node.previewHtml))
@@ -147,6 +147,7 @@ export function buildSearchEntry(
     kindLabel: humanizeNodeKind(node),
     positionLabel: `x ${Math.round(frame.left)} · y ${Math.round(frame.top)}`,
     openHref: resolveNodeOpenHref(node),
+    openTarget: node.canvasNavigationTarget,
   };
 }
 
@@ -163,6 +164,7 @@ function defaultNodeTitle(node: CanvasNode): string {
 function humanizeNodeKind(node: CanvasNode): string {
   const type = (node.type || "text").toLowerCase();
   if (type === "file" && node.fileKind === "markdown") return "Markdown";
+  if (type === "file" && node.fileKind === "canvas") return "Canvas";
   if (type === "file" && node.fileKind === "image") return "Image";
   if (type === "file" && node.fileKind === "pdf") return "PDF";
   if (type === "file" && node.fileKind === "audio") return "Audio";
@@ -194,13 +196,14 @@ function htmlToSearchText(html: string | undefined): string {
     .replace(/&quot;/gi, '"');
 }
 
-function buildAnchorAttributes(href: string): string {
+function buildAnchorAttributes(href: string, target?: "_parent"): string {
   const safeHref = escapeAttribute(href);
-  if (href.startsWith("#page-")) {
+  const targetAttr = target ? ` target="${target}"` : "";
+  if (href.startsWith("#page-") && !target) {
     const pageId = href.replace(/^#page-/, "").split(/[?#]/)[0];
     return `href="${safeHref}" data-inline-page="${escapeAttribute(pageId)}"`;
   }
-  return `href="${safeHref}"`;
+  return `href="${safeHref}"${targetAttr}`;
 }
 
 async function renderNodeContent(
@@ -233,7 +236,7 @@ async function renderNodeContent(
   if (type === "file") {
     const displayName = escapeHtml(node.displayName || node.file || "File");
     const href = escapeAttribute(
-      node.fileKind === "markdown" && node.canvasHref
+      (node.fileKind === "markdown" || node.fileKind === "canvas") && node.canvasHref
         ? node.canvasHref
         : node.exportHtmlPath || node.exportPath || node.file || "",
     );
@@ -248,6 +251,10 @@ async function renderNodeContent(
         : (node.previewText ? `<p class="md-card-preview-text">${escapeHtml(node.previewText)}</p>` : "");
 
       return `<div class="md-card"><a class="md-card-title-link" ${buildAnchorAttributes(href)}><div class="md-card-title">${displayName}</div></a>${preview}</div>`;
+    }
+
+    if (node.fileKind === "canvas") {
+      return `<a class="canvas-card-link" ${buildAnchorAttributes(href, node.canvasNavigationTarget)}><span class="canvas-card-title">${displayName}</span><span class="canvas-card-action">Open canvas</span></a>`;
     }
 
     if (node.fileKind === "pdf") {

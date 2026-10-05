@@ -43,8 +43,9 @@ export interface CanvasNode {
   exportPath?: string;
   exportHtmlPath?: string;
   canvasHref?: string;
+  canvasNavigationTarget?: "_parent";
   displayName?: string;
-  fileKind?: "image" | "markdown" | "pdf" | "audio" | "video" | "file";
+  fileKind?: "image" | "markdown" | "canvas" | "pdf" | "audio" | "video" | "file";
   previewText?: string;
   previewHtml?: string;
   renderedTextHtml?: string;
@@ -93,7 +94,7 @@ export interface ExportOptions {
 export interface EmbeddedPage {
   id: string;
   title: string;
-  kind: "markdown" | "link" | "pdf";
+  kind: "markdown" | "canvas" | "link" | "pdf";
   bodyHtml: string;
 }
 

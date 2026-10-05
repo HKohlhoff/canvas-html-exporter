@@ -42,13 +42,31 @@ export type ExportResult = {
   outputKind: "folder" | "file";
   data: PreparedCanvasData;
   options: ExportOptions;
+  canvasPages: ExportedCanvasPage[];
 };
 
 type PreparedCanvasData = CanvasData;
 
+export type ExportedCanvasPage = {
+  sourcePath: string;
+  title: string;
+  data: PreparedCanvasData;
+  options: ExportOptions;
+  outputPath?: string;
+  pageId?: string;
+};
+
+type CanvasRegistryEntry = {
+  href: string;
+  outputPath?: string;
+  pageId?: string;
+  status: "preparing" | "complete";
+};
+
 type MarkdownContext = {
   app: App;
   canvasFile: TFile;
+  rootCanvasPath: string;
   exportFormat: ExportFormatChoice;
   outputMode: "vault" | "filesystem";
   outputRoot: string;
@@ -58,7 +76,7 @@ type MarkdownContext = {
   highlightingTheme?: HighlightingThemeChoice;
   fileMap: Map<string, string>;
   htmlMap: Map<string, string>;
-  counter: number;
+  outputCounter: { value: number };
   pageStack: Set<string>;
   inlineStack: Set<string>;
   canvasColors?: Record<string, string>;
@@ -67,6 +85,10 @@ type MarkdownContext = {
   inlineStyleColors?: Record<string, string>;
   singleHtmlPages: EmbeddedPage[];
   pageIdCounter: number;
+  canvasRegistry: Map<string, CanvasRegistryEntry>;
+  canvasPages: ExportedCanvasPage[];
+  canvasPageCounter: { value: number };
+  settings: ExportSettings;
 };
 
 type LinkBase = "canvas" | "page";
@@ -74,8 +96,9 @@ type LinkBase = "canvas" | "page";
 type ResolvedInternalTarget = {
   href: string;
   found: boolean;
-  kind: "markdown" | "image" | "file" | "external" | "anchor" | "missing";
+  kind: "markdown" | "canvas" | "image" | "file" | "external" | "anchor" | "missing";
   displayText?: string;
+  navigationTarget?: "_parent";
 };
 
 function stripFrontmatter(markdown: string): string {
@@ -170,16 +193,7 @@ export async function exportCanvasPackage(
   canvasFile: TFile,
   settings: ExportSettings,
 ): Promise<ExportResult> {
-  const rawContent = await app.vault.read(canvasFile);
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(rawContent);
-  } catch (error) {
-    const detail = error instanceof Error ? `: ${error.message}` : "";
-    throw new Error(`Invalid canvas JSON in ${canvasFile.path}${detail}`);
-  }
-
+  const rootParsed = await readCanvasJson(app, canvasFile);
   const outputMode = isAbsoluteFilesystemPath(settings.outputDir) && settings.outputDir.trim() !== "/" ? "filesystem" : "vault";
   const baseFolder = resolveBaseFolder(settings.outputDir, outputMode);
   const safeCanvasName = safeSegment(canvasFile.basename);
@@ -199,14 +213,10 @@ export async function exportCanvasPackage(
     await ensureFolderExists(app, filesDir, outputMode);
   }
 
-  const normalized = normalizeCanvasData(parsed, canvasFile.basename);
-  const nodes = normalized.nodes;
-  const edges = normalized.edges;
-  const title = normalized.name || canvasFile.basename;
-
   const ctx: MarkdownContext = {
     app,
     canvasFile,
+    rootCanvasPath: canvasFile.path,
     exportFormat,
     outputMode,
     outputRoot: useSingleHtml ? singleHtmlPath : exportFolder,
@@ -216,7 +226,7 @@ export async function exportCanvasPackage(
     highlightingTheme: settings.highlightingTheme,
     fileMap: new Map<string, string>(),
     htmlMap: new Map<string, string>(),
-    counter: 0,
+    outputCounter: { value: 0 },
     pageStack: new Set<string>(),
     inlineStack: new Set<string>(),
     canvasColors: settings.canvasColors,
@@ -225,42 +235,154 @@ export async function exportCanvasPackage(
     inlineStyleColors: settings.inlineStyleColors,
     singleHtmlPages: [],
     pageIdCounter: 0,
+    canvasRegistry: new Map<string, CanvasRegistryEntry>(),
+    canvasPages: [],
+    canvasPageCounter: { value: 0 },
+    settings,
   };
 
-  const preparedNodes: CanvasNode[] = [];
-  for (const node of nodes) {
-    preparedNodes.push(await prepareNode(ctx, node));
+  ctx.canvasRegistry.set(canvasFile.path, {
+    href: useSingleHtml ? "#" : "index.html",
+    status: "preparing",
+  });
+  const root = await prepareCanvasDocument(ctx, canvasFile, settings.initialFoldState, rootParsed);
+  const rootEntry = ctx.canvasRegistry.get(canvasFile.path);
+  if (rootEntry) rootEntry.status = "complete";
+  if (useSingleHtml && ctx.canvasPages.length > 0) {
+    root.options.embeddedPages = [
+      ...(root.options.embeddedPages || []),
+      ...ctx.canvasPages.map((page) => ({
+        id: page.pageId || "",
+        title: page.title,
+        kind: "canvas" as const,
+        bodyHtml: "",
+      })),
+    ];
   }
-
-  const nodeIds = new Set(preparedNodes.map((node) => node.id));
-  const preparedEdges = edges.filter((edge) => nodeIds.has(edge.fromNode) && nodeIds.has(edge.toNode));
-  const initialFoldState = settings.foldingInitiallyEnabled === true && settings.initialFoldState
-    ? filterCanvasFoldState(
-      settings.initialFoldState,
-      nodeIds,
-      preparedEdges.flatMap((edge) => edge.id ? [edge.id] : []),
-    )
-    : undefined;
 
   return {
     outputPath: useSingleHtml ? singleHtmlPath : exportFolder,
     outputKind: useSingleHtml ? "file" : "folder",
+    data: root.data,
+    options: root.options,
+    canvasPages: ctx.canvasPages,
+  };
+}
+
+async function prepareCanvasDocument(
+  ctx: MarkdownContext,
+  canvasFile: TFile,
+  requestedFoldState?: CanvasFoldState,
+  parsedCanvas?: unknown,
+): Promise<{ data: PreparedCanvasData; options: ExportOptions }> {
+  const parsed = parsedCanvas === undefined
+    ? await readCanvasJson(ctx.app, canvasFile)
+    : parsedCanvas;
+  const normalized = normalizeCanvasData(parsed, canvasFile.basename);
+  const preparedNodes: CanvasNode[] = [];
+  for (const node of normalized.nodes) {
+    preparedNodes.push(await prepareNode(ctx, node));
+  }
+
+  const nodeIds = new Set(preparedNodes.map((node) => node.id));
+  const preparedEdges = normalized.edges.filter((edge) => nodeIds.has(edge.fromNode) && nodeIds.has(edge.toNode));
+  const initialFoldState = ctx.settings.foldingInitiallyEnabled === true && requestedFoldState
+    ? filterCanvasFoldState(
+      requestedFoldState,
+      nodeIds,
+      preparedEdges.flatMap((edge) => edge.id ? [edge.id] : []),
+    )
+    : undefined;
+  const title = normalized.name || canvasFile.basename;
+
+  return {
     data: { nodes: preparedNodes, edges: preparedEdges, name: title },
     options: {
-      darkMode: settings.darkMode,
+      darkMode: ctx.settings.darkMode,
       title,
-      highlightingTheme: settings.highlightingTheme,
-      showMinimap: settings.showMinimap,
-      showSearch: settings.showSearch,
-      foldingInitiallyEnabled: settings.foldingInitiallyEnabled === true,
-      calloutColors: settings.calloutColors,
-      headingColors: settings.headingColors,
-      inlineStyleColors: settings.inlineStyleColors,
-      exportFormat,
+      highlightingTheme: ctx.settings.highlightingTheme,
+      showMinimap: ctx.settings.showMinimap,
+      showSearch: ctx.settings.showSearch,
+      foldingInitiallyEnabled: ctx.settings.foldingInitiallyEnabled === true,
+      canvasColors: ctx.settings.canvasColors,
+      calloutColors: ctx.settings.calloutColors,
+      headingColors: ctx.settings.headingColors,
+      inlineStyleColors: ctx.settings.inlineStyleColors,
+      exportFormat: ctx.exportFormat,
       embeddedPages: ctx.singleHtmlPages,
       initialFoldState,
     },
   };
+}
+
+async function readCanvasJson(app: App, canvasFile: TFile): Promise<unknown> {
+  const rawContent = await app.vault.read(canvasFile);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawContent);
+  } catch (error) {
+    const detail = error instanceof Error ? `: ${error.message}` : "";
+    throw new Error(`Invalid canvas JSON in ${canvasFile.path}${detail}`);
+  }
+  return parsed;
+}
+
+function createChildCanvasContext(ctx: MarkdownContext, canvasFile: TFile): MarkdownContext {
+  return {
+    ...ctx,
+    canvasFile,
+    htmlMap: new Map<string, string>(),
+    pageStack: new Set<string>(),
+    inlineStack: new Set<string>(),
+    singleHtmlPages: [],
+    pageIdCounter: 0,
+  };
+}
+
+async function exportCanvasTarget(ctx: MarkdownContext, canvasFile: TFile): Promise<CanvasRegistryEntry> {
+  const existing = ctx.canvasRegistry.get(canvasFile.path);
+  if (existing) return existing;
+
+  ctx.canvasPageCounter.value += 1;
+  const pageNumber = ctx.canvasPageCounter.value;
+  const pageId = ctx.exportFormat === "single-html" ? `canvas-c${pageNumber}` : undefined;
+  const href = ctx.exportFormat === "single-html"
+    ? `#page-${pageId}`
+    : `canvas-${String(pageNumber).padStart(3, "0")}-${safeSegment(canvasFile.basename)}.html`;
+  const outputPath = ctx.exportFormat === "package"
+    ? joinOutputPath(ctx.outputMode, ctx.outputRoot, href)
+    : undefined;
+  const entry: CanvasRegistryEntry = {
+    href,
+    outputPath,
+    pageId,
+    status: "preparing",
+  };
+  ctx.canvasRegistry.set(canvasFile.path, entry);
+
+  try {
+    const childContext = createChildCanvasContext(ctx, canvasFile);
+    const prepared = await prepareCanvasDocument(childContext, canvasFile);
+    ctx.canvasPages.push({
+      sourcePath: canvasFile.path,
+      title: prepared.options.title,
+      data: prepared.data,
+      options: prepared.options,
+      outputPath,
+      pageId,
+    });
+    entry.status = "complete";
+    return entry;
+  } catch (error) {
+    ctx.canvasRegistry.delete(canvasFile.path);
+    throw error;
+  }
+}
+
+function canvasNavigationTarget(ctx: MarkdownContext): "_parent" | undefined {
+  return ctx.exportFormat === "single-html" && ctx.canvasFile.path !== ctx.rootCanvasPath
+    ? "_parent"
+    : undefined;
 }
 
 async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<CanvasNode> {
@@ -302,6 +424,24 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   }
 
   const ext = file.extension.toLowerCase();
+
+  if (ext === "canvas") {
+    try {
+      const target = await exportCanvasTarget(ctx, file);
+      return {
+        ...node,
+        displayName: file.basename,
+        fileKind: "canvas",
+        exportHtmlPath: target.outputPath ? target.href : undefined,
+        canvasHref: target.href,
+        canvasNavigationTarget: canvasNavigationTarget(ctx),
+      };
+    } catch (error) {
+      console.error(`[canvas-html-exporter] Subcanvas export failed for ${file.path}`, error);
+      const exportPath = await copyVaultFile(ctx, file, "file");
+      return { ...node, displayName: file.basename, fileKind: "file", exportPath };
+    }
+  }
 
   if (isImageExt(ext)) {
     const exportPath = await copyVaultFile(ctx, file, "image");
@@ -701,7 +841,7 @@ async function rewriteMarkdownHtmlAssets(
     if (resolved) {
       const label = match[3] || "";
       const attrs = match[2] || "";
-      const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href)}${attrs}>${label}</a>`;
+      const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href, resolved.navigationTarget)}${attrs}>${label}</a>`;
       result = result.replace(original, replacement);
     }
   }
@@ -759,7 +899,7 @@ async function rewriteWikiLinks(
     } else {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false, mode, linkBase);
       if (resolved) {
-        replacement = renderFileEmbed(resolved.href, targetFile, embedLabel || target, parsed.size, ctx);
+        replacement = renderFileEmbed(resolved.href, targetFile, embedLabel || target, parsed.size, ctx, resolved.navigationTarget);
       }
     }
 
@@ -782,7 +922,7 @@ async function rewriteWikiLinks(
       continue;
     }
 
-    const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href)}>${escapeHtmlAttr(alias)}</a>`;
+    const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href, resolved.navigationTarget)}>${escapeHtmlAttr(alias)}</a>`;
     result = result.replace(original, replacement);
   }
 
@@ -801,10 +941,11 @@ function renderFileEmbed(
   label: string,
   size: { width?: number; height?: number } | null,
   ctx?: MarkdownContext,
+  navigationTarget?: "_parent",
 ): string {
   const safeHref = escapeHtmlAttr(href);
   const safeLabel = escapeHtmlAttr(label || file.basename || file.name);
-  const anchorAttrs = ctx ? buildPageAnchorAttributes(ctx, href) : `href="${safeHref}" target="_blank" rel="noopener noreferrer"`;
+  const anchorAttrs = ctx ? buildPageAnchorAttributes(ctx, href, navigationTarget) : `href="${safeHref}" target="_blank" rel="noopener noreferrer"`;
 
   if (file.extension.toLowerCase() === "pdf") {
     const sizeAttrs = embedSizeAttributes(size);
@@ -823,13 +964,13 @@ function renderFileEmbed(
   return `<div class="file-embed-block"><a class="file-chip" ${anchorAttrs}>${safeLabel}</a></div>`;
 }
 
-function buildPageAnchorAttributes(ctx: MarkdownContext, href: string): string {
+function buildPageAnchorAttributes(ctx: MarkdownContext, href: string, navigationTarget?: "_parent"): string {
   const safeHref = escapeHtmlAttr(href);
-  if (ctx.exportFormat === "single-html" && href.startsWith("#page-")) {
+  if (ctx.exportFormat === "single-html" && href.startsWith("#page-") && !navigationTarget) {
     const pageId = href.replace(/^#page-/, "").split(/[?#]/)[0];
     return `href="${safeHref}" data-inline-page="${escapeHtmlAttr(pageId)}"`;
   }
-  return `href="${safeHref}"`;
+  return `href="${safeHref}"${navigationTarget ? ` target="${navigationTarget}"` : ""}`;
 }
 
 function getEmbedLabel(
@@ -911,6 +1052,26 @@ async function resolveObsidianTarget(
     };
   }
 
+  if (resolved.extension.toLowerCase() === "canvas") {
+    try {
+      const exported = await exportCanvasTarget(ctx, resolved);
+      const href = ctx.exportFormat === "single-html"
+        ? exported.href
+        : linkBase === "page"
+        ? getHrefForMarkdownPage(ctx.htmlMap.get(sourceFile.path) || "", exported.href)
+        : exported.href;
+      return {
+        href: `${href}${suffix}`,
+        found: true,
+        kind: "canvas",
+        displayText: resolved.basename,
+        navigationTarget: canvasNavigationTarget(ctx),
+      };
+    } catch (error) {
+      console.error(`[canvas-html-exporter] Linked subcanvas export failed for ${resolved.path}`, error);
+    }
+  }
+
   if (resolved.extension.toLowerCase() === "md") {
     const cached = ctx.htmlMap.get(resolved.path);
     const exported = cached || await exportMarkdownNote(ctx, resolved);
@@ -976,8 +1137,8 @@ async function copyVaultFile(ctx: MarkdownContext, file: TFile, kind: "image" | 
 }
 
 function uniqueOutputName(ctx: MarkdownContext, basename: string, extension: string): string {
-  ctx.counter += 1;
-  return buildUniqueOutputName(ctx.counter, basename, extension);
+  ctx.outputCounter.value += 1;
+  return buildUniqueOutputName(ctx.outputCounter.value, basename, extension);
 }
 
 async function ensureFolderExists(app: App, folderPath: string, outputMode: "vault" | "filesystem"): Promise<void> {

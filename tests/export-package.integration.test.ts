@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { convertCanvasToHtml } from "../src/render/converter";
 import { exportCanvasPackage } from "../src/export/exporter";
+import { escapeAttribute } from "../src/render/html";
 
 type MockFile = {
   path: string;
@@ -921,6 +922,132 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.match(markdownPage?.bodyHtml || "", /data-inline-page="p\d+"/);
     assert.match(markdownPage?.bodyHtml || "", /href="#page-p\d+"/);
   });
+
+  for (const exportFormat of ["package", "single-html"] as const) {
+    await test(`exports linked subcanvases recursively and terminates cycles in ${exportFormat}`, async () => {
+      const { app, files } = createMockApp([
+        {
+          path: "root.canvas",
+          text: JSON.stringify({
+            nodes: [
+              { id: "child-card", type: "file", file: "nested/child.canvas", x: 0, y: 0, width: 320, height: 180 },
+              { id: "child-link", type: "text", text: "[[nested/child.canvas|Child link]]", x: 360, y: 0, width: 320, height: 180 },
+            ],
+            edges: [],
+          }),
+        },
+        {
+          path: "nested/child.canvas",
+          text: JSON.stringify({
+            nodes: [
+              { id: "root-card", type: "file", file: "root.canvas", x: 0, y: 0, width: 320, height: 180 },
+              { id: "grand-card", type: "file", file: "nested/grand.canvas", x: 360, y: 0, width: 320, height: 180 },
+              { id: "root-link", type: "text", text: "[[root.canvas|Root link]]", x: 720, y: 0, width: 320, height: 180 },
+            ],
+            edges: [],
+          }),
+        },
+        {
+          path: "nested/grand.canvas",
+          text: JSON.stringify({
+            nodes: [
+              { id: "child-card", type: "file", file: "nested/child.canvas", x: 0, y: 0, width: 320, height: 180 },
+            ],
+            edges: [],
+          }),
+        },
+      ]);
+
+      const result = await exportCanvasPackage(app as never, files.get("root.canvas") as never, {
+        darkMode: false,
+        outputDir: "out",
+        exportFormat,
+      });
+      assert.equal(result.canvasPages.length, 2);
+      assert.deepEqual(
+        new Set(result.canvasPages.map((page) => page.sourcePath)),
+        new Set(["nested/child.canvas", "nested/grand.canvas"]),
+      );
+
+      const rootCard = result.data.nodes.find((node) => node.id === "child-card");
+      const rootText = result.data.nodes.find((node) => node.id === "child-link");
+      assert.equal(rootCard?.fileKind, "canvas");
+      assert.equal(rootCard?.canvasNavigationTarget, undefined);
+      assert.match(rootCard?.canvasHref || "", exportFormat === "single-html" ? /^#page-canvas-c\d+$/ : /^canvas-\d{3}-child\.html$/);
+      assert.match(rootText?.renderedTextHtml || "", exportFormat === "single-html" ? /data-inline-page="canvas-c\d+"/ : /href="canvas-\d{3}-child\.html"/);
+
+      const childPage = result.canvasPages.find((page) => page.sourcePath === "nested/child.canvas");
+      const grandPage = result.canvasPages.find((page) => page.sourcePath === "nested/grand.canvas");
+      assert.ok(childPage);
+      assert.ok(grandPage);
+      const backToRoot = childPage.data.nodes.find((node) => node.id === "root-card");
+      const grandCard = childPage.data.nodes.find((node) => node.id === "grand-card");
+      const rootLink = childPage.data.nodes.find((node) => node.id === "root-link");
+      assert.equal(backToRoot?.canvasHref, exportFormat === "single-html" ? "#" : "index.html");
+      assert.equal(backToRoot?.canvasNavigationTarget, exportFormat === "single-html" ? "_parent" : undefined);
+      assert.equal(grandCard?.canvasNavigationTarget, exportFormat === "single-html" ? "_parent" : undefined);
+      assert.equal(grandPage.data.nodes[0].canvasHref, rootCard?.canvasHref);
+      assert.match(
+        rootLink?.renderedTextHtml || "",
+        exportFormat === "single-html" ? /href="#" target="_parent"/ : /href="index\.html"/,
+      );
+
+      const childHtml = await convertCanvasToHtml(childPage.data, childPage.options);
+      assert.match(childHtml, /class="canvas-card-link"/);
+      assert.match(childHtml, /<span class="canvas-card-action">Open canvas<\/span>/);
+      if (exportFormat === "single-html") {
+        assert.match(childHtml, /href="#" target="_parent"/);
+        assert.doesNotMatch(childHtml, /href="#" data-inline-page=/);
+        for (const page of result.canvasPages) {
+          const pageHtml = await convertCanvasToHtml(page.data, page.options);
+          const embedded = result.options.embeddedPages?.find((entry) => entry.id === page.pageId);
+          assert.ok(embedded);
+          embedded.bodyHtml = `<div class="single-canvas-page"><iframe class="single-canvas-frame" srcdoc="${escapeAttribute(pageHtml)}" title="${escapeAttribute(page.title)}"></iframe></div>`;
+        }
+        const rootHtml = await convertCanvasToHtml(result.data, result.options);
+        assert.match(rootHtml, /data-page-kind="canvas"/);
+        assert.match(rootHtml, /class="single-canvas-frame"/);
+        assert.doesNotMatch(rootHtml, /srcdoc="<!DOCTYPE html>/);
+      } else {
+        assert.match(childPage?.outputPath || "", /^out\/root\/canvas-\d{3}-child\.html$/);
+        assert.match(grandPage?.outputPath || "", /^out\/root\/canvas-\d{3}-grand\.html$/);
+        assert.doesNotMatch(childHtml, /target="_parent"/);
+      }
+    });
+
+    await test(`falls back to a generic file for invalid linked canvases in ${exportFormat}`, async () => {
+      const { app, files } = createMockApp([
+        {
+          path: "root.canvas",
+          text: JSON.stringify({
+            nodes: [{ id: "broken", type: "file", file: "broken.canvas", x: 0, y: 0, width: 320, height: 180 }],
+            edges: [],
+          }),
+        },
+        { path: "broken.canvas", text: "{not valid JSON" },
+      ]);
+      const originalConsoleError = console.error;
+      console.error = () => undefined;
+      try {
+        const result = await exportCanvasPackage(app as never, files.get("root.canvas") as never, {
+          darkMode: false,
+          outputDir: "out",
+          exportFormat,
+        });
+        assert.equal(result.canvasPages.length, 0);
+        assert.equal(result.data.nodes[0].fileKind, "file");
+        if (exportFormat === "single-html") {
+          assert.match(result.data.nodes[0].exportPath || "", /^data:application\/octet-stream;base64,/);
+        } else {
+          const copiedPath = result.data.nodes[0].exportPath || "";
+          assert.match(copiedPath, /^assets\/files\/\d{3}_broken\.canvas$/);
+          assert.ok(files.has(`out/root/${copiedPath}`));
+        }
+      } finally {
+        console.error = originalConsoleError;
+      }
+    });
+  }
 })().catch((error) => {
   console.error(error);
   process.exit(1);

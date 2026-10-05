@@ -6,6 +6,13 @@ first.
 
 ## [Unreleased]
 
+### Added
+
+- Export Canvas file nodes and Canvas wiki links recursively. Package exports
+  create navigable Canvas HTML pages, while single-HTML exports embed matching
+  virtual pages; shared targets and cycles are handled once by canonical Vault
+  path.
+
 ### Development
 
 - Make the tag release workflow safe to rerun when a GitHub release already

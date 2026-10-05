@@ -8,7 +8,7 @@ export type BrowserRuntimeParameters = {
   theme: ReturnType<typeof getTheme>;
   edgePaletteColors: Record<string, string>;
   edgesData: { id: string; fromId: string; toId: string; fromSide: "top" | "bottom" | "left" | "right"; toSide: "top" | "bottom" | "left" | "right"; fromEnd: CanvasEdgeEnd; toEnd: CanvasEdgeEnd; lineStyle: "solid" | "dashed" | "dotted" | "short-dash" | "long-dash" | "dash-dot"; width: number; label: string; color: string; }[];
-  searchEntries: { id: string; title: string; snippet: string; text: string; kindLabel: string; positionLabel: string; openHref?: string; }[];
+  searchEntries: { id: string; title: string; snippet: string; text: string; kindLabel: string; positionLabel: string; openHref?: string; openTarget?: "_parent"; }[];
   foldingGraph: CanvasFoldingGraph;
   groupNodeIds: string[];
   initialFoldState: CanvasFoldState | undefined;

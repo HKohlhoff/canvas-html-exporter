@@ -19,6 +19,28 @@ Both export modes use the same semantic rendering path:
 Changes to rendering, links, assets or browser behavior must consider both
 modes.
 
+## Linked Canvas boundary
+
+The export orchestrator resolves `.canvas` file nodes and internal Canvas
+links by canonical Vault path. It owns a per-export registry so a shared target
+is prepared once and directed cycles terminate without removing the links that
+form them. Parsing, normalization and HTML rendering continue through the same
+Canvas pipeline used by the root document.
+
+Package exports write referenced Canvases as real sibling HTML pages. A single
+HTML export registers them as virtual pages in the root document and embeds
+each complete Canvas document in an isolated frame. Links from an embedded
+Canvas navigate its parent document, which preserves one-click transitions,
+browser history and the existing virtual-page runtime without introducing a
+second renderer.
+
+Each Canvas retains its own Markdown/link subpage registry and browser state;
+asset naming is shared across the complete recursive export. Only the active
+root Canvas may import the optional live Canvas Folding state. Linked Canvases
+use their saved graph and start with the exporter's normal expanded state.
+Invalid linked Canvas data falls back to the established generic-file export
+and does not abort otherwise valid output.
+
 ## Canvas Folding boundary
 
 Canvas Folding is an optional provider. The exporter may discover the plugin by

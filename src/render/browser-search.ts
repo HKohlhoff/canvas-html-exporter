@@ -56,8 +56,9 @@ export function buildBrowserSearch(): string {
         return base + separator + "q=" + encodeURIComponent(query) + hash;
       }
 
-      function applyLinkAttrs(link, href, query) {
-        if (String(href).startsWith("#page-")) {
+      function applyLinkAttrs(link, href, query, target) {
+        if (target) link.setAttribute("target", target);
+        if (String(href).startsWith("#page-") && !target) {
           link.setAttribute("href", appendSearchQueryToHref(href, query));
           link.setAttribute("data-inline-page", parseInlinePageIdFromHref(href));
           return;
@@ -83,7 +84,7 @@ export function buildBrowserSearch(): string {
           if (entry.openHref) {
             const title = document.createElement("a");
             title.className = "search-result-title search-result-title-link";
-            applyLinkAttrs(title, entry.openHref, query);
+            applyLinkAttrs(title, entry.openHref, query, entry.openTarget);
             title.setAttribute("data-search-open", "true");
             appendHighlightedText(title, entry.title, query);
             item.appendChild(title);

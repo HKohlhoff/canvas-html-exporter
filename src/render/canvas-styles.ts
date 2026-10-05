@@ -807,6 +807,45 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       padding: 0 32px 32px;
       background: transparent;
     }
+    .single-page-body .single-canvas-page {
+      height: calc(100vh - 112px);
+      min-height: 560px;
+      margin: 0 -32px -32px;
+    }
+    .single-page-body .single-canvas-frame {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: ${theme.canvasBackground};
+    }
+    .canvas-card-link {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px;
+      color: ${theme.text};
+      text-align: center;
+      text-decoration: none;
+    }
+    .canvas-card-link:hover {
+      color: ${theme.link};
+      text-decoration: none;
+    }
+    .canvas-card-title {
+      font-weight: 650;
+      overflow-wrap: anywhere;
+    }
+    .canvas-card-action {
+      color: ${theme.link};
+      font-size: 0.88em;
+      font-weight: 600;
+    }
     .single-page-body .md-page {
       max-width: none;
       margin: 0;

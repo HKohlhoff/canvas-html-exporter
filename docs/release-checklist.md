@@ -97,6 +97,9 @@ npm run build:prod
   appears while the left mouse button is held, `Esc` cancels the current drag,
   and short or interactive clicks retain their normal behavior.
 - Internal links, anchors, embeds and missing-target fallbacks work.
+- Linked Canvas file nodes and wiki links open recursively in one click;
+  overview return links, browser history, shared targets, cycles, and invalid
+  target fallback work in package and single HTML.
 - Test the documentation Canvas from `examples/demo-vault/`.
 - Test `Advanced Canvas Attributes.canvas` from the same demo vault as package
   and single HTML. Compare all supported shapes, borders, alignments, colors,

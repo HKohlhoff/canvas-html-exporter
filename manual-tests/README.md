@@ -21,6 +21,30 @@ Test both package and single-HTML export:
 - confirm offline behavior and absence of source-Vault modifications;
 - disable/re-enable the plugin and repeat one minimal export.
 
+## Linked subcanvases
+
+Use an overview Canvas that links to at least two subcanvases. Include a return
+Canvas card in every subcanvas, a shared target referenced more than once, and
+one cycle back to an already visited Canvas. Repeat all checks as package and
+single HTML:
+
+- open every subcanvas card with one click and compare its node, group and edge
+  layout with Obsidian;
+- use the return card once and confirm that the overview opens immediately;
+- follow a Canvas wiki link from a text or Markdown node as well as a Canvas
+  file-node card;
+- use browser Back and Forward across overview and subcanvas transitions;
+- confirm zoom, pan, fit/reset, search, minimap and folding inside each linked
+  Canvas;
+- confirm a shared target is present once and every reference opens it;
+- confirm a directed Canvas cycle remains navigable and does not duplicate
+  pages or stall the export;
+- move the complete package and verify all Canvas pages and assets still work
+  offline; verify the single HTML has no external local dependency;
+- include one missing or invalid Canvas target and confirm the remaining export
+  completes with the normal file fallback;
+- confirm no source Canvas is modified.
+
 ## Advanced Canvas compatibility
 
 Open `examples/demo-vault/Advanced Canvas Attributes.canvas` and repeat the
