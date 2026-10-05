@@ -54,12 +54,7 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     .page-header-meta {
       display: flex;
       align-items: baseline;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .page-header-meta p {
-      flex: 1 1 auto;
-      min-width: 0;
+      gap: 8px;
     }
     .viewport {
       overflow: auto;
