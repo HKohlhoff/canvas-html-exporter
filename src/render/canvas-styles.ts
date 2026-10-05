@@ -793,7 +793,19 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       padding: 32px 32px 0;
       background: transparent;
     }
-    .toolbar-canvas-link,
+    .single-page-toolbar[hidden] {
+      display: none;
+    }
+    .canvas-return-row {
+      display: flex;
+      justify-content: flex-end;
+      flex: 0 0 auto;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px 4px;
+    }
+    .canvas-return-link,
     .single-page-canvas-link {
       color: ${theme.link};
       text-decoration: none;
@@ -801,7 +813,7 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       font-weight: 600;
       white-space: nowrap;
     }
-    .toolbar-canvas-link:hover,
+    .canvas-return-link:hover,
     .single-page-canvas-link:hover {
       text-decoration: underline;
     }

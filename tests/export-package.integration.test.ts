@@ -986,7 +986,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       const grandCard = childPage.data.nodes.find((node) => node.id === "grand-card");
       const rootLink = childPage.data.nodes.find((node) => node.id === "root-link");
       assert.equal(backToRoot, undefined);
-      assert.equal(childPage.options.canvasHomeHref, exportFormat === "package" ? "index.html" : undefined);
+      assert.equal(childPage.options.canvasHomeHref, exportFormat === "package" ? "index.html" : "#");
+      assert.equal(childPage.options.canvasHomeTarget, exportFormat === "single-html" ? "_parent" : undefined);
       assert.equal(grandCard?.canvasNavigationTarget, exportFormat === "single-html" ? "_parent" : undefined);
       assert.ok(grandCard?.canvasPreview?.nodes.some((node) => node.id === "child-card"));
       assert.equal(grandPage.data.nodes[0].canvasHref, rootCard?.canvasHref);
@@ -1003,8 +1004,9 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       assert.match(rootPreviewHtml, /class="canvas-card-title">Child canvas<\/span>/);
       assert.doesNotMatch(childHtml, /Open canvas/);
       assert.doesNotMatch(rootPreviewHtml, /Open canvas/);
+      assert.match(childHtml, /<div class="page-header">[\s\S]*?<\/div>\s+<div class="canvas-return-row">[\s\S]*?<\/div>\s+<div class="viewport">/);
       if (exportFormat === "single-html") {
-        assert.doesNotMatch(childHtml, /class="toolbar-canvas-link"/);
+        assert.match(childHtml, /class="canvas-return-link" href="#" target="_parent">Canvas<\/a>/);
         for (const page of result.canvasPages) {
           const pageHtml = await convertCanvasToHtml(page.data, page.options);
           const embedded = result.options.embeddedPages?.find((entry) => entry.id === page.pageId);
@@ -1015,13 +1017,14 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         assert.match(rootHtml, /data-page-kind="canvas"/);
         assert.match(rootHtml, /class="single-canvas-frame"/);
         assert.match(rootHtml, /id="single-page-canvas-link"[^>]*>Canvas<\/a>/);
+        assert.match(rootHtml, /singlePageToolbar\.hidden = template\.dataset\.pageKind === "canvas"/);
         assert.doesNotMatch(rootHtml, /srcdoc="<!DOCTYPE html>/);
       } else {
         assert.match(childPage?.outputPath || "", /^out\/root\/canvas-\d{3}-child\.html$/);
         assert.match(grandPage?.outputPath || "", /^out\/root\/canvas-\d{3}-grand\.html$/);
         assert.doesNotMatch(childHtml, /target="_parent"/);
-        assert.match(childHtml, /class="toolbar-canvas-link" href="index\.html">Canvas<\/a>/);
-        assert.match(childHtml, /\.toolbar-canvas-link,\s+\.single-page-canvas-link \{\s+color: #1967d2;/);
+        assert.match(childHtml, /class="canvas-return-link" href="index\.html">Canvas<\/a>/);
+        assert.match(childHtml, /\.canvas-return-link,\s+\.single-page-canvas-link \{\s+color: #1967d2;/);
       }
     });
 

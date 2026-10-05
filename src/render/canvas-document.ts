@@ -16,7 +16,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const foldingInitiallyEnabled = options.foldingInitiallyEnabled === true;
   const exportFormat = options.exportFormat || "package";
   const canvasHomeLink = options.canvasHomeHref
-    ? `<a class="toolbar-canvas-link" href="${escapeAttribute(options.canvasHomeHref)}">Canvas</a>`
+    ? `<div class="canvas-return-row"><a class="canvas-return-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a></div>`
     : "";
   const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
   const initialFoldState = foldingInitiallyEnabled ? options.initialFoldState : undefined;
@@ -131,7 +131,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     : "";
   const embeddedPagesHtml = exportFormat === "single-html" && embeddedPages.length
     ? `<section id="single-page-view" class="single-page-view" hidden>
-    <div class="single-page-toolbar">
+    <div id="single-page-toolbar" class="single-page-toolbar">
       <a id="single-page-canvas-link" class="single-page-canvas-link" href="#">Canvas</a>
     </div>
     <main id="single-page-body" class="single-page-body"></main>
@@ -172,12 +172,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     </div></details>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
-    ${canvasHomeLink}
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>
     <p>${canvasCountSummary}<span id="hidden-node-summary" hidden></span></p>
   </div>
+  ${canvasHomeLink}
   <div class="viewport">
     <div id="zoom-area-selection" class="zoom-area-selection" hidden></div>
     <div id="zoom-area-hint" class="zoom-area-hint" role="status" hidden>Release to zoom · Esc to cancel</div>

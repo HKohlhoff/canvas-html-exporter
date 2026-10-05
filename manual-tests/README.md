@@ -36,7 +36,7 @@ single HTML:
 - confirm the source return card is not rendered in the HTML, then use the
   upper-right **Canvas** control once and confirm that the overview opens
   immediately; in both formats it must appear as the same plain blue text link,
-  not as an outlined button;
+  not as an outlined button, below the heading and above the Canvas content;
 - follow a Canvas wiki link from a text or Markdown node as well as a Canvas
   file-node card;
 - use browser Back and Forward across overview and subcanvas transitions;

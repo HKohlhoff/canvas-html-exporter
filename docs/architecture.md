@@ -37,8 +37,11 @@ second renderer.
 A Canvas file node in a linked Canvas that targets the root Canvas is treated
 as redundant export navigation and omitted from that linked page. Single HTML
 already exposes the root through its virtual-page **Canvas** control; package
-subpages receive an equivalent `index.html` toolbar link. Textual links to the
-root remain ordinary content and are preserved.
+subpages receive an equivalent `index.html` link. Subcanvas documents place
+this return row after the page heading and before the viewport. For embedded
+Canvas pages, the redundant outer virtual-page toolbar is hidden; non-Canvas
+virtual pages retain it. Textual links to the root remain ordinary content and
+are preserved.
 
 Each Canvas retains its own Markdown/link subpage registry and browser state;
 asset naming is shared across the complete recursive export. Only the active

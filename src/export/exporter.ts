@@ -315,8 +315,11 @@ async function prepareCanvasDocument(
       headingColors: ctx.settings.headingColors,
       inlineStyleColors: ctx.settings.inlineStyleColors,
       exportFormat: ctx.exportFormat,
-      canvasHomeHref: ctx.exportFormat === "package" && canvasFile.path !== ctx.rootCanvasPath
-        ? "index.html"
+      canvasHomeHref: canvasFile.path !== ctx.rootCanvasPath
+        ? ctx.exportFormat === "single-html" ? "#" : "index.html"
+        : undefined,
+      canvasHomeTarget: ctx.exportFormat === "single-html" && canvasFile.path !== ctx.rootCanvasPath
+        ? "_parent"
         : undefined,
       embeddedPages: ctx.singleHtmlPages,
       initialFoldState,

@@ -90,6 +90,7 @@ export interface ExportOptions {
   foldingInitiallyEnabled?: boolean;
   exportFormat?: "package" | "single-html";
   canvasHomeHref?: string;
+  canvasHomeTarget?: "_parent";
   embeddedPages?: EmbeddedPage[];
   initialFoldState?: CanvasFoldState;
 }

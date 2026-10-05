@@ -24,6 +24,7 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       const zoomAreaHint = document.getElementById("zoom-area-hint");
       const singlePageView = document.getElementById("single-page-view");
       const singlePageBody = document.getElementById("single-page-body");
+      const singlePageToolbar = document.getElementById("single-page-toolbar");
       const singlePageCanvasLink = document.getElementById("single-page-canvas-link");
       const minimapPanel = document.getElementById("minimap-panel");
       const minimapDragHandle = document.getElementById("minimap-drag-handle");

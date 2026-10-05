@@ -213,6 +213,9 @@ export function buildBrowserPages(): string {
         if (!template) return false;
         clearChildren(singlePageBody);
         singlePageBody.appendChild(template.content.cloneNode(true));
+        if (singlePageToolbar) {
+          singlePageToolbar.hidden = template.dataset.pageKind === "canvas";
+        }
         materializeInlineAssets(singlePageBody);
         applySearchHighlights(singlePageBody, parsePageSearchQuery(window.location.hash));
         canvasShell.hidden = true;
