@@ -246,8 +246,8 @@ The exporter identifies each referenced Canvas by its Vault path. Shared
 subcanvases are exported once, and references that form a cycle remain finite
 and navigable. In a package, linked Canvases become real HTML pages beside
 `index.html`. In a single HTML export, they become virtual pages inside the one
-file. Package subpages receive the same **Canvas** control in their toolbar,
-while single HTML uses the existing virtual-page control. Browser Back
+file. Package subpages receive the same plain blue **Canvas** text link in their
+toolbar, while single HTML uses the existing virtual-page link. Browser Back
 continues to follow the navigation history.
 
 If a linked Canvas cannot be parsed, the normal generic-file fallback is used

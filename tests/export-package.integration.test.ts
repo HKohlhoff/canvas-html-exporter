@@ -1021,6 +1021,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         assert.match(grandPage?.outputPath || "", /^out\/root\/canvas-\d{3}-grand\.html$/);
         assert.doesNotMatch(childHtml, /target="_parent"/);
         assert.match(childHtml, /class="toolbar-canvas-link" href="index\.html">Canvas<\/a>/);
+        assert.match(childHtml, /\.toolbar-canvas-link,\s+\.single-page-canvas-link \{\s+color: #1967d2;/);
       }
     });
 

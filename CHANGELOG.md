@@ -14,7 +14,8 @@ first.
   path. Linked pages use the upper-right **Canvas** control for the return to
   the overview, so a redundant source return card is not rendered. Canvas
   cards show an offline diagram preview instead of a separate **Open canvas**
-  action label.
+  action label. Package subpages present the return as the same plain text link
+  used by single HTML rather than as an extra outlined button.
 
 ### Development
 
