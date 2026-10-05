@@ -293,9 +293,15 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
       materializeInlineAssets(document);
       if (exportFormat === "package" && searchInput) {
         const initialSearchQuery = new URLSearchParams(window.location.search).get("q");
+        const initialSearchNodeId = new URLSearchParams(window.location.search).get("node");
         if (initialSearchQuery && initialSearchQuery.trim()) {
           searchInput.value = initialSearchQuery.trim();
-          openSearch();
+          runSearch(searchInput.value);
+          if (initialSearchNodeId && initialSearchNodeId.trim()) {
+            window.setTimeout(() => focusNode(initialSearchNodeId.trim()), 0);
+          } else {
+            openSearch();
+          }
         }
       }
 

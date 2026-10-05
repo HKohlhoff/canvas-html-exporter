@@ -1012,6 +1012,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       assert.equal(grandPage.data.nodes[0].canvasHref, rootCard?.canvasHref);
       assert.match(chapter?.searchText || "", /Chapter One[\s\S]*Text/);
       assert.ok(result.options.additionalSearchEntries?.some((entry) => entry.text.includes("Chapter One")));
+      assert.ok(result.options.additionalSearchEntries?.some((entry) => entry.openNodeId === "chapter"));
       assert.ok(result.options.additionalSearchEntries?.some((entry) => entry.positionLabel === "grand"));
       assert.ok(childPage.options.additionalSearchEntries?.some((entry) => entry.positionLabel === "grand"));
       assert.ok(grandPage.options.additionalSearchEntries?.every((entry) => entry.positionLabel !== "child"));

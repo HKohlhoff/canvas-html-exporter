@@ -216,10 +216,12 @@ export function buildBrowserContents(): string {
           pageStates: navigationPageStates,
         }, "*");
         const searchQuery = parsePageSearchQuery(window.location.hash);
+        const searchNodeId = parsePageNodeId(window.location.hash);
         if (searchQuery) {
           frame.contentWindow.postMessage({
             type: "canvas-html-search-query",
             query: searchQuery,
+            nodeId: searchNodeId,
           }, "*");
         }
       }
@@ -248,7 +250,12 @@ export function buildBrowserContents(): string {
           if (isRootCanvas || exportFormat !== "single-html" || event.source !== window.parent) return;
           if (typeof message.query !== "string" || !message.query.trim() || !searchInput) return;
           searchInput.value = message.query.trim();
-          openSearch();
+          runSearch(searchInput.value);
+          if (typeof message.nodeId === "string" && message.nodeId.trim()) {
+            window.setTimeout(() => focusNode(message.nodeId.trim()), 0);
+          } else {
+            openSearch();
+          }
           return;
         }
         if (message.type === "canvas-html-navigation-page-state") {

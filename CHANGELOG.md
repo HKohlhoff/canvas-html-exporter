@@ -55,7 +55,7 @@ first.
   **Navigation**, using natural number order.
 - Extend **Search...** to the complete subordinate Canvas hierarchy in package
   and single-HTML exports. Results identify and open their owning subcanvas,
-  where the same query continues automatically; Markdown pages are indexed
+  bring the matching card directly into view, and retain the query; Markdown pages are indexed
   from their full text rather than only the card preview.
 
 ### Development

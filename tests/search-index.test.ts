@@ -56,6 +56,8 @@ test("indexes every reachable descendant canvas once", () => {
   assert.ok(entries.some((entry) => entry.text.includes("Hidden full page term")));
   assert.ok(entries.some((entry) => entry.text.includes("Deep result")));
   assert.ok(entries.every((entry) => entry.focusNodeId === undefined));
+  assert.ok(entries.some((entry) => entry.openNodeId === "note"));
+  assert.ok(entries.some((entry) => entry.openNodeId === "deep"));
   assert.ok(entries.some((entry) => entry.openHref === "canvas-child.html" && entry.positionLabel === "Child"));
   assert.ok(entries.some((entry) => entry.openHref === "canvas-grand.html" && entry.positionLabel === "Grand"));
 });

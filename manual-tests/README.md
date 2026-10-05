@@ -69,7 +69,8 @@ single HTML:
   Navigation;
 - search from the overview for text that exists only in a deeply linked
   subcanvas and for text beyond a Markdown card's visible preview; confirm both
-  appear with their owning Canvas and open that Canvas. Repeat from a
+  appear with their owning Canvas, open that Canvas, and bring the matching
+  card into view with the normal search highlight. Repeat from a
   subcanvas and confirm only its subordinate hierarchy is included;
 - from a subcanvas open a Markdown page, PDF viewer, and link page; confirm
   **Back** returns to that subcanvas and **Canvas** returns to the root

@@ -122,6 +122,18 @@ export function buildBrowserPages(): string {
         return String(searchParams.get("q") || "").trim();
       }
 
+      function parsePageNodeId(hash) {
+        const value = String(hash || "").replace(/^#/, "");
+        const queryIndex = value.indexOf("?");
+        if (queryIndex >= 0) {
+          const params = new URLSearchParams(value.slice(queryIndex + 1));
+          const hashNodeId = String(params.get("node") || "").trim();
+          if (hashNodeId) return hashNodeId;
+        }
+        const searchParams = new URLSearchParams(window.location.search);
+        return String(searchParams.get("node") || "").trim();
+      }
+
       function renderCanvasShell() {
         if (!canvasShell || !singlePageView) return;
         singlePageView.classList.remove("is-canvas-page");

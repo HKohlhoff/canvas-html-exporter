@@ -1431,7 +1431,7 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /@keyframes search-hit-pulse \{/);
   assert.match(html, /@media \(prefers-reduced-motion: reduce\) \{\s+\.node\.search-hit \{\s+animation: none;/);
   assert.match(html, /target\.getBoundingClientRect\(\);\s+target\.classList\.add\("search-hit"\)/);
-  assert.match(html, /function appendSearchQueryToHref\(href, query\)/);
+  assert.match(html, /function appendSearchQueryToHref\(href, query, nodeId\)/);
   assert.match(html, /function updateActiveSearchResult\(\)/);
   assert.match(html, /function moveActiveSearchResult\(direction\)/);
   assert.match(html, /function activateCurrentSearchResult\(\)/);
@@ -1446,8 +1446,8 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /"openHref":"assets\/files\/suche-notiz\.html"|"openHref":"assets\/files\//);
   assert.match(html, /title\.setAttribute\("data-search-open", "true"\)/);
   assert.match(html, /search-result-title-link/);
-  assert.match(html, /function applyLinkAttrs\(link, href, query, target\)/);
-  assert.match(html, /link\.setAttribute\("href", appendSearchQueryToHref\(href, query\)\)/);
+  assert.match(html, /function applyLinkAttrs\(link, href, query, target, nodeId\)/);
+  assert.match(html, /link\.setAttribute\("href", appendSearchQueryToHref\(href, query, nodeId\)\)/);
   assert.match(html, /"kindLabel":"Markdown"/);
 });
 
@@ -1488,6 +1488,7 @@ await test("renders descendant search results as navigable page entries", async 
       kindLabel: "Markdown",
       positionLabel: "Untercanvas",
       openHref: "canvas-child.html",
+      openNodeId: "note-1",
     }],
   });
 
@@ -1497,8 +1498,11 @@ await test("renders descendant search results as navigable page entries", async 
   assert.match(html, /result\.setAttribute\("data-search-open", "true"\)/);
   assert.match(html, /function getSearchResultSnippet\(entry, query\)/);
   assert.match(html, /type: "canvas-html-search-query"/);
-  assert.match(html, /searchInput\.value = message\.query\.trim\(\);\s+openSearch\(\)/);
+  assert.match(html, /"openNodeId":"note-1"/);
+  assert.match(html, /params\.set\("node", nodeId\)/);
+  assert.match(html, /window\.setTimeout\(\(\) => focusNode\(message\.nodeId\.trim\(\)\), 0\)/);
   assert.match(html, /const initialSearchQuery = new URLSearchParams\(window\.location\.search\)\.get\("q"\)/);
+  assert.match(html, /window\.setTimeout\(\(\) => focusNode\(initialSearchNodeId\.trim\(\)\), 0\)/);
 });
 
 await test("omits minimap when disabled", async () => {

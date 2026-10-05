@@ -39,31 +39,35 @@ export function buildBrowserSearch(): string {
         }
       }
 
-      function appendSearchQueryToHref(href, query) {
+      function appendSearchQueryToHref(href, query, nodeId) {
         const rawHref = String(href || "");
         if (!rawHref) return "";
-        if (!query || !query.trim()) return rawHref;
+        if ((!query || !query.trim()) && !nodeId) return rawHref;
         if (rawHref.startsWith("#page-")) {
           const [pageRef, existingQuery = ""] = rawHref.slice(1).split("?");
           const params = new URLSearchParams(existingQuery);
-          params.set("q", query);
+          if (query && query.trim()) params.set("q", query);
+          if (nodeId) params.set("node", nodeId);
           return "#" + pageRef + "?" + params.toString();
         }
         const hashIndex = rawHref.indexOf("#");
         const base = hashIndex >= 0 ? rawHref.slice(0, hashIndex) : rawHref;
         const hash = hashIndex >= 0 ? rawHref.slice(hashIndex) : "";
         const separator = base.includes("?") ? "&" : "?";
-        return base + separator + "q=" + encodeURIComponent(query) + hash;
+        const params = new URLSearchParams();
+        if (query && query.trim()) params.set("q", query);
+        if (nodeId) params.set("node", nodeId);
+        return base + separator + params.toString() + hash;
       }
 
-      function applyLinkAttrs(link, href, query, target) {
+      function applyLinkAttrs(link, href, query, target, nodeId) {
         if (target) link.setAttribute("target", target);
         if (String(href).startsWith("#page-") && !target) {
-          link.setAttribute("href", appendSearchQueryToHref(href, query));
+          link.setAttribute("href", appendSearchQueryToHref(href, query, nodeId));
           link.setAttribute("data-inline-page", parseInlinePageIdFromHref(href));
           return;
         }
-        link.setAttribute("href", appendSearchQueryToHref(href, query));
+        link.setAttribute("href", appendSearchQueryToHref(href, query, nodeId));
       }
 
       function getSearchResultSnippet(entry, query) {
@@ -111,7 +115,7 @@ export function buildBrowserSearch(): string {
             result.type = "button";
             result.setAttribute("data-node-id", entry.focusNodeId);
           } else if (entry.openHref) {
-            applyLinkAttrs(result, entry.openHref, query, entry.openTarget);
+            applyLinkAttrs(result, entry.openHref, query, entry.openTarget, entry.openNodeId);
             result.setAttribute("data-search-open", "true");
           }
           result.className = "search-result";

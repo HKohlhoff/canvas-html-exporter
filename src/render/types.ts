@@ -110,6 +110,7 @@ export interface SearchEntry {
   focusNodeId?: string;
   openHref?: string;
   openTarget?: "_parent";
+  openNodeId?: string;
 }
 
 export interface ContentsNavigationItem {

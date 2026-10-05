@@ -57,6 +57,7 @@ export function buildDescendantSearchEntries(
       .map((entry) => ({
         ...entry,
         id: `${document.sourcePath}:${entry.id}`,
+        openNodeId: entry.focusNodeId,
         focusNodeId: undefined,
         positionLabel: document.title,
         openHref: document.href,
