@@ -215,6 +215,13 @@ export function buildBrowserContents(): string {
           globalOpen: globalNavigationOpen,
           pageStates: navigationPageStates,
         }, "*");
+        const searchQuery = parsePageSearchQuery(window.location.hash);
+        if (searchQuery) {
+          frame.contentWindow.postMessage({
+            type: "canvas-html-search-query",
+            query: searchQuery,
+          }, "*");
+        }
       }
 
       window.openContents = openContents;
@@ -237,6 +244,13 @@ export function buildBrowserContents(): string {
       window.addEventListener("message", (event) => {
         const message = event.data;
         if (!message || typeof message.type !== "string") return;
+        if (message.type === "canvas-html-search-query") {
+          if (isRootCanvas || exportFormat !== "single-html" || event.source !== window.parent) return;
+          if (typeof message.query !== "string" || !message.query.trim() || !searchInput) return;
+          searchInput.value = message.query.trim();
+          openSearch();
+          return;
+        }
         if (message.type === "canvas-html-navigation-page-state") {
           if (!isRootCanvas || exportFormat !== "single-html") return;
           const activeFrame = singlePageBody?.querySelector(".single-canvas-frame");

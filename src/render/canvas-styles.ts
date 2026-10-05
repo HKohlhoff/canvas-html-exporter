@@ -1263,6 +1263,7 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       gap: 6px;
     }
     .search-result {
+      display: block;
       width: 100%;
       text-align: left;
       border: 1px solid ${theme.canvasBorder};
@@ -1271,6 +1272,7 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       border-radius: 12px;
       padding: 10px 12px;
       cursor: pointer;
+      text-decoration: none;
     }
     .search-result:hover {
       background: ${theme.chipBackground};

@@ -8,6 +8,19 @@ export type ContentsCanvasDocument = {
   data: CanvasData;
 };
 
+const navigationCollator = new Intl.Collator("de", {
+  sensitivity: "base",
+  numeric: true,
+});
+
+export function compareNavigationTitles(left: string, right: string): number {
+  return navigationCollator.compare(left, right);
+}
+
+function sortNavigationItems(items: ContentsNavigationItem[]): ContentsNavigationItem[] {
+  return items.sort((left, right) => compareNavigationTitles(left.title, right.title));
+}
+
 export function buildContentsNavigation(
   documents: ContentsCanvasDocument[],
   rootSourcePath: string,
@@ -41,7 +54,7 @@ export function buildContentsNavigation(
       kind: "canvas",
       current: !currentPageHref && sourcePath === currentSourcePath,
       target,
-      children: children.length ? children : undefined,
+      children: children.length ? sortNavigationItems(children) : undefined,
     };
   }
 
@@ -75,7 +88,7 @@ export function buildContentsNavigation(
     .filter((item): item is ContentsNavigationItem => item !== null);
   return {
     canvases: [...(root ? [root] : []), ...additionalCanvases],
-    pages,
+    pages: sortNavigationItems(pages),
   };
 }
 

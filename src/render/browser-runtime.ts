@@ -291,6 +291,13 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
       window.addEventListener("offline", syncLinkOfflineState);
 
       materializeInlineAssets(document);
+      if (exportFormat === "package" && searchInput) {
+        const initialSearchQuery = new URLSearchParams(window.location.search).get("q");
+        if (initialSearchQuery && initialSearchQuery.trim()) {
+          searchInput.value = initialSearchQuery.trim();
+          openSearch();
+        }
+      }
 
     })();
 `;

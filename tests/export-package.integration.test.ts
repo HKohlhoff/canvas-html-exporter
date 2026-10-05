@@ -1010,6 +1010,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       assert.equal(grandCard?.canvasNavigationTarget, exportFormat === "single-html" ? "_parent" : undefined);
       assert.ok(grandCard?.canvasPreview?.nodes.some((node) => node.id === "child-card"));
       assert.equal(grandPage.data.nodes[0].canvasHref, rootCard?.canvasHref);
+      assert.match(chapter?.searchText || "", /Chapter One[\s\S]*Text/);
+      assert.ok(result.options.additionalSearchEntries?.some((entry) => entry.text.includes("Chapter One")));
+      assert.ok(result.options.additionalSearchEntries?.some((entry) => entry.positionLabel === "grand"));
+      assert.ok(childPage.options.additionalSearchEntries?.some((entry) => entry.positionLabel === "grand"));
+      assert.ok(grandPage.options.additionalSearchEntries?.every((entry) => entry.positionLabel !== "child"));
       assert.match(
         rootLink?.renderedTextHtml || "",
         exportFormat === "single-html" ? /href="#" target="_parent"/ : /href="index\.html"/,

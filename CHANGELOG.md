@@ -51,6 +51,12 @@ first.
   **Navigation** panel is open, so the panel no longer covers the search field.
 - Add **Back** beside **Canvas** on HTML pages owned by a subcanvas, returning
   to that subcanvas while **Canvas** continues to open the main overview.
+- Sort sibling Canvases and the current Canvas's page entries alphabetically in
+  **Navigation**, using natural number order.
+- Extend **Search...** to the complete subordinate Canvas hierarchy in package
+  and single-HTML exports. Results identify and open their owning subcanvas,
+  where the same query continues automatically; Markdown pages are indexed
+  from their full text rather than only the card preview.
 
 ### Development
 

@@ -14,6 +14,7 @@ import {
   markdownToHtml,
 } from "../render/converter";
 import { buildContentsNavigation, rebaseContentsNavigation, type ContentsCanvasDocument } from "./contents";
+import { buildDescendantSearchEntries } from "./search-index";
 import { buildPackagePageNavigation } from "../render/package-page-navigation";
 import { getTheme } from "../render/theme";
 import { isAbsoluteFilesystemPath, requireDesktopNodeApis } from "../helpers/desktop-paths";
@@ -290,8 +291,20 @@ export async function exportCanvasPackage(
     canvasFile.path,
     ctx.exportFormat,
   );
+  root.options.additionalSearchEntries = buildDescendantSearchEntries(
+    contentsDocuments,
+    canvasFile.path,
+    canvasFile.path,
+    ctx.exportFormat,
+  );
   for (const page of ctx.canvasPages) {
     page.options.contents = buildContentsNavigation(
+      contentsDocuments,
+      canvasFile.path,
+      page.sourcePath,
+      ctx.exportFormat,
+    );
+    page.options.additionalSearchEntries = buildDescendantSearchEntries(
       contentsDocuments,
       canvasFile.path,
       page.sourcePath,
@@ -559,6 +572,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
     let exportHtmlPath: string | undefined;
     let previewText: string | undefined;
     let previewHtml: string | undefined;
+    let searchText: string | undefined;
     let canvasHref: string | undefined;
 
     try {
@@ -577,6 +591,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       const preview = await buildMarkdownPreview(ctx, file);
       previewText = preview.text;
       previewHtml = preview.html;
+      searchText = preview.searchText;
     } catch (error) {
       console.error(`[canvas-html-exporter] Markdown preview generation failed for ${file.path}`, error);
     }
@@ -590,6 +605,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
         canvasHref,
         previewText: previewText || undefined,
         previewHtml: previewHtml || undefined,
+        searchText,
       };
     }
 
@@ -601,6 +617,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       exportPath: fallbackExportPath,
       previewText: previewText || undefined,
       previewHtml: previewHtml || undefined,
+      searchText,
     };
   }
 
@@ -1259,7 +1276,7 @@ async function resolveObsidianTarget(
   };
 }
 
-async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<{ text: string; html: string }> {
+async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<{ text: string; html: string; searchText: string }> {
   const raw = stripFrontmatter(await ctx.app.vault.read(file));
   const previewSource = raw.slice(0, 2000);
   const text = buildPreviewText(raw);
@@ -1272,7 +1289,7 @@ async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<
     html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode, highlightingTheme: ctx.highlightingTheme });
   }
 
-  return { text, html };
+  return { text, html, searchText: raw };
 }
 
 async function copyVaultFile(ctx: MarkdownContext, file: TFile, kind: "image" | "file"): Promise<string> {

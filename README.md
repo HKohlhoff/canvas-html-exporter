@@ -58,7 +58,7 @@ A **demo-vault** with the complete content showcase can be downloaded from the
 - Show Markdown file nodes with a preview and export them as standalone HTML pages or embedded single-file pages
 - Follow linked Canvas file nodes and Canvas wiki links recursively, with cycle-safe navigation between overview and subcanvases
 - Show linked Canvas cards with an offline diagram preview of their groups, nodes, colors, and connections
-- Open a portable fixed Navigation panel with the Canvas hierarchy and the HTML pages directly contained in the current Canvas
+- Open a portable fixed Navigation panel with the alphabetically sorted Canvas hierarchy and the HTML pages directly contained in the current Canvas
 - Rewrite internal Markdown links, wiki links, heading links, section embeds, and block references
 - Copy assets into package exports or inline them into single HTML exports
 - Support image, PDF, audio, video, and generic file nodes
@@ -89,9 +89,12 @@ controls above the Canvas:
   browser windows.
 - `Minimap` shows the Canvas overview, hidden/focused state, and current
   viewport. It can be moved and used for navigation.
-- `Search...` opens keyboard- and mouse-accessible node search. Selecting a
-  result reveals it when necessary, scrolls it into view, and marks it briefly
-  with a prominent yellow pulse highlight. Tab and Shift+Tab stay inside
+- `Search...` opens keyboard- and mouse-accessible search across the current
+  Canvas and every recursively subordinate Canvas. Current-Canvas results are
+  revealed in place and marked briefly with a prominent yellow pulse;
+  subordinate results open their owning Canvas and continue the same search
+  there. Markdown cards contribute the full note text to the index, not only
+  their visible preview. Tab and Shift+Tab stay inside
   the open search dialog; closing it returns focus to the control used to open
   it.
 
@@ -262,9 +265,10 @@ for that target and the rest of the export continues.
 Use **Navigation** in the Canvas toolbar to open a fixed panel on the
 left. The current page remains visible beside it and returns to the full width
 when the panel is closed. The
-**Canvases** section shows the overview and recursively linked subcanvases as a
-finite hierarchy; shared targets and cycles are listed only once, and the
-current Canvas is highlighted. **Pages in this canvas** lists the Markdown,
+**Canvases** section shows the overview and recursively linked subcanvases as an
+alphabetically sorted, finite hierarchy; shared targets and cycles are listed
+only once, and the current Canvas is highlighted. **Pages in this canvas**
+lists its entries alphabetically and includes the Markdown,
 PDF-viewer, and link-node HTML pages directly represented by cards in the
 current Canvas. Selecting an entry opens the same portable target used by its
 Canvas card. These file pages also provide the **Navigation** toggle in the same

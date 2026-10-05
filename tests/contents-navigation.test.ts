@@ -49,9 +49,31 @@ test("builds a finite canvas tree and lists direct HTML pages once", () => {
   assert.equal(contents.canvases[0]?.children?.[0]?.current, true);
   assert.equal(contents.canvases[0]?.children?.[0]?.children, undefined);
   assert.deepEqual(contents.pages.map((page) => [page.title, page.kind]), [
-    ["Chapter 1", "markdown"],
     ["Appendix.pdf", "pdf"],
+    ["Chapter 1", "markdown"],
   ]);
+});
+
+test("sorts every navigation level and page list alphabetically", () => {
+  const sortedDocuments: ContentsCanvasDocument[] = [
+    {
+      sourcePath: "root.canvas",
+      title: "Overview",
+      href: "index.html",
+      data: {
+        nodes: [
+          { id: "z", type: "file", label: "Kapitel 10", fileKind: "canvas", canvasSourcePath: "z.canvas", x: 0, y: 0, width: 1, height: 1 },
+          { id: "a", type: "file", label: "Kapitel 2", fileKind: "canvas", canvasSourcePath: "a.canvas", x: 0, y: 0, width: 1, height: 1 },
+        ],
+        edges: [],
+      },
+    },
+    { sourcePath: "z.canvas", title: "Z", href: "z.html", data: { nodes: [], edges: [] } },
+    { sourcePath: "a.canvas", title: "A", href: "a.html", data: { nodes: [], edges: [] } },
+  ];
+
+  const contents = buildContentsNavigation(sortedDocuments, "root.canvas", "root.canvas", "package");
+  assert.deepEqual(contents.canvases[0]?.children?.map((item) => item.title), ["Kapitel 2", "Kapitel 10"]);
 });
 
 test("uses parent navigation for canvas links inside a single-html subcanvas", () => {
@@ -74,11 +96,11 @@ test("marks and rebases the current package file page", () => {
     "assets/files/chapter-1.html",
   );
   assert.equal(contents.canvases[0]?.children?.[0]?.current, false);
-  assert.equal(contents.pages[0]?.current, true);
+  assert.equal(contents.pages[1]?.current, true);
 
   const rebased = rebaseContentsNavigation(contents, "assets/files/chapter-1.html");
   assert.equal(rebased.canvases[0]?.href, "../../index.html");
   assert.equal(rebased.canvases[0]?.children?.[0]?.href, "../../canvas-a.html");
-  assert.equal(rebased.pages[0]?.href, "chapter-1.html");
-  assert.equal(rebased.pages[1]?.href, "appendix.html");
+  assert.equal(rebased.pages[0]?.href, "appendix.html");
+  assert.equal(rebased.pages[1]?.href, "chapter-1.html");
 });

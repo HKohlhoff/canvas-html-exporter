@@ -66,6 +66,18 @@ export function buildBrowserSearch(): string {
         link.setAttribute("href", appendSearchQueryToHref(href, query));
       }
 
+      function getSearchResultSnippet(entry, query) {
+        const snippet = String(entry.snippet || "");
+        const normalizedQuery = String(query || "").trim().toLowerCase();
+        if (!normalizedQuery || snippet.toLowerCase().includes(normalizedQuery)) return snippet;
+        const fullText = String(entry.text || "");
+        const matchIndex = fullText.toLowerCase().indexOf(normalizedQuery);
+        if (matchIndex < 0) return snippet;
+        const start = Math.max(0, matchIndex - 80);
+        const end = Math.min(fullText.length, matchIndex + normalizedQuery.length + 120);
+        return (start > 0 ? "…" : "") + fullText.slice(start, end).trim() + (end < fullText.length ? "…" : "");
+      }
+
       function renderSearchResults(matches, query) {
         if (!searchResults || !searchSummary) return;
         activeSearchIndex = matches.length ? 0 : -1;
@@ -81,7 +93,7 @@ export function buildBrowserSearch(): string {
         for (const entry of matches) {
           const item = document.createElement("li");
           item.className = "search-result-item";
-          if (entry.openHref) {
+          if (entry.openHref && entry.focusNodeId) {
             const title = document.createElement("a");
             title.className = "search-result-title search-result-title-link";
             applyLinkAttrs(title, entry.openHref, query, entry.openTarget);
@@ -94,18 +106,23 @@ export function buildBrowserSearch(): string {
             appendHighlightedText(title, entry.title, query);
             item.appendChild(title);
           }
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "search-result";
-          button.setAttribute("data-node-id", entry.id);
+          const result = entry.focusNodeId ? document.createElement("button") : document.createElement("a");
+          if (entry.focusNodeId) {
+            result.type = "button";
+            result.setAttribute("data-node-id", entry.focusNodeId);
+          } else if (entry.openHref) {
+            applyLinkAttrs(result, entry.openHref, query, entry.openTarget);
+            result.setAttribute("data-search-open", "true");
+          }
+          result.className = "search-result";
           const metaEl = document.createElement("span");
           metaEl.className = "search-result-meta";
           metaEl.textContent = entry.kindLabel + " · " + entry.positionLabel;
           const snippetEl = document.createElement("span");
           snippetEl.className = "search-result-snippet";
-          appendHighlightedText(snippetEl, entry.snippet, query);
-          button.append(metaEl, snippetEl);
-          item.appendChild(button);
+          appendHighlightedText(snippetEl, getSearchResultSnippet(entry, query), query);
+          result.append(metaEl, snippetEl);
+          item.appendChild(result);
           searchResults.appendChild(item);
         }
         updateActiveSearchResult();

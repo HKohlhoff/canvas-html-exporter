@@ -108,7 +108,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   }));
   const searchEntries = nodes
     .map((node) => buildSearchEntry(node, bounds.offsetX, bounds.offsetY))
-    .filter((entry) => entry.text);
+    .filter((entry) => entry.text)
+    .concat(options.additionalSearchEntries || []);
 
   const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
   const minimapHtml = showMinimap

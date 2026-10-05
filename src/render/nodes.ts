@@ -3,7 +3,7 @@ import { getNodeFrame, getNodeMediaKind } from "./geometry";
 import { escapeAttribute, escapeHtml } from "./html";
 import { markdownToHtml } from "./markdown";
 import { buildCanvasEdgeColorMap, getTheme, resolveNodeColors } from "./theme";
-import type { CanvasData, CanvasNode, HighlightingThemeChoice } from "./types";
+import type { CanvasData, CanvasNode, HighlightingThemeChoice, SearchEntry } from "./types";
 
 const FOCUS_ICON_SVG = `<svg class="branch-focus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"></circle><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>`;
 
@@ -123,7 +123,7 @@ export function buildSearchEntry(
   node: CanvasNode,
   offsetX: number,
   offsetY: number,
-): { id: string; title: string; snippet: string; text: string; kindLabel: string; positionLabel: string; openHref?: string; openTarget?: "_parent" } {
+): SearchEntry {
   const frame = getNodeFrame(node, offsetX, offsetY);
   const previewText = node.previewHtml
     ? normalizeSearchText(htmlToSearchText(node.previewHtml))
@@ -139,11 +139,13 @@ export function buildSearchEntry(
     .filter(Boolean);
   const title = parts[0] || defaultNodeTitle(node);
   const snippet = parts.slice(1).join(" ").slice(0, 220) || title;
+  const fullSearchText = normalizeSearchText(node.searchText);
   return {
     id: node.id,
+    focusNodeId: node.id,
     title,
     snippet,
-    text: parts.join(" ").trim(),
+    text: [...parts, fullSearchText].filter(Boolean).join(" ").trim(),
     kindLabel: humanizeNodeKind(node),
     positionLabel: `x ${Math.round(frame.left)} · y ${Math.round(frame.top)}`,
     openHref: resolveNodeOpenHref(node),

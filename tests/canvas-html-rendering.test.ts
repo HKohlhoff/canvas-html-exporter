@@ -1477,6 +1477,30 @@ await test("indexes visible markdown preview html instead of hidden raw preview 
   assert.doesNotMatch(html, /VersteckterSuchbegriff/);
 });
 
+await test("renders descendant search results as navigable page entries", async () => {
+  const html = await convertCanvasToHtml({ name: "Root", nodes: [], edges: [] }, {
+    ...baseOptions,
+    additionalSearchEntries: [{
+      id: "child.canvas:note",
+      title: "Untergeordnete Notiz",
+      snippet: "Kurzer Ausschnitt",
+      text: "Untergeordnete Notiz Kurzer Ausschnitt Volltextbegriff",
+      kindLabel: "Markdown",
+      positionLabel: "Untercanvas",
+      openHref: "canvas-child.html",
+    }],
+  });
+
+  assert.match(html, /"id":"child\.canvas:note"/);
+  assert.match(html, /"text":"Untergeordnete Notiz Kurzer Ausschnitt Volltextbegriff"/);
+  assert.match(html, /const result = entry\.focusNodeId \? document\.createElement\("button"\) : document\.createElement\("a"\)/);
+  assert.match(html, /result\.setAttribute\("data-search-open", "true"\)/);
+  assert.match(html, /function getSearchResultSnippet\(entry, query\)/);
+  assert.match(html, /type: "canvas-html-search-query"/);
+  assert.match(html, /searchInput\.value = message\.query\.trim\(\);\s+openSearch\(\)/);
+  assert.match(html, /const initialSearchQuery = new URLSearchParams\(window\.location\.search\)\.get\("q"\)/);
+});
+
 await test("omits minimap when disabled", async () => {
   const data: CanvasData = {
     name: "Ohne Mini",

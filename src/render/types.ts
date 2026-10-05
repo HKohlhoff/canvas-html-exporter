@@ -50,6 +50,7 @@ export interface CanvasNode {
   fileKind?: "image" | "markdown" | "canvas" | "pdf" | "audio" | "video" | "file";
   previewText?: string;
   previewHtml?: string;
+  searchText?: string;
   renderedTextHtml?: string;
   shape?: CanvasNodeShape;
   borderStyle?: CanvasNodeBorderStyle;
@@ -94,8 +95,21 @@ export interface ExportOptions {
   canvasHomeHref?: string;
   canvasHomeTarget?: "_parent";
   contents?: ContentsNavigation;
+  additionalSearchEntries?: SearchEntry[];
   embeddedPages?: EmbeddedPage[];
   initialFoldState?: CanvasFoldState;
+}
+
+export interface SearchEntry {
+  id: string;
+  title: string;
+  snippet: string;
+  text: string;
+  kindLabel: string;
+  positionLabel: string;
+  focusNodeId?: string;
+  openHref?: string;
+  openTarget?: "_parent";
 }
 
 export interface ContentsNavigationItem {

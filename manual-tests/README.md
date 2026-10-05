@@ -62,9 +62,15 @@ single HTML:
 - use **Navigation** itself to open and close the panel like **Minimap**;
   confirm there is no separate Close button and keyboard Tab navigation can
   move naturally between the panel and the page;
+- confirm sibling Canvases and the entries under **Pages in this canvas** are
+  alphabetically sorted, including natural ordering such as 2 before 10;
 - while **Navigation** is open, open **Search...** and confirm the complete
   search panel and its backdrop stay inside the visible area to the right of
   Navigation;
+- search from the overview for text that exists only in a deeply linked
+  subcanvas and for text beyond a Markdown card's visible preview; confirm both
+  appear with their owning Canvas and open that Canvas. Repeat from a
+  subcanvas and confirm only its subordinate hierarchy is included;
 - from a subcanvas open a Markdown page, PDF viewer, and link page; confirm
   **Back** returns to that subcanvas and **Canvas** returns to the root
   overview. Repeat in single HTML and confirm a root-owned page has no
