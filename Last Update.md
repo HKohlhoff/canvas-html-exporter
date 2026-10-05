@@ -1,92 +1,115 @@
-# Canvas HTML Exporter 1.5.0: Large Canvases as connected pages
+# Canvas HTML Exporter 1.5.0: A major step for connected Canvas projects
 
-This update makes it practical to divide a large Canvas into an overview and
-several linked Canvases without losing the feeling of one connected document.
-The exported result can now be explored page by page, searched as a whole, and
-navigated without having to know how its files are arranged.
+This update introduces three substantial new capabilities: an optional
+Navigation panel, Canvas nodes that open as complete Canvas pages, and a
+refined deep search.
 
-Package folders and single HTML files provide the same navigation and search
-experience. Your existing export settings remain in place.
+Together, they turn an export from a single Canvas view into a structured,
+navigable publication made from many connected Canvases and their pages. Large
+projects no longer have to be squeezed into one crowded Canvas: they can be
+divided into clear sections while still behaving like one coherent export.
 
-## Turn an overview into a collection of Canvases
+All three improvements work in package folders and single HTML files. Your
+existing export settings remain in place, and your source Canvases and notes
+are never changed.
 
-Link another Canvas from a Canvas file card or a Canvas wiki link. The exporter
-follows those links and includes the linked Canvases automatically, including
-further Canvases linked from them.
+## 1. Optional Navigation panel
 
-- A linked Canvas card shows a small offline preview of its layout, groups,
-  colors, nodes, and connections.
-- Clicking the title or preview opens that Canvas directly. A separate **Open
-  canvas** label is no longer needed.
-- Each linked Canvas opens with the same full Canvas layout and controls as the
-  main overview.
-- A Canvas that is referenced more than once is included only once. Circular
-  links remain usable and do not create endless copies.
-- A return card pointing back to the main overview is omitted from the exported
-  subcanvas. Use the **(back to: Canvas)** link in the status line instead.
+For the first time, readers can see and navigate the complete structure of a
+multi-Canvas export from every page. They no longer have to return to the main
+overview simply to reach another section or document.
 
-This lets you keep a compact overview while moving detailed chapters, project
-areas, or process stages into their own Canvases.
+**Navigation** opens a fixed panel on the left while the current Canvas or file
+page remains visible on the right. Click **Navigation** again to close it.
 
-## Navigate the complete export
+The panel contains two clearly separated areas:
 
-Use **Navigation** to open a fixed panel on the left. The current page remains
-visible beside it.
+- **Canvases** shows the main overview and all subordinate Canvases in an
+  alphabetically sorted hierarchy.
+- **Pages in this canvas** shows the Markdown, PDF, and link pages that belong
+  directly to the current Canvas.
 
-The **Canvases** section shows the main overview and all linked Canvases as an
-alphabetically sorted hierarchy. **Pages in this canvas** lists the Markdown,
-PDF, and link pages belonging directly to the selected Canvas. The active
-Canvas or file page is highlighted, so you can see where you are.
+The currently displayed Canvas or file page is highlighted, making your
+position in a larger export immediately visible.
 
-Click **Navigation** again to close the panel. The setting **Navigation**
-chooses whether it starts open or closed. Changing it on the main Canvas sets
-the default for other Canvas pages, while each page can remember a different
-choice. File pages start with Navigation closed on their first visit, leaving
-the document itself unobstructed.
+The plugin setting **Navigation** defines whether the panel is initially open
+or closed. This choice is passed from the main overview to subordinate Canvas
+pages that do not yet have their own choice. Visitors can then open or close
+Navigation independently on every Canvas and file page. That individual choice
+is remembered when the page is opened again. File pages start with Navigation
+closed on their first visit so the document has the full available width.
 
-## Clear return paths
+This provides orientation in large exports without permanently taking space
+away from the Canvas or document being viewed.
 
-File pages opened from a linked Canvas show two destinations:
+## 2. Canvas nodes open as Canvas pages
 
-- **Back** returns to the Canvas that owns the file card.
-- **Canvas** returns directly to the main overview.
+A Canvas node is no longer just a reference to another file. It can now become
+a complete, interactive page within the exported publication. This is the key
+to splitting a large overview into manageable chapters, project areas, process
+stages, or any other structure that suits the content.
 
-File pages opened from the main overview show only **Canvas**, because both
-destinations would be the same. Linked Canvas pages also provide the compact
-**(back to: Canvas)** link in their status line.
+A Canvas file node or a Canvas wiki link now opens the referenced Canvas as a
+complete page inside the export. These subordinate Canvases are often called
+subcanvases.
 
-When you return to a Canvas in a package export, its previous zoom level and
-visible position are restored. Opening that Canvas again deliberately from a
-card or from Navigation starts with its normal fitted view. This matches the
-single HTML experience: returning continues where you left off, while a new
-visit starts with a clear overview.
+- The Canvas card shows a small offline preview of the referenced layout,
+  including its groups, nodes, colors, and connections.
+- The title and preview form one clickable area. A separate **Open canvas**
+  label is no longer needed.
+- The subcanvas uses the full browser area and offers the same zoom, minimap,
+  search, and folding controls as the main overview.
+- Further Canvas links are followed as well, so a subcanvas can contain another
+  level of Canvas pages.
+- A Canvas referenced more than once is included only once. Circular links
+  remain usable without producing endless copies.
 
-## Search across linked Canvases
+A subcanvas provides **(back to: Canvas)** in its status line to return to the
+main overview. A Markdown, PDF, or link page opened from a subcanvas provides
+two clear return paths: **Back** returns to its owning subcanvas, while
+**Canvas** returns directly to the main overview. A file page belonging to the
+main overview needs only **Canvas**.
 
-**Search...** now covers the current Canvas and every Canvas below it in the
-linked hierarchy. The line below the Search heading tells you which Canvas is
-the starting point and whether subordinate Canvases are included.
+Returning to a Canvas restores its previous view where applicable, including
+the zoom level and visible position. Opening the same subcanvas again from its
+card or from Navigation is treated as a new visit and starts with the normal
+fitted overview.
 
-- Markdown cards contribute their complete note text, not only the text visible
-  in the Canvas preview.
-- Every result names the Canvas it belongs to.
-- Results for Markdown, PDF, and link cards open the corresponding page
-  directly.
-- Results without a separate page open their Canvas, bring the matching card
-  into view, and highlight it.
-- The same Vault file appears only once, even if several Canvases reference it.
-- After using **Back** or **Canvas** from a result page, Search reopens with the
-  same query, result information, and usable links.
+The result feels like one connected work rather than a collection of separate
+Canvas exports.
 
-Search, Navigation, zoom, minimap, and folding continue to work inside every
-linked Canvas.
+## 3. Refined deep search
 
-## Portable and non-destructive
+Search no longer stops at the currently visible Canvas. A single search from
+the main overview can now reveal relevant content anywhere in the complete
+subordinate structure and lead directly to the page or card where it appears.
 
-Package exports use separate HTML pages and assets. Single HTML exports keep
-the same hierarchy as virtual pages inside one self-contained file. Both
-formats remain portable and work without Obsidian. The exporter does not alter
-your source Canvases or notes.
+**Search...** now finds matching content throughout the current Canvas and all
+of its subordinate Canvas pages. It searches Canvas nodes, pages belonging to
+those Canvases, and the complete text of Markdown notes—not only the short
+preview visible on a Canvas card.
+
+The line below the Search heading states where the search begins and whether
+subordinate Canvases are included. Every result also names its owning Canvas,
+so you know where the match was found before opening it.
+
+- A result for a Markdown, PDF, or link card opens the matching page directly.
+- A result without a separate page opens its Canvas, moves the matching card
+  into view, and highlights it.
+- Repeated references to the same Vault file are combined into one clear
+  result, while independent Canvas nodes remain separate results.
+- After opening a result, **Back** and **Canvas** return with the same query and
+  reopen Search on the destination Canvas. The result can then be opened again
+  without losing its title or origin.
+
+This makes the overview a useful starting point for searching the complete
+export, while a search started inside a subcanvas stays within that part of the
+hierarchy.
+
+Together, Navigation, Canvas pages, and deep search provide a substantial gain
+for publishing books, knowledge collections, project documentation, and other
+large Canvas-based work. The export remains easy to share, but is now much
+easier to explore and understand.
 
 Export the main overview Canvas again to use these improvements. Existing HTML
 exports do not update themselves.
