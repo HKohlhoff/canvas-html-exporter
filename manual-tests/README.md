@@ -60,6 +60,9 @@ single HTML:
 - use **Navigation** itself to open and close the panel like **Minimap**;
   confirm there is no separate Close button and keyboard Tab navigation can
   move naturally between the panel and the page;
+- while **Navigation** is open, open **Search...** and confirm the complete
+  search panel and its backdrop stay inside the visible area to the right of
+  Navigation;
 - from a subcanvas open a Markdown page, PDF viewer, and link page; confirm
   **Back** returns to that subcanvas and **Canvas** returns to the root
   overview. Repeat in single HTML and confirm a root-owned page has no

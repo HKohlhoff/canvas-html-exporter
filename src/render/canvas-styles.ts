@@ -1197,6 +1197,9 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       background: rgba(0, 0, 0, 0.28);
       backdrop-filter: blur(4px);
     }
+    body.contents-open .search-overlay {
+      left: var(--contents-panel-width);
+    }
     .search-overlay[hidden] {
       display: none;
     }

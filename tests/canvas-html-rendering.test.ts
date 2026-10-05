@@ -1408,6 +1408,7 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /id="search-toolbar-button" type="button" onclick="openSearch\(\)"/);
   assert.match(html, /id="search-overlay" class="search-overlay" hidden/);
+  assert.match(html, /body\.contents-open \.search-overlay \{\s+left: var\(--contents-panel-width\);/);
   assert.match(html, /id="search-input" class="search-input" type="search"/);
   assert.match(html, /id="search-results" class="search-results"/);
   assert.match(html, /function runSearch\(query\)/);

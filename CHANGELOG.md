@@ -41,6 +41,8 @@ first.
   choices and highlighting the active file page.
 - Restore each package Canvas's zoom level and visible position after visiting
   another Canvas or file page.
+- Keep the search overlay inside the remaining Canvas area while the fixed
+  **Navigation** panel is open, so the panel no longer covers the search field.
 - Add **Back** beside **Canvas** on HTML pages owned by a subcanvas, returning
   to that subcanvas while **Canvas** continues to open the main overview.
 
