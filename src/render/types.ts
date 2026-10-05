@@ -43,10 +43,14 @@ export interface CanvasNode {
   exportPath?: string;
   exportHtmlPath?: string;
   canvasHref?: string;
+  canvasNavigationTarget?: "_parent";
+  canvasSourcePath?: string;
+  canvasPreview?: CanvasData;
   displayName?: string;
-  fileKind?: "image" | "markdown" | "pdf" | "audio" | "video" | "file";
+  fileKind?: "image" | "markdown" | "canvas" | "pdf" | "audio" | "video" | "file";
   previewText?: string;
   previewHtml?: string;
+  searchText?: string;
   renderedTextHtml?: string;
   shape?: CanvasNodeShape;
   borderStyle?: CanvasNodeBorderStyle;
@@ -85,15 +89,50 @@ export interface ExportOptions {
   showMinimap?: boolean;
   showSearch?: boolean;
   foldingInitiallyEnabled?: boolean;
+  navigationInitiallyOpen?: boolean;
+  navigationPageId?: string;
   exportFormat?: "package" | "single-html";
+  canvasHomeHref?: string;
+  canvasHomeTarget?: "_parent";
+  contents?: ContentsNavigation;
+  additionalSearchEntries?: SearchEntry[];
   embeddedPages?: EmbeddedPage[];
   initialFoldState?: CanvasFoldState;
+}
+
+export interface SearchEntry {
+  id: string;
+  title: string;
+  snippet: string;
+  text: string;
+  kindLabel: string;
+  positionLabel: string;
+  dedupeKey?: string;
+  focusNodeId?: string;
+  openHref?: string;
+  openTarget?: "_parent";
+  openNodeId?: string;
+  openPageHref?: string;
+}
+
+export interface ContentsNavigationItem {
+  title: string;
+  href: string;
+  kind: "canvas" | "markdown" | "link" | "pdf";
+  current?: boolean;
+  target?: "_parent";
+  children?: ContentsNavigationItem[];
+}
+
+export interface ContentsNavigation {
+  canvases: ContentsNavigationItem[];
+  pages: ContentsNavigationItem[];
 }
 
 export interface EmbeddedPage {
   id: string;
   title: string;
-  kind: "markdown" | "link" | "pdf";
+  kind: "markdown" | "canvas" | "link" | "pdf";
   bodyHtml: string;
 }
 

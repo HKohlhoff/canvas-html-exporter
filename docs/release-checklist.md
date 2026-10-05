@@ -97,6 +97,33 @@ npm run build:prod
   appears while the left mouse button is held, `Esc` cancels the current drag,
   and short or interactive clicks retain their normal behavior.
 - Internal links, anchors, embeds and missing-target fallbacks work.
+- Linked Canvas file nodes and wiki links open recursively in one click;
+  the redundant source return card stays hidden, the upper-right **Canvas**
+  **(back to: Canvas)** label follows the node/group/connection status with a
+  20 px gap, only **Canvas** is linked and returns to the overview, and browser
+  history, shared targets, cycles, and invalid
+  target fallback work in package and single HTML.
+- Canvas cards show the linked diagram preview in both formats without an
+  **Open canvas** label or external preview asset.
+- **Navigation** opens as a fixed left panel on every Canvas page, keeps the page
+  visible beside it, restores full width on close, shows each shared/cyclic Canvas only
+  once, highlights the current Canvas, and opens its directly contained
+  Markdown, PDF-viewer, and link-node pages in the correct package or embedded
+  single-HTML scope. Package file pages provide the same toggle and panel and
+  highlight themselves. Close, `Esc`, and keyboard focus work.
+- The configured initial Navigation state is respected. Toggling it on the
+  main Canvas changes the default for pages without an individual choice.
+  Every Canvas and file page restores its own later state when reopened; file
+  pages start closed on their first visit in both export formats.
+  **Navigation** itself toggles the panel; no panel-internal Close button is
+  shown.
+- Returning to a package Canvas restores that Canvas's previous zoom level and
+  visible position through **Back**, **Canvas**, or browser history. Explicitly
+  reopening a subcanvas from a card or **Navigation** starts with the normal
+  fitted view, matching single HTML.
+- HTML pages owned by a subcanvas show **Back** to that subcanvas and **Canvas**
+  to the root overview in both formats; root-owned pages omit redundant
+  **Back** navigation.
 - Test the documentation Canvas from `examples/demo-vault/`.
 - Test `Advanced Canvas Attributes.canvas` from the same demo vault as package
   and single HTML. Compare all supported shapes, borders, alignments, colors,

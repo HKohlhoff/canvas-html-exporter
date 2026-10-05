@@ -10,6 +10,7 @@ import { CURRENT_RELEASE_NOTES_ID } from "./release-notes-content";
 import { openCurrentReleaseNotes } from "./ui/release-notes";
 import { openPluginReadme } from "./ui/readme";
 import { collectCanvasColorKeys } from "./export/canvas-data";
+import { escapeAttribute } from "./render/html";
 
 type CanvasColorMap = Record<string, string>;
 type CalloutColorMap = Record<string, string>;
@@ -99,9 +100,29 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
         headingColors,
         inlineStyleColors,
         foldingInitiallyEnabled: settings.foldingInitialState !== "none",
+        navigationInitiallyOpen: settings.navigationInitialState === "open",
         initialFoldState: initialFoldState ?? undefined,
       });
-      result.options.canvasColors = this.readCanvasPaletteColors(collectCanvasColorKeys(result.data));
+      const canvasColorKeys = new Set<string>();
+      for (const data of [result.data, ...result.canvasPages.map((page) => page.data)]) {
+        for (const colorKey of collectCanvasColorKeys(data)) canvasColorKeys.add(colorKey);
+      }
+      const resolvedCanvasColors = this.readCanvasPaletteColors([...canvasColorKeys]);
+      result.options.canvasColors = resolvedCanvasColors;
+      for (const page of result.canvasPages) page.options.canvasColors = resolvedCanvasColors;
+
+      for (const page of result.canvasPages) {
+        const pageHtml = await convertCanvasToHtml(page.data, page.options);
+        if (result.outputKind === "folder") {
+          if (!page.outputPath) throw new Error(`Missing package path for subcanvas ${page.sourcePath}`);
+          await this.writeOutput(page.outputPath, "file", pageHtml);
+          continue;
+        }
+
+        const embeddedPage = result.options.embeddedPages?.find((entry) => entry.id === page.pageId);
+        if (!embeddedPage) throw new Error(`Missing single-HTML page for subcanvas ${page.sourcePath}`);
+        embeddedPage.bodyHtml = `<div class="single-canvas-page"><iframe class="single-canvas-frame" data-navigation-page-id="${escapeAttribute(page.options.navigationPageId || "")}" srcdoc="${escapeAttribute(pageHtml)}" title="${escapeAttribute(page.title)}"></iframe></div>`;
+      }
       const html = await convertCanvasToHtml(result.data, result.options);
       await this.writeOutput(result.outputPath, result.outputKind, html);
       const label = result.outputKind === "file" ? "Self-contained canvas HTML exported" : "Canvas package exported";

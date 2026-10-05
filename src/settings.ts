@@ -9,6 +9,7 @@ import { isAbsoluteFilesystemPath, isMobileRuntime } from "./helpers/desktop-pat
 import { normalizeStoredOutputPath, openVaultFolderPicker, pickFolderPath } from "./path-pickers";
 
 export type ExportFormatChoice = "package" | "single-html";
+export type NavigationInitialStateChoice = "closed" | "open";
 
 export type PluginSettings = {
   darkMode: boolean;
@@ -18,6 +19,7 @@ export type PluginSettings = {
   highlightingTheme: HighlightingThemeChoice;
   showMinimap: boolean;
   showSearch: boolean;
+  navigationInitialState: NavigationInitialStateChoice;
 };
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -28,6 +30,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   highlightingTheme: "shiki",
   showMinimap: true,
   showSearch: true,
+  navigationInitialState: "closed",
 };
 
 const EXPORT_FORMAT_LABELS: Record<ExportFormatChoice, string> = {
@@ -49,8 +52,14 @@ const FOLDING_INITIAL_STATE_LABELS: Record<FoldingInitialStateChoice, string> = 
   current: "Current Canvas Folding state",
 };
 
+const NAVIGATION_INITIAL_STATE_LABELS: Record<NavigationInitialStateChoice, string> = {
+  closed: "Closed",
+  open: "Open",
+};
+
 const VALID_EXPORT_FORMATS = new Set<ExportFormatChoice>(Object.keys(EXPORT_FORMAT_LABELS) as ExportFormatChoice[]);
 const VALID_FOLDING_INITIAL_STATES = new Set<FoldingInitialStateChoice>(Object.keys(FOLDING_INITIAL_STATE_LABELS) as FoldingInitialStateChoice[]);
+const VALID_NAVIGATION_INITIAL_STATES = new Set<NavigationInitialStateChoice>(Object.keys(NAVIGATION_INITIAL_STATE_LABELS) as NavigationInitialStateChoice[]);
 const VALID_HIGHLIGHTING_THEMES = new Set<HighlightingThemeChoice>(Object.keys(HIGHLIGHTING_THEME_LABELS) as HighlightingThemeChoice[]);
 const DEFAULT_OUTPUT_PLACEHOLDER = DEFAULT_SETTINGS.outputDir;
 
@@ -61,6 +70,9 @@ export function normalizePluginSettings(saved: unknown): PluginSettings {
   const foldingInitialState = normalizeFoldingInitialStateChoice(
     typeof data.foldingInitialState === "string" ? data.foldingInitialState.trim() : "",
   );
+  const navigationInitialState = (typeof data.navigationInitialState === "string"
+    ? data.navigationInitialState.trim()
+    : "") as NavigationInitialStateChoice;
   let normalizedOutputDir = normalizeStoredOutputPath(typeof data.outputDir === "string" ? data.outputDir : "");
   if (isMobileRuntime() && isAbsoluteFilesystemPath(normalizedOutputDir)) {
     normalizedOutputDir = DEFAULT_SETTINGS.outputDir;
@@ -74,6 +86,9 @@ export function normalizePluginSettings(saved: unknown): PluginSettings {
     highlightingTheme: VALID_HIGHLIGHTING_THEMES.has(highlightingTheme) ? highlightingTheme : DEFAULT_SETTINGS.highlightingTheme,
     showMinimap: typeof data.showMinimap === "boolean" ? data.showMinimap : DEFAULT_SETTINGS.showMinimap,
     showSearch: typeof data.showSearch === "boolean" ? data.showSearch : DEFAULT_SETTINGS.showSearch,
+    navigationInitialState: VALID_NAVIGATION_INITIAL_STATES.has(navigationInitialState)
+      ? navigationInitialState
+      : DEFAULT_SETTINGS.navigationInitialState,
   };
 }
 
@@ -191,6 +206,17 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
             },
           },
           {
+            name: "Navigation",
+            desc: "Choose whether the navigation panel is initially open. The main Canvas controls the default; each page remembers its own later choice.",
+            aliases: ["contents", "panel", "sidebar"],
+            control: {
+              type: "dropdown",
+              key: "navigationInitialState",
+              defaultValue: DEFAULT_SETTINGS.navigationInitialState,
+              options: NAVIGATION_INITIAL_STATE_LABELS,
+            },
+          },
+          {
             name: "Syntax highlighting",
             desc: "Choose the color theme for fenced code blocks.",
             aliases: ["code", "highlighting theme"],
@@ -266,6 +292,13 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
         this.plugin.settings.foldingInitialState = VALID_FOLDING_INITIAL_STATES.has(selected)
           ? selected
           : DEFAULT_SETTINGS.foldingInitialState;
+        break;
+      }
+      case "navigationInitialState": {
+        const selected = value as NavigationInitialStateChoice;
+        this.plugin.settings.navigationInitialState = VALID_NAVIGATION_INITIAL_STATES.has(selected)
+          ? selected
+          : DEFAULT_SETTINGS.navigationInitialState;
         break;
       }
       case "darkMode":

@@ -19,6 +19,73 @@ Both export modes use the same semantic rendering path:
 Changes to rendering, links, assets or browser behavior must consider both
 modes.
 
+## Linked Canvas boundary
+
+The export orchestrator resolves `.canvas` file nodes and internal Canvas
+links by canonical Vault path. It owns a per-export registry so a shared target
+is prepared once and directed cycles terminate without removing the links that
+form them. Parsing, normalization and HTML rendering continue through the same
+Canvas pipeline used by the root document.
+
+Package exports write referenced Canvases as real sibling HTML pages. A single
+HTML export registers them as virtual pages in the root document and embeds
+each complete Canvas document in an isolated frame. Links from an embedded
+Canvas navigate its parent document, which preserves one-click transitions,
+browser history and the existing virtual-page runtime without introducing a
+second renderer.
+
+A Canvas file node in a linked Canvas that targets the root Canvas is treated
+as redundant export navigation and omitted from that linked page. Single HTML
+already exposes the root through its virtual-page **Canvas** control; package
+subpages receive an equivalent `index.html` link. Subcanvas documents place
+the **(back to: Canvas)** label directly after the node, group, connection, and
+hidden-item counts in the page-header metadata row with a 20 px gap; only
+**Canvas** is linked. For embedded Canvas pages, the
+redundant outer virtual-page toolbar is hidden; non-Canvas
+virtual pages retain it. Textual links to the root remain ordinary content and
+are preserved.
+
+Each Canvas retains its own Markdown/link subpage registry and browser state;
+asset naming is shared across the complete recursive export. Only the active
+root Canvas may import the optional live Canvas Folding state. Linked Canvases
+use their saved graph and start with the exporter's normal expanded state.
+Invalid linked Canvas data falls back to the established generic-file export
+and does not abort otherwise valid output.
+
+After recursive preparation completes, Canvas file nodes receive a compact,
+non-recursive preview projection of the resolved target: node/group geometry,
+supported shapes and colors, plus connection endpoints and colors. The
+renderer turns this projection into inline SVG. This keeps previews identical
+in package and single HTML, offline-capable, cycle-safe, and independent of
+screenshots or browser automation.
+
+The export layer also derives a read-only navigation model after recursive
+preparation. A deterministic first-visit traversal turns the Canvas graph into
+a finite navigation hierarchy; shared targets and cycles are not expanded a
+second time. Every Canvas document receives the same hierarchy plus the
+Markdown, PDF-viewer, and link-node pages directly represented by nodes in
+that document. The renderer owns the fixed side-panel DOM and interaction;
+opening it adds page padding equal to the panel width so the current view stays
+visible beside it, and closing it restores the full width. The main Canvas owns
+the default open/closed state, while each Canvas and embedded page can retain a
+local override that is restored when that page is reopened. Package exports
+also keep the current state map in the browser tab so Back/Forward cache entries
+receive newer choices on `pageshow`. Package links
+remain relative files, while links from an embedded single-HTML subcanvas to a
+Canvas target navigate its parent page; local page entries remain inside that
+subcanvas's isolated virtual-page scope.
+The iframe used as the isolation boundary for a subcanvas is styled as a
+borderless full-page surface. Parent-target Canvas links are intercepted inside
+that frame and sent to the outer runtime, which validates and applies the hash
+instead of letting a `file:` browser resolve `#` as a directory target.
+
+Package HTML pages exported from a subcanvas receive two explicit destinations:
+**Back** is calculated relative to their owning Canvas page, while **Canvas**
+continues to target `index.html`. In a nested single-HTML page, **Back** clears
+the local virtual-page hash and restores the owning subcanvas; **Canvas**
+navigates the parent document to the root overview. Root-owned pages omit the
+redundant **Back** action.
+
 ## Canvas Folding boundary
 
 Canvas Folding is an optional provider. The exporter may discover the plugin by

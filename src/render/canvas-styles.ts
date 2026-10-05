@@ -16,7 +16,7 @@ type CanvasStyleParameters = {
 
 export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, contentInlineStyleCss, calloutCss, singlePageHeadingCss, singlePageInlineStyleCss, previewInlineStyleCss, previewHeadingCss }: CanvasStyleParameters): string {
   return `
-    :root { ${canvasColorVars} }
+    :root { ${canvasColorVars} --contents-panel-width: min(420px, calc(100vw - 32px)); }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
@@ -24,6 +24,10 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       background: ${theme.bodyBackground};
       color: ${theme.text};
       overflow: auto;
+      transition: padding-left 0.16s ease;
+    }
+    body.contents-open {
+      padding-left: var(--contents-panel-width);
     }
     #canvas-shell {
       display: flex;
@@ -50,6 +54,11 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       margin: 0;
       color: ${theme.mutedText};
       font-size: 0.95rem;
+    }
+    .page-header-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 20px;
     }
     .viewport {
       overflow: auto;
@@ -771,6 +780,85 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       opacity: 0.5;
       cursor: default;
     }
+    .contents-overlay {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 40;
+      width: var(--contents-panel-width);
+    }
+    .contents-overlay[hidden] {
+      display: none;
+    }
+    .contents-panel {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid ${theme.canvasBorder};
+      background: ${theme.canvasBackground};
+      box-shadow: 12px 0 36px rgba(0,0,0,0.22);
+    }
+    .contents-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px;
+      border-bottom: 1px solid ${theme.canvasBorder};
+    }
+    .contents-header h2 {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+    .contents-navigation {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      padding: 10px 20px 24px;
+    }
+    .contents-section h3 {
+      margin: 16px 0 8px;
+      color: ${theme.mutedText};
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .contents-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .contents-list .contents-list {
+      margin-left: 10px;
+      padding-left: 14px;
+      border-left: 1px solid ${theme.canvasBorder};
+    }
+    .contents-item {
+      margin: 2px 0;
+    }
+    .contents-link {
+      display: block;
+      padding: 7px 9px;
+      border-radius: 7px;
+      color: ${theme.link};
+      line-height: 1.35;
+      text-decoration: none;
+      overflow-wrap: anywhere;
+    }
+    .contents-link:hover {
+      background: ${theme.chipBackground};
+      text-decoration: none;
+    }
+    .contents-link.is-current {
+      background: ${theme.chipBackground};
+      color: ${theme.text};
+      font-weight: 600;
+    }
+    .contents-empty {
+      margin: 18px 0 0;
+      color: ${theme.mutedText};
+      font-size: 0.9rem;
+    }
     .single-page-view {
       max-width: 960px;
       margin: 32px auto;
@@ -783,29 +871,130 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     .single-page-view[hidden] {
       display: none;
     }
+    .single-page-view.is-canvas-page {
+      width: 100%;
+      max-width: none;
+      height: 100vh;
+      height: 100dvh;
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
     .single-page-toolbar {
       position: sticky;
       top: 0;
       z-index: 12;
       display: flex;
       justify-content: flex-end;
+      gap: 14px;
       margin: 0;
       padding: 32px 32px 0;
       background: transparent;
     }
+    .single-page-toolbar[hidden] {
+      display: none;
+    }
+    .canvas-return-label {
+      color: ${theme.mutedText};
+      font-size: 0.95rem;
+      white-space: nowrap;
+    }
+    .canvas-return-link,
+    .single-page-back-link,
     .single-page-canvas-link {
       color: ${theme.link};
       text-decoration: none;
-      font-size: 0.95em;
       font-weight: 600;
       white-space: nowrap;
     }
+    .single-page-back-link,
+    .single-page-canvas-link {
+      font-size: 0.95em;
+    }
+    .single-page-navigation-button {
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: ${theme.link};
+      font: inherit;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .single-page-navigation-button.is-active {
+      text-decoration: underline;
+    }
+    .canvas-return-link:hover,
+    .single-page-back-link:hover,
     .single-page-canvas-link:hover {
       text-decoration: underline;
     }
     .single-page-body {
       padding: 0 32px 32px;
       background: transparent;
+    }
+    .single-page-body .single-canvas-page {
+      height: calc(100vh - 112px);
+      min-height: 560px;
+      margin: 0 -32px -32px;
+    }
+    .single-page-view.is-canvas-page .single-page-body,
+    .single-page-view.is-canvas-page .single-canvas-page {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+    }
+    .single-page-body .single-canvas-frame {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: ${theme.canvasBackground};
+    }
+    .canvas-card-link {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      padding: 10px;
+      color: ${theme.text};
+      text-align: center;
+      text-decoration: none;
+    }
+    .canvas-card-link:hover {
+      color: ${theme.link};
+      text-decoration: none;
+    }
+    .canvas-card-title {
+      flex: 0 0 auto;
+      font-weight: 650;
+      overflow-wrap: anywhere;
+    }
+    .canvas-card-preview {
+      display: block;
+      width: 100%;
+      min-height: 0;
+      flex: 1 1 auto;
+      border: 1px solid ${theme.canvasBorder};
+      border-radius: 8px;
+      background: ${theme.canvasBackground};
+    }
+    .canvas-card-preview-edges line {
+      vector-effect: non-scaling-stroke;
+      stroke-width: 1.25;
+      opacity: 0.75;
+    }
+    .canvas-card-preview-nodes .minimap-node {
+      vector-effect: non-scaling-stroke;
+      stroke-width: 1.25;
     }
     .single-page-body .md-page {
       max-width: none;
@@ -1008,6 +1197,9 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       background: rgba(0, 0, 0, 0.28);
       backdrop-filter: blur(4px);
     }
+    body.contents-open .search-overlay {
+      left: var(--contents-panel-width);
+    }
     .search-overlay[hidden] {
       display: none;
     }
@@ -1031,6 +1223,18 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     }
     .search-panel-header strong {
       font-size: 1rem;
+    }
+    .search-panel-heading {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .search-scope {
+      color: ${theme.mutedText};
+      font-size: 0.82rem;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
     }
     .search-close-button {
       border: 1px solid ${theme.canvasBorder};
@@ -1071,6 +1275,7 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       gap: 6px;
     }
     .search-result {
+      display: block;
       width: 100%;
       text-align: left;
       border: 1px solid ${theme.canvasBorder};
@@ -1079,6 +1284,7 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       border-radius: 12px;
       padding: 10px 12px;
       cursor: pointer;
+      text-decoration: none;
     }
     .search-result:hover {
       background: ${theme.chipBackground};
@@ -1089,13 +1295,11 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       background: ${theme.chipBackground};
     }
     .search-result-title {
-      display: inline-block;
+      display: block;
+      margin-bottom: 3px;
       font-weight: 700;
       color: ${theme.text};
       text-decoration: none;
-    }
-    .search-result-title-link:hover {
-      text-decoration: underline;
     }
     .search-result-meta,
     .search-result-snippet {

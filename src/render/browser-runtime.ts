@@ -1,4 +1,5 @@
 import { buildBrowserEdges } from "./browser-edges";
+import { buildBrowserContents } from "./browser-contents";
 import { buildBrowserFolding } from "./browser-folding";
 import { buildBrowserInteraction } from "./browser-interaction";
 import { buildBrowserPages } from "./browser-pages";
@@ -15,6 +16,10 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
     (() => {
       const exportFormat = ${serializeScriptData(exportFormat)};
       const baseDocumentTitle = ${serializeScriptData(options.title)};
+      const isRootCanvas = ${serializeScriptData(!options.canvasHomeHref)};
+      const navigationInitiallyOpen = ${serializeScriptData(options.navigationInitiallyOpen === true)};
+      const navigationPageId = ${serializeScriptData(options.navigationPageId || "root")};
+      const initialRestoreCanvasViewId = new URLSearchParams(window.location.search).get("canvasView");
       const toolbar = document.querySelector(".toolbar");
       const canvasShell = document.getElementById("canvas-shell");
       const edgeLayer = document.getElementById("edge-layer");
@@ -24,7 +29,9 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       const zoomAreaHint = document.getElementById("zoom-area-hint");
       const singlePageView = document.getElementById("single-page-view");
       const singlePageBody = document.getElementById("single-page-body");
+      const singlePageToolbar = document.getElementById("single-page-toolbar");
       const singlePageCanvasLink = document.getElementById("single-page-canvas-link");
+      const singlePageBackLink = document.getElementById("single-page-back-link");
       const minimapPanel = document.getElementById("minimap-panel");
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
@@ -43,6 +50,9 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       const searchResults = document.getElementById("search-results");
       const searchSummary = document.getElementById("search-summary");
       const searchCloseButton = document.getElementById("search-close-button");
+      const contentsOverlay = document.getElementById("contents-overlay");
+      const contentsPanel = document.getElementById("contents-panel");
+      const contentsToolbarButtons = Array.from(document.querySelectorAll("#contents-toolbar-button, .single-page-navigation-button"));
       const embeddedPageTemplates = Array.from(document.querySelectorAll("#embedded-pages-store template"));
       const edgeColor = ${serializeScriptData(
         normalizeCssColorValue(options.canvasColors?.["0"] || "") || theme.edge,
@@ -85,13 +95,23 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       let highlightedNodeId = null;
       let searchHighlightTimer = null;
       let activeSearchIndex = -1;
+      let restoreNestedSearchOnCanvasReturn = false;
 
-${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}${buildBrowserPages()}${buildBrowserFolding({ hasImportedFolding })}${buildBrowserInteraction()}      applyImportedFolding(${serializeScriptData(hasImportedFolding)});
+${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}${buildBrowserContents()}${buildBrowserPages()}${buildBrowserFolding({ hasImportedFolding })}${buildBrowserInteraction()}      applyImportedFolding(${serializeScriptData(hasImportedFolding)});
       syncLinkOfflineState();
-      window.resetZoom();
+      if (!restorePackageViewportState()) window.resetZoom();
+      if (exportFormat === "package") {
+        document.addEventListener("click", storePackageViewportBeforeNavigation, true);
+        window.addEventListener("beforeunload", storePackageViewportState);
+        window.addEventListener("pagehide", storePackageViewportState);
+        window.addEventListener("pageshow", (event) => {
+          if (event.persisted) restorePackageViewportState(true);
+        });
+      }
       window.addEventListener("resize", () => {
         drawEdges();
-        window.resetZoom();
+        if (exportFormat === "package") updateMinimapViewport();
+        else window.resetZoom();
         if (minimapPanel) {
           if (minimapPanel.dataset.positionMode === "custom") {
             const rect = minimapPanel.getBoundingClientRect();
@@ -207,6 +227,17 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
         });
       }
       document.addEventListener("click", (event) => {
+        const parentLink = event.target instanceof Element
+          ? event.target.closest('a[target="_parent"][href^="#"]')
+          : null;
+        if (parentLink && exportFormat === "single-html" && !isRootCanvas) {
+          event.preventDefault();
+          window.parent.postMessage({
+            type: "canvas-html-parent-navigation",
+            href: parentLink.getAttribute("href") || "#",
+          }, "*");
+          return;
+        }
         const link = event.target instanceof Element ? event.target.closest("[data-inline-page]") : null;
         if (!link) return;
         const pageId = link.getAttribute("data-inline-page") || "";
@@ -219,15 +250,19 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
         }
         window.location.hash = href;
       });
-      if (singlePageCanvasLink) {
-        singlePageCanvasLink.addEventListener("click", (event) => {
+      function returnToLocalCanvas(event) {
           event.preventDefault();
           if (window.location.hash) {
             window.location.hash = "";
           } else {
             syncEmbeddedPageFromHash();
           }
-        });
+      }
+      if (singlePageCanvasLink) {
+        singlePageCanvasLink.addEventListener("click", returnToLocalCanvas);
+      }
+      if (singlePageBackLink) {
+        singlePageBackLink.addEventListener("click", returnToLocalCanvas);
       }
       if (exportFormat === "single-html") {
         syncEmbeddedPageFromHash();
@@ -257,6 +292,19 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
       window.addEventListener("offline", syncLinkOfflineState);
 
       materializeInlineAssets(document);
+      if (exportFormat === "package" && searchInput) {
+        const initialSearchQuery = new URLSearchParams(window.location.search).get("q");
+        const initialSearchNodeId = new URLSearchParams(window.location.search).get("node");
+        if (initialSearchQuery && initialSearchQuery.trim()) {
+          searchInput.value = initialSearchQuery.trim();
+          runSearch(searchInput.value);
+          if (initialSearchNodeId && initialSearchNodeId.trim()) {
+            window.setTimeout(() => focusNode(initialSearchNodeId.trim()), 0);
+          } else {
+            openSearch();
+          }
+        }
+      }
 
     })();
 `;

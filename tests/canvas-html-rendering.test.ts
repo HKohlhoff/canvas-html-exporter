@@ -84,6 +84,77 @@ await test("renders markdown file nodes with title link and preview", async () =
   assert.match(html, /class="md-card-preview"><p>Vorschau<\/p>/);
 });
 
+await test("renders an accessible fixed navigation panel with global root and local subcanvas state", async () => {
+  const html = await convertCanvasToHtml({ nodes: [], edges: [] }, {
+    ...baseOptions,
+    exportFormat: "single-html",
+    navigationInitiallyOpen: true,
+    contents: {
+      canvases: [{
+        title: "Overview",
+        href: "#",
+        kind: "canvas",
+        current: true,
+        children: [{ title: "Act I", href: "#page-canvas-c1", kind: "canvas" }],
+      }],
+      pages: [{ title: "Chapter 1", href: "#page-p1", kind: "markdown" }],
+    },
+  });
+  assert.match(html, /id="contents-toolbar-button"[^>]*>Navigation<\/button>/);
+  assert.match(html, /<h2 id="contents-title">Navigation<\/h2>/);
+  assert.match(html, /id="contents-panel"[^>]+aria-labelledby="contents-title"/);
+  assert.doesNotMatch(html, /id="contents-close-button"/);
+  assert.match(html, /<h3>Canvases<\/h3>/);
+  assert.match(html, /<span class="contents-link is-current" aria-current="page" data-contents-current-canvas="true">Overview<\/span>/);
+  assert.match(html, /href="#page-canvas-c1" data-inline-page="canvas-c1">Act I<\/a>/);
+  assert.match(html, /<h3>Pages in this canvas<\/h3>[\s\S]+href="#page-p1" data-inline-page="p1">Chapter 1<\/a>/);
+  assert.match(html, /function toggleContents\(\)/);
+  assert.match(html, /function syncContentsCurrentPage\(pageId\)/);
+  assert.match(html, /link\.getAttribute\("data-inline-page"\) === pageId/);
+  assert.match(html, /activeLink\.setAttribute\("aria-current", "page"\)/);
+  assert.match(html, /body\.contents-open \{\s+padding-left: var\(--contents-panel-width\)/);
+  assert.match(html, /const navigationInitiallyOpen = true;/);
+  assert.match(html, /const isMainCanvas = isRootCanvas && \(!singlePageView \|\| singlePageView\.hidden\)/);
+  assert.match(html, /navigationPageStates\[pageId\] = open/);
+  assert.match(html, /const isUnvisitedEmbeddedFilePage = exportFormat === "single-html"/);
+  assert.match(html, /singlePageView\.dataset\.pageKind !== "canvas"/);
+  assert.match(html, /if \(isUnvisitedEmbeddedFilePage\) return false/);
+  assert.match(html, /url\.searchParams\.set\("navigationPages", JSON\.stringify/);
+  assert.match(html, /type: "canvas-html-navigation-state"/);
+  assert.match(html, /type: "canvas-html-navigation-page-state"/);
+  assert.match(html, /type: "canvas-html-navigation-ready"/);
+  assert.match(html, /type: "canvas-html-parent-navigation"/);
+  assert.match(html, /parentLink\.getAttribute\("href"\) \|\| "#"/);
+  assert.match(html, /const navigationWindowStatePrefix = "canvas-html-exporter-navigation:"/);
+  assert.match(html, /window\.name = navigationWindowStatePrefix \+ JSON\.stringify/);
+  assert.match(html, /viewportStates: packageViewportStates/);
+  assert.match(html, /const viewportValue = params\.get\("canvasViews"\)/);
+  assert.match(html, /url\.searchParams\.set\("canvasViews", JSON\.stringify/);
+  assert.match(html, /if \(restoreCanvasViewId\) url\.searchParams\.set\("canvasView", restoreCanvasViewId\)/);
+  assert.match(html, /Object\.prototype\.hasOwnProperty\.call\(stored, "viewportStates"\)/);
+  assert.match(html, /function storePackageViewportState\(\)/);
+  assert.match(html, /packageViewportStates\[navigationPageId\] = \{/);
+  assert.match(html, /top: viewport\.scrollTop,\s+\};\s+storePackageNavigationState\(\);/);
+  assert.match(html, /function restorePackageViewportState\(forceRestore\)/);
+  assert.match(html, /const initialRestoreCanvasViewId = new URLSearchParams\(window\.location\.search\)\.get\("canvasView"\)/);
+  assert.match(html, /if \(!forceRestore && initialRestoreCanvasViewId !== navigationPageId\) return false/);
+  assert.match(html, /if \(event\.persisted\) restorePackageViewportState\(true\)/);
+  assert.match(html, /viewport\.scrollTo\(\{ left: state\.left, top: state\.top, behavior: "auto" \}\)/);
+  assert.match(html, /window\.addEventListener\("pagehide", storePackageViewportState\)/);
+  assert.match(html, /document\.addEventListener\("click", storePackageViewportBeforeNavigation, true\)/);
+  assert.match(html, /window\.addEventListener\("beforeunload", storePackageViewportState\)/);
+  assert.match(html, /if \(isLocalHtml\) storePackageViewportState\(\)/);
+  assert.match(html, /if \(exportFormat === "package"\) updateMinimapViewport\(\);\s+else window\.resetZoom\(\);/);
+  assert.match(html, /if \(!restorePackageViewportState\(\)\) window\.resetZoom\(\)/);
+  assert.match(html, /readPackageNavigationState\(\);\s+readPackageWindowState\(\);/);
+  assert.match(html, /window\.addEventListener\("pageshow", \(\) => \{/);
+  assert.match(html, /\.single-page-view\.is-canvas-page \{[\s\S]*?max-width: none;[\s\S]*?height: 100dvh;[\s\S]*?margin: 0;[\s\S]*?border: 0;/);
+  assert.match(html, /singlePageView\.classList\.toggle\("is-canvas-page", template\.dataset\.pageKind === "canvas"\)/);
+  assert.match(html, /function restoreContentsForCanvasView\(\) \{\s+applyContentsVisibility\(getStoredNavigationState\(getActiveNavigationPageId\(\)\)\)/);
+  const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
+  assert.doesNotThrow(() => new vm.Script(runtime));
+});
+
 await test("keeps inline markdown styling visible in markdown file previews", async () => {
   const data: CanvasData = {
     name: "Test",
@@ -371,6 +442,7 @@ await test("renders standalone markdown documents with wrapper and title", () =>
   assert.match(html, /ul, ol \{ margin: 0\.65em 0; padding-left: 2em; \}/);
   assert.match(html, /table \{ border-collapse: collapse; width: auto; max-width: 100%; margin: 0\.8em 0; \}/);
   assert.match(html, /URLSearchParams\(window\.location\.search\)/);
+  assert.match(html, /url\.searchParams\.set\("navigationPages", navigationPages\)/);
   assert.match(html, /className = "search-highlight"/);
   assert.match(html, /:target,\n {4}\.target-highlight \{/);
   assert.match(html, /const highlightTarget = target\.closest\("details\.heading-section"\) \|\| target;/);
@@ -1348,7 +1420,10 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /id="search-toolbar-button" type="button" onclick="openSearch\(\)"/);
   assert.match(html, /id="search-overlay" class="search-overlay" hidden/);
+  assert.match(html, /body\.contents-open \.search-overlay \{\s+left: var\(--contents-panel-width\);/);
   assert.match(html, /id="search-input" class="search-input" type="search"/);
+  assert.match(html, /id="search-scope" class="search-scope">Searching in: Test Canvas<\/span>/);
+  assert.match(html, /aria-describedby="search-scope search-summary"/);
   assert.match(html, /id="search-results" class="search-results"/);
   assert.match(html, /function runSearch\(query\)/);
   assert.match(html, /function openSearch\(\)/);
@@ -1358,7 +1433,7 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /@keyframes search-hit-pulse \{/);
   assert.match(html, /@media \(prefers-reduced-motion: reduce\) \{\s+\.node\.search-hit \{\s+animation: none;/);
   assert.match(html, /target\.getBoundingClientRect\(\);\s+target\.classList\.add\("search-hit"\)/);
-  assert.match(html, /function appendSearchQueryToHref\(href, query\)/);
+  assert.match(html, /function appendSearchQueryToHref\(href, query, nodeId, pageHref\)/);
   assert.match(html, /function updateActiveSearchResult\(\)/);
   assert.match(html, /function moveActiveSearchResult\(direction\)/);
   assert.match(html, /function activateCurrentSearchResult\(\)/);
@@ -1371,11 +1446,13 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /event\.key === "\/"/);
   assert.match(html, /"title":"Alpha Beta Gamma"/);
   assert.match(html, /"openHref":"assets\/files\/suche-notiz\.html"|"openHref":"assets\/files\//);
-  assert.match(html, /title\.setAttribute\("data-search-open", "true"\)/);
-  assert.match(html, /search-result-title-link/);
-  assert.match(html, /function applyLinkAttrs\(link, href, query\)/);
-  assert.match(html, /link\.setAttribute\("href", appendSearchQueryToHref\(href, query\)\)/);
+  assert.match(html, /title\.className = "search-result-title"/);
+  assert.match(html, /result\.append\(title, metaEl, snippetEl\)/);
+  assert.match(html, /function applyLinkAttrs\(link, href, query, target, nodeId, pageHref\)/);
+  assert.match(html, /link\.setAttribute\("href", appendSearchQueryToHref\(href, query, nodeId, pageHref\)\)/);
   assert.match(html, /"kindLabel":"Markdown"/);
+  assert.match(html, /"positionLabel":"Test Canvas"/);
+  assert.doesNotMatch(html, /"positionLabel":"x /);
 });
 
 await test("indexes visible markdown preview html instead of hidden raw preview text", async () => {
@@ -1402,6 +1479,58 @@ await test("indexes visible markdown preview html instead of hidden raw preview 
   const html = await convertCanvasToHtml(data, baseOptions);
   assert.match(html, /"text":"Teilansicht Nur sichtbarer Abschnitt"/);
   assert.doesNotMatch(html, /VersteckterSuchbegriff/);
+});
+
+await test("renders descendant search results as navigable page entries", async () => {
+  const html = await convertCanvasToHtml({ name: "Root", nodes: [], edges: [] }, {
+    ...baseOptions,
+    additionalSearchEntries: [{
+      id: "child.canvas:note",
+      title: "Untergeordnete Notiz",
+      snippet: "Kurzer Ausschnitt",
+      text: "Untergeordnete Notiz Kurzer Ausschnitt Volltextbegriff",
+      kindLabel: "Markdown",
+      positionLabel: "Untercanvas",
+      openHref: "canvas-child.html",
+      openNodeId: "note-1",
+    }],
+  });
+
+  assert.match(html, /"id":"child\.canvas:note"/);
+  assert.match(html, /Searching in: Test Canvas and subordinate canvases/);
+  assert.match(html, /"text":"Untergeordnete Notiz Kurzer Ausschnitt Volltextbegriff"/);
+  assert.match(html, /"positionLabel":"Untercanvas"/);
+  assert.match(html, /const result = entry\.openHref \? document\.createElement\("a"\) : document\.createElement\("button"\)/);
+  assert.match(html, /result\.setAttribute\("data-search-open", "true"\)/);
+  assert.match(html, /result\.setAttribute\("aria-label", "Open " \+ entry\.title\)/);
+  assert.match(html, /function getSearchResultSnippet\(entry, query\)/);
+  assert.match(html, /type: "canvas-html-search-query"/);
+  assert.match(html, /"openNodeId":"note-1"/);
+  assert.match(html, /params\.set\("node", nodeId\)/);
+  assert.match(html, /params\.set\("page", pageHref\)/);
+  assert.match(html, /function parseNestedPageHref\(hash\)/);
+  assert.match(html, /const pageHref = appendSearchQueryToHref\(message\.pageHref, searchInput\.value\)/);
+  assert.match(html, /restoreNestedSearchOnCanvasReturn = true/);
+  assert.match(html, /const restoreNestedSearch = restoreNestedSearchOnCanvasReturn/);
+  assert.match(html, /if \(restoreNestedSearch\) \{\s+openSearch\(\);[\s\S]*?window\.resetZoom\(\)/);
+  assert.match(html, /window\.setTimeout\(\(\) => focusNode\(message\.nodeId\.trim\(\)\), 0\)/);
+  assert.match(html, /const initialSearchQuery = new URLSearchParams\(window\.location\.search\)\.get\("q"\)/);
+  assert.match(html, /window\.setTimeout\(\(\) => focusNode\(initialSearchNodeId\.trim\(\)\), 0\)/);
+});
+
+await test("lists a referenced file only once in search", async () => {
+  const html = await convertCanvasToHtml({
+    name: "Doppelte Datei",
+    nodes: [
+      { id: "note-a", type: "file", file: "notes/identity.md", fileKind: "markdown", displayName: "Identität", x: 0, y: 0, width: 200, height: 100 },
+      { id: "note-b", type: "file", file: "notes/identity.md", fileKind: "markdown", displayName: "Identität erneut", x: 240, y: 0, width: 200, height: 100 },
+    ],
+    edges: [],
+  }, baseOptions);
+
+  assert.match(html, /"id":"note-a"/);
+  assert.doesNotMatch(html, /"id":"note-b"/);
+  assert.doesNotMatch(html, /dedupeKey/);
 });
 
 await test("omits minimap when disabled", async () => {

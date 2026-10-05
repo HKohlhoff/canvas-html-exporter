@@ -6,12 +6,17 @@ import {
   buildMarkdownDocumentHtml,
   CanvasData,
   CanvasNode,
+  ContentsNavigation,
   ExportOptions,
   EXPORTER_SIGNATURE,
   EXPORTER_VERSION,
   HighlightingThemeChoice,
   markdownToHtml,
 } from "../render/converter";
+import { buildContentsNavigation, rebaseContentsNavigation, type ContentsCanvasDocument } from "./contents";
+import { buildDescendantSearchEntries } from "./search-index";
+import { buildPackagePageNavigation } from "../render/package-page-navigation";
+import { getTheme } from "../render/theme";
 import { isAbsoluteFilesystemPath, requireDesktopNodeApis } from "../helpers/desktop-paths";
 import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePath } from "./files";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./canvas-data";
@@ -34,6 +39,7 @@ export type ExportSettings = {
   showMinimap?: boolean;
   showSearch?: boolean;
   foldingInitiallyEnabled?: boolean;
+  navigationInitiallyOpen?: boolean;
   initialFoldState?: CanvasFoldState;
 };
 
@@ -42,13 +48,34 @@ export type ExportResult = {
   outputKind: "folder" | "file";
   data: PreparedCanvasData;
   options: ExportOptions;
+  canvasPages: ExportedCanvasPage[];
 };
 
 type PreparedCanvasData = CanvasData;
 
+export type ExportedCanvasPage = {
+  sourcePath: string;
+  title: string;
+  href: string;
+  data: PreparedCanvasData;
+  options: ExportOptions;
+  outputPath?: string;
+  pageId?: string;
+};
+
+type CanvasRegistryEntry = {
+  href: string;
+  navigationPageId: string;
+  outputPath?: string;
+  pageId?: string;
+  data?: PreparedCanvasData;
+  status: "preparing" | "complete";
+};
+
 type MarkdownContext = {
   app: App;
   canvasFile: TFile;
+  rootCanvasPath: string;
   exportFormat: ExportFormatChoice;
   outputMode: "vault" | "filesystem";
   outputRoot: string;
@@ -58,7 +85,7 @@ type MarkdownContext = {
   highlightingTheme?: HighlightingThemeChoice;
   fileMap: Map<string, string>;
   htmlMap: Map<string, string>;
-  counter: number;
+  outputCounter: { value: number };
   pageStack: Set<string>;
   inlineStack: Set<string>;
   canvasColors?: Record<string, string>;
@@ -67,6 +94,18 @@ type MarkdownContext = {
   inlineStyleColors?: Record<string, string>;
   singleHtmlPages: EmbeddedPage[];
   pageIdCounter: number;
+  canvasRegistry: Map<string, CanvasRegistryEntry>;
+  canvasPages: ExportedCanvasPage[];
+  canvasPageCounter: { value: number };
+  packagePages: DeferredPackagePage[];
+  settings: ExportSettings;
+};
+
+type DeferredPackagePage = {
+  ownerCanvasPath: string;
+  relativePath: string;
+  outputPath: string;
+  render: (contents: ContentsNavigation, navigationPageId: string) => string;
 };
 
 type LinkBase = "canvas" | "page";
@@ -74,8 +113,9 @@ type LinkBase = "canvas" | "page";
 type ResolvedInternalTarget = {
   href: string;
   found: boolean;
-  kind: "markdown" | "image" | "file" | "external" | "anchor" | "missing";
+  kind: "markdown" | "canvas" | "image" | "file" | "external" | "anchor" | "missing";
   displayText?: string;
+  navigationTarget?: "_parent";
 };
 
 function stripFrontmatter(markdown: string): string {
@@ -170,16 +210,7 @@ export async function exportCanvasPackage(
   canvasFile: TFile,
   settings: ExportSettings,
 ): Promise<ExportResult> {
-  const rawContent = await app.vault.read(canvasFile);
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(rawContent);
-  } catch (error) {
-    const detail = error instanceof Error ? `: ${error.message}` : "";
-    throw new Error(`Invalid canvas JSON in ${canvasFile.path}${detail}`);
-  }
-
+  const rootParsed = await readCanvasJson(app, canvasFile);
   const outputMode = isAbsoluteFilesystemPath(settings.outputDir) && settings.outputDir.trim() !== "/" ? "filesystem" : "vault";
   const baseFolder = resolveBaseFolder(settings.outputDir, outputMode);
   const safeCanvasName = safeSegment(canvasFile.basename);
@@ -199,14 +230,10 @@ export async function exportCanvasPackage(
     await ensureFolderExists(app, filesDir, outputMode);
   }
 
-  const normalized = normalizeCanvasData(parsed, canvasFile.basename);
-  const nodes = normalized.nodes;
-  const edges = normalized.edges;
-  const title = normalized.name || canvasFile.basename;
-
   const ctx: MarkdownContext = {
     app,
     canvasFile,
+    rootCanvasPath: canvasFile.path,
     exportFormat,
     outputMode,
     outputRoot: useSingleHtml ? singleHtmlPath : exportFolder,
@@ -216,7 +243,7 @@ export async function exportCanvasPackage(
     highlightingTheme: settings.highlightingTheme,
     fileMap: new Map<string, string>(),
     htmlMap: new Map<string, string>(),
-    counter: 0,
+    outputCounter: { value: 0 },
     pageStack: new Set<string>(),
     inlineStack: new Set<string>(),
     canvasColors: settings.canvasColors,
@@ -225,45 +252,251 @@ export async function exportCanvasPackage(
     inlineStyleColors: settings.inlineStyleColors,
     singleHtmlPages: [],
     pageIdCounter: 0,
+    canvasRegistry: new Map<string, CanvasRegistryEntry>(),
+    canvasPages: [],
+    canvasPageCounter: { value: 0 },
+    packagePages: [],
+    settings,
   };
 
-  const preparedNodes: CanvasNode[] = [];
-  for (const node of nodes) {
-    preparedNodes.push(await prepareNode(ctx, node));
+  ctx.canvasRegistry.set(canvasFile.path, {
+    href: useSingleHtml ? "#" : "index.html",
+    navigationPageId: "root",
+    status: "preparing",
+  });
+  const root = await prepareCanvasDocument(ctx, canvasFile, settings.initialFoldState, rootParsed);
+  const rootEntry = ctx.canvasRegistry.get(canvasFile.path);
+  if (rootEntry) {
+    rootEntry.data = root.data;
+    rootEntry.status = "complete";
   }
-
-  const nodeIds = new Set(preparedNodes.map((node) => node.id));
-  const preparedEdges = edges.filter((edge) => nodeIds.has(edge.fromNode) && nodeIds.has(edge.toNode));
-  const initialFoldState = settings.foldingInitiallyEnabled === true && settings.initialFoldState
-    ? filterCanvasFoldState(
-      settings.initialFoldState,
-      nodeIds,
-      preparedEdges.flatMap((edge) => edge.id ? [edge.id] : []),
-    )
-    : undefined;
+  attachCanvasPreviews(ctx, [root.data, ...ctx.canvasPages.map((page) => page.data)]);
+  const contentsDocuments = [
+    {
+      sourcePath: canvasFile.path,
+      title: root.options.title,
+      href: useSingleHtml ? "#" : "index.html",
+      data: root.data,
+    },
+    ...ctx.canvasPages.map((page) => ({
+      sourcePath: page.sourcePath,
+      title: page.title,
+      href: page.href,
+      data: page.data,
+    })),
+  ];
+  root.options.contents = buildContentsNavigation(
+    contentsDocuments,
+    canvasFile.path,
+    canvasFile.path,
+    ctx.exportFormat,
+  );
+  root.options.additionalSearchEntries = buildDescendantSearchEntries(
+    contentsDocuments,
+    canvasFile.path,
+    canvasFile.path,
+    ctx.exportFormat,
+  );
+  for (const page of ctx.canvasPages) {
+    page.options.contents = buildContentsNavigation(
+      contentsDocuments,
+      canvasFile.path,
+      page.sourcePath,
+      ctx.exportFormat,
+    );
+    page.options.additionalSearchEntries = buildDescendantSearchEntries(
+      contentsDocuments,
+      canvasFile.path,
+      page.sourcePath,
+      ctx.exportFormat,
+    );
+  }
+  if (!useSingleHtml) {
+    await writeDeferredPackagePages(ctx, contentsDocuments);
+  }
+  if (useSingleHtml && ctx.canvasPages.length > 0) {
+    root.options.embeddedPages = [
+      ...(root.options.embeddedPages || []),
+      ...ctx.canvasPages.map((page) => ({
+        id: page.pageId || "",
+        title: page.title,
+        kind: "canvas" as const,
+        bodyHtml: "",
+      })),
+    ];
+  }
 
   return {
     outputPath: useSingleHtml ? singleHtmlPath : exportFolder,
     outputKind: useSingleHtml ? "file" : "folder",
+    data: root.data,
+    options: root.options,
+    canvasPages: ctx.canvasPages,
+  };
+}
+
+async function writeDeferredPackagePages(
+  ctx: MarkdownContext,
+  documents: ContentsCanvasDocument[],
+): Promise<void> {
+  for (const page of ctx.packagePages) {
+    const contents = rebaseContentsNavigation(
+      buildContentsNavigation(
+        documents,
+        ctx.rootCanvasPath,
+        page.ownerCanvasPath,
+        "package",
+        page.relativePath,
+      ),
+      page.relativePath,
+    );
+    const ownerNavigationPageId = ctx.canvasRegistry.get(page.ownerCanvasPath)?.navigationPageId || "root";
+    const navigationPageId = `${ownerNavigationPageId}:page:${page.relativePath}`;
+    await writeTextFile(
+      ctx.app,
+      page.outputPath,
+      page.render(contents, navigationPageId),
+      ctx.outputMode,
+    );
+  }
+}
+
+async function prepareCanvasDocument(
+  ctx: MarkdownContext,
+  canvasFile: TFile,
+  requestedFoldState?: CanvasFoldState,
+  parsedCanvas?: unknown,
+): Promise<{ data: PreparedCanvasData; options: ExportOptions }> {
+  const parsed = parsedCanvas === undefined
+    ? await readCanvasJson(ctx.app, canvasFile)
+    : parsedCanvas;
+  const normalized = normalizeCanvasData(parsed, canvasFile.basename);
+  const preparedNodes: CanvasNode[] = [];
+  for (const node of normalized.nodes) {
+    const preparedNode = await prepareNode(ctx, node);
+    if (preparedNode) preparedNodes.push(preparedNode);
+  }
+
+  const nodeIds = new Set(preparedNodes.map((node) => node.id));
+  const preparedEdges = normalized.edges.filter((edge) => nodeIds.has(edge.fromNode) && nodeIds.has(edge.toNode));
+  const initialFoldState = ctx.settings.foldingInitiallyEnabled === true && requestedFoldState
+    ? filterCanvasFoldState(
+      requestedFoldState,
+      nodeIds,
+      preparedEdges.flatMap((edge) => edge.id ? [edge.id] : []),
+    )
+    : undefined;
+  const title = normalized.name || canvasFile.basename;
+
+  return {
     data: { nodes: preparedNodes, edges: preparedEdges, name: title },
     options: {
-      darkMode: settings.darkMode,
+      darkMode: ctx.settings.darkMode,
       title,
-      highlightingTheme: settings.highlightingTheme,
-      showMinimap: settings.showMinimap,
-      showSearch: settings.showSearch,
-      foldingInitiallyEnabled: settings.foldingInitiallyEnabled === true,
-      calloutColors: settings.calloutColors,
-      headingColors: settings.headingColors,
-      inlineStyleColors: settings.inlineStyleColors,
-      exportFormat,
+      highlightingTheme: ctx.settings.highlightingTheme,
+      showMinimap: ctx.settings.showMinimap,
+      showSearch: ctx.settings.showSearch,
+      foldingInitiallyEnabled: ctx.settings.foldingInitiallyEnabled === true,
+      navigationInitiallyOpen: ctx.settings.navigationInitiallyOpen === true,
+      navigationPageId: ctx.canvasRegistry.get(canvasFile.path)?.navigationPageId || "root",
+      canvasColors: ctx.settings.canvasColors,
+      calloutColors: ctx.settings.calloutColors,
+      headingColors: ctx.settings.headingColors,
+      inlineStyleColors: ctx.settings.inlineStyleColors,
+      exportFormat: ctx.exportFormat,
+      canvasHomeHref: canvasFile.path !== ctx.rootCanvasPath
+        ? ctx.exportFormat === "single-html" ? "#" : "index.html"
+        : undefined,
+      canvasHomeTarget: ctx.exportFormat === "single-html" && canvasFile.path !== ctx.rootCanvasPath
+        ? "_parent"
+        : undefined,
       embeddedPages: ctx.singleHtmlPages,
       initialFoldState,
     },
   };
 }
 
-async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<CanvasNode> {
+async function readCanvasJson(app: App, canvasFile: TFile): Promise<unknown> {
+  const rawContent = await app.vault.read(canvasFile);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawContent);
+  } catch (error) {
+    const detail = error instanceof Error ? `: ${error.message}` : "";
+    throw new Error(`Invalid canvas JSON in ${canvasFile.path}${detail}`);
+  }
+  return parsed;
+}
+
+function createChildCanvasContext(ctx: MarkdownContext, canvasFile: TFile): MarkdownContext {
+  return {
+    ...ctx,
+    canvasFile,
+    htmlMap: new Map<string, string>(),
+    pageStack: new Set<string>(),
+    inlineStack: new Set<string>(),
+    singleHtmlPages: [],
+    pageIdCounter: 0,
+  };
+}
+
+async function exportCanvasTarget(ctx: MarkdownContext, canvasFile: TFile): Promise<CanvasRegistryEntry> {
+  const existing = ctx.canvasRegistry.get(canvasFile.path);
+  if (existing) return existing;
+
+  ctx.canvasPageCounter.value += 1;
+  const pageNumber = ctx.canvasPageCounter.value;
+  const pageId = ctx.exportFormat === "single-html" ? `canvas-c${pageNumber}` : undefined;
+  const href = ctx.exportFormat === "single-html"
+    ? `#page-${pageId}`
+    : `canvas-${String(pageNumber).padStart(3, "0")}-${safeSegment(canvasFile.basename)}.html`;
+  const outputPath = ctx.exportFormat === "package"
+    ? joinOutputPath(ctx.outputMode, ctx.outputRoot, href)
+    : undefined;
+  const entry: CanvasRegistryEntry = {
+    href,
+    navigationPageId: `c${pageNumber}`,
+    outputPath,
+    pageId,
+    status: "preparing",
+  };
+  ctx.canvasRegistry.set(canvasFile.path, entry);
+
+  try {
+    const childContext = createChildCanvasContext(ctx, canvasFile);
+    const prepared = await prepareCanvasDocument(childContext, canvasFile);
+    ctx.canvasPages.push({
+      sourcePath: canvasFile.path,
+      title: prepared.options.title,
+      href,
+      data: prepared.data,
+      options: prepared.options,
+      outputPath,
+      pageId,
+    });
+    entry.data = prepared.data;
+    entry.status = "complete";
+    return entry;
+  } catch (error) {
+    ctx.canvasRegistry.delete(canvasFile.path);
+    throw error;
+  }
+}
+
+function canvasNavigationTarget(ctx: MarkdownContext): "_parent" | undefined {
+  return ctx.exportFormat === "single-html" && ctx.canvasFile.path !== ctx.rootCanvasPath
+    ? "_parent"
+    : undefined;
+}
+
+function getPackageBackHref(ctx: MarkdownContext, currentHtmlPath: string): string | undefined {
+  if (ctx.exportFormat !== "package" || ctx.canvasFile.path === ctx.rootCanvasPath) return undefined;
+  const ownerCanvasHref = ctx.canvasRegistry.get(ctx.canvasFile.path)?.href;
+  if (!ownerCanvasHref) return undefined;
+  return normalizeExportHref(getHrefForMarkdownPage(currentHtmlPath, ownerCanvasHref));
+}
+
+async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<CanvasNode | null> {
   const nodeType = (node.type || "").toLowerCase();
 
   if (nodeType === "link") {
@@ -303,6 +536,28 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
 
   const ext = file.extension.toLowerCase();
 
+  if (ext === "canvas") {
+    if (ctx.canvasFile.path !== ctx.rootCanvasPath && file.path === ctx.rootCanvasPath) {
+      return null;
+    }
+    try {
+      const target = await exportCanvasTarget(ctx, file);
+      return {
+        ...node,
+        displayName: file.basename,
+        fileKind: "canvas",
+        exportHtmlPath: target.outputPath ? target.href : undefined,
+        canvasHref: target.href,
+        canvasNavigationTarget: canvasNavigationTarget(ctx),
+        canvasSourcePath: file.path,
+      };
+    } catch (error) {
+      console.error(`[canvas-html-exporter] Subcanvas export failed for ${file.path}`, error);
+      const exportPath = await copyVaultFile(ctx, file, "file");
+      return { ...node, displayName: file.basename, fileKind: "file", exportPath };
+    }
+  }
+
   if (isImageExt(ext)) {
     const exportPath = await copyVaultFile(ctx, file, "image");
     return {
@@ -317,6 +572,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
     let exportHtmlPath: string | undefined;
     let previewText: string | undefined;
     let previewHtml: string | undefined;
+    let searchText: string | undefined;
     let canvasHref: string | undefined;
 
     try {
@@ -335,6 +591,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       const preview = await buildMarkdownPreview(ctx, file);
       previewText = preview.text;
       previewHtml = preview.html;
+      searchText = preview.searchText;
     } catch (error) {
       console.error(`[canvas-html-exporter] Markdown preview generation failed for ${file.path}`, error);
     }
@@ -348,6 +605,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
         canvasHref,
         previewText: previewText || undefined,
         previewHtml: previewHtml || undefined,
+        searchText,
       };
     }
 
@@ -359,6 +617,7 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       exportPath: fallbackExportPath,
       previewText: previewText || undefined,
       previewHtml: previewHtml || undefined,
+      searchText,
     };
   }
 
@@ -370,29 +629,25 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       : exportPath.split("/").pop() || "";
     const viewerName = uniqueOutputName(ctx, `${file.basename}-viewer`, "html");
     const viewerPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, viewerName);
-    const canvasHrefForViewer = normalizeExportHref(getHrefForMarkdownPage(normalizeExportHref(`assets/files/${viewerName}`), "index.html"));
-    const viewerHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="generator" content="${EXPORTER_SIGNATURE}">
-  <meta name="canvas-html-exporter-build" content="${EXPORTER_VERSION}-${ctx.highlightingTheme || "shiki"}">
-  <title>${escapeHtmlAttr(file.basename)}</title>
-  <!-- Exported by ${EXPORTER_SIGNATURE} -->
-  <style>
-    html,body{margin:0;padding:0;height:100%;}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f5f8;color:#1b2733;}
-    .pdf-viewer-toolbar{display:flex;justify-content:flex-end;padding:12px 16px;border-bottom:1px solid #d6dde7;background:#fff;}
-    .pdf-viewer-canvas-link{color:#1967d2;text-decoration:none;font-size:0.95em;font-weight:600;}
-    .pdf-viewer-canvas-link:hover{text-decoration:underline;}
-    iframe{display:block;width:100%;height:calc(100vh - 53px);border:none;}
-  </style>
-</head>
-<body><div class="pdf-viewer-toolbar"><a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHrefForViewer)}">Canvas</a></div><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
-</html>`;
+    const viewerRel = normalizeExportHref(`assets/files/${viewerName}`);
+    const canvasHrefForViewer = normalizeExportHref(getHrefForMarkdownPage(viewerRel, "index.html"));
+    const backHrefForViewer = getPackageBackHref(ctx, viewerRel);
     if (ctx.exportFormat !== "single-html") {
-      await writeTextFile(ctx.app, viewerPath, viewerHtml, ctx.outputMode);
+      ctx.packagePages.push({
+        ownerCanvasPath: ctx.canvasFile.path,
+        relativePath: viewerRel,
+        outputPath: viewerPath,
+        render: (contents, navigationPageId) => buildPdfDocumentHtml(
+          file.basename,
+          pdfFilename,
+          ctx.darkMode,
+          ctx.highlightingTheme,
+          canvasHrefForViewer,
+          backHrefForViewer,
+          contents,
+          navigationPageId,
+        ),
+      });
     }
     const canvasHref = ctx.exportFormat === "single-html"
       ? registerSingleHtmlPage(
@@ -428,6 +683,45 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   };
 }
 
+function attachCanvasPreviews(ctx: MarkdownContext, documents: PreparedCanvasData[]): void {
+  const previewCache = new Map<string, CanvasData>();
+  for (const document of documents) {
+    for (const node of document.nodes) {
+      if (node.fileKind !== "canvas" || !node.canvasSourcePath) continue;
+      let preview = previewCache.get(node.canvasSourcePath);
+      if (!preview) {
+        const target = ctx.canvasRegistry.get(node.canvasSourcePath)?.data;
+        if (!target) continue;
+        preview = projectCanvasPreview(target);
+        previewCache.set(node.canvasSourcePath, preview);
+      }
+      node.canvasPreview = preview;
+    }
+  }
+}
+
+function projectCanvasPreview(data: PreparedCanvasData): CanvasData {
+  return {
+    nodes: data.nodes.map((node) => ({
+      id: node.id,
+      type: node.type,
+      x: node.x,
+      y: node.y,
+      width: node.width,
+      height: node.height,
+      color: node.color,
+      shape: node.shape,
+      borderStyle: node.borderStyle,
+    })),
+    edges: data.edges.map((edge) => ({
+      id: edge.id,
+      fromNode: edge.fromNode,
+      toNode: edge.toNode,
+      color: edge.color,
+    })),
+  };
+}
+
 async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promise<string> {
   const url = typeof node.url === "string" ? node.url.trim() : "";
   const title = typeof node.label === "string" && node.label.trim() ? node.label.trim() : url || "Link";
@@ -438,8 +732,23 @@ async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promi
   const outputPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, outputName);
   const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
   const canvasHref = normalizeExportHref(getHrefForMarkdownPage(rel, "index.html"));
-  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme, canvasHref);
-  await writeTextFile(ctx.app, outputPath, html, ctx.outputMode);
+  const backHref = getPackageBackHref(ctx, rel);
+  ctx.packagePages.push({
+    ownerCanvasPath: ctx.canvasFile.path,
+    relativePath: rel,
+    outputPath,
+    render: (contents, navigationPageId) => buildLinkDocumentHtml(
+      title,
+      url,
+      ctx.darkMode,
+      ctx.canvasColors,
+      ctx.highlightingTheme,
+      canvasHref,
+      backHref,
+      contents,
+      navigationPageId,
+    ),
+  });
   return rel;
 }
 
@@ -630,18 +939,26 @@ async function renderMarkdownFileToHtml(
     }
     const title = (pageTitle || file.basename || file.name).trim();
     const canvasHref = getHrefForMarkdownPage(rel, "index.html");
-    const htmlDoc = buildMarkdownDocumentHtml(
-      title,
-      htmlBody,
-      ctx.darkMode,
-      ctx.canvasColors,
-      ctx.calloutColors,
-      ctx.headingColors,
-      ctx.inlineStyleColors,
-      ctx.highlightingTheme,
-      canvasHref,
-    );
-    await writeTextFile(ctx.app, outputPath, htmlDoc, ctx.outputMode);
+    const backHref = getPackageBackHref(ctx, rel);
+    ctx.packagePages.push({
+      ownerCanvasPath: ctx.canvasFile.path,
+      relativePath: rel,
+      outputPath,
+      render: (contents, navigationPageId) => buildMarkdownDocumentHtml(
+        title,
+        htmlBody,
+        ctx.darkMode,
+        ctx.canvasColors,
+        ctx.calloutColors,
+        ctx.headingColors,
+        ctx.inlineStyleColors,
+        ctx.highlightingTheme,
+        canvasHref,
+        backHref,
+        contents,
+        navigationPageId,
+      ),
+    });
     return rel;
   } catch (error) {
     if (mode === "page") {
@@ -701,7 +1018,7 @@ async function rewriteMarkdownHtmlAssets(
     if (resolved) {
       const label = match[3] || "";
       const attrs = match[2] || "";
-      const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href)}${attrs}>${label}</a>`;
+      const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href, resolved.navigationTarget)}${attrs}>${label}</a>`;
       result = result.replace(original, replacement);
     }
   }
@@ -759,7 +1076,7 @@ async function rewriteWikiLinks(
     } else {
       const resolved = await resolveObsidianTarget(ctx, sourceFile, target, false, false, mode, linkBase);
       if (resolved) {
-        replacement = renderFileEmbed(resolved.href, targetFile, embedLabel || target, parsed.size, ctx);
+        replacement = renderFileEmbed(resolved.href, targetFile, embedLabel || target, parsed.size, ctx, resolved.navigationTarget);
       }
     }
 
@@ -782,7 +1099,7 @@ async function rewriteWikiLinks(
       continue;
     }
 
-    const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href)}>${escapeHtmlAttr(alias)}</a>`;
+    const replacement = `<a ${buildPageAnchorAttributes(ctx, resolved.href, resolved.navigationTarget)}>${escapeHtmlAttr(alias)}</a>`;
     result = result.replace(original, replacement);
   }
 
@@ -801,10 +1118,11 @@ function renderFileEmbed(
   label: string,
   size: { width?: number; height?: number } | null,
   ctx?: MarkdownContext,
+  navigationTarget?: "_parent",
 ): string {
   const safeHref = escapeHtmlAttr(href);
   const safeLabel = escapeHtmlAttr(label || file.basename || file.name);
-  const anchorAttrs = ctx ? buildPageAnchorAttributes(ctx, href) : `href="${safeHref}" target="_blank" rel="noopener noreferrer"`;
+  const anchorAttrs = ctx ? buildPageAnchorAttributes(ctx, href, navigationTarget) : `href="${safeHref}" target="_blank" rel="noopener noreferrer"`;
 
   if (file.extension.toLowerCase() === "pdf") {
     const sizeAttrs = embedSizeAttributes(size);
@@ -823,13 +1141,13 @@ function renderFileEmbed(
   return `<div class="file-embed-block"><a class="file-chip" ${anchorAttrs}>${safeLabel}</a></div>`;
 }
 
-function buildPageAnchorAttributes(ctx: MarkdownContext, href: string): string {
+function buildPageAnchorAttributes(ctx: MarkdownContext, href: string, navigationTarget?: "_parent"): string {
   const safeHref = escapeHtmlAttr(href);
-  if (ctx.exportFormat === "single-html" && href.startsWith("#page-")) {
+  if (ctx.exportFormat === "single-html" && href.startsWith("#page-") && !navigationTarget) {
     const pageId = href.replace(/^#page-/, "").split(/[?#]/)[0];
     return `href="${safeHref}" data-inline-page="${escapeHtmlAttr(pageId)}"`;
   }
-  return `href="${safeHref}"`;
+  return `href="${safeHref}"${navigationTarget ? ` target="${navigationTarget}"` : ""}`;
 }
 
 function getEmbedLabel(
@@ -911,6 +1229,26 @@ async function resolveObsidianTarget(
     };
   }
 
+  if (resolved.extension.toLowerCase() === "canvas") {
+    try {
+      const exported = await exportCanvasTarget(ctx, resolved);
+      const href = ctx.exportFormat === "single-html"
+        ? exported.href
+        : linkBase === "page"
+        ? getHrefForMarkdownPage(ctx.htmlMap.get(sourceFile.path) || "", exported.href)
+        : exported.href;
+      return {
+        href: `${href}${suffix}`,
+        found: true,
+        kind: "canvas",
+        displayText: resolved.basename,
+        navigationTarget: canvasNavigationTarget(ctx),
+      };
+    } catch (error) {
+      console.error(`[canvas-html-exporter] Linked subcanvas export failed for ${resolved.path}`, error);
+    }
+  }
+
   if (resolved.extension.toLowerCase() === "md") {
     const cached = ctx.htmlMap.get(resolved.path);
     const exported = cached || await exportMarkdownNote(ctx, resolved);
@@ -938,7 +1276,7 @@ async function resolveObsidianTarget(
   };
 }
 
-async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<{ text: string; html: string }> {
+async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<{ text: string; html: string; searchText: string }> {
   const raw = stripFrontmatter(await ctx.app.vault.read(file));
   const previewSource = raw.slice(0, 2000);
   const text = buildPreviewText(raw);
@@ -951,7 +1289,7 @@ async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<
     html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode, highlightingTheme: ctx.highlightingTheme });
   }
 
-  return { text, html };
+  return { text, html, searchText: raw };
 }
 
 async function copyVaultFile(ctx: MarkdownContext, file: TFile, kind: "image" | "file"): Promise<string> {
@@ -976,8 +1314,8 @@ async function copyVaultFile(ctx: MarkdownContext, file: TFile, kind: "image" | 
 }
 
 function uniqueOutputName(ctx: MarkdownContext, basename: string, extension: string): string {
-  ctx.counter += 1;
-  return buildUniqueOutputName(ctx.counter, basename, extension);
+  ctx.outputCounter.value += 1;
+  return buildUniqueOutputName(ctx.outputCounter.value, basename, extension);
 }
 
 async function ensureFolderExists(app: App, folderPath: string, outputMode: "vault" | "filesystem"): Promise<void> {
@@ -1100,6 +1438,82 @@ function buildMarkdownAnchorSuffix(section: string): string {
   return headingId ? `#${headingId}` : "";
 }
 
+function buildPackageNavigationLinkScript(): string {
+  return `(() => {
+    const params = new URLSearchParams(window.location.search);
+    const navigation = params.get("navigation");
+    const navigationPages = params.get("navigationPages");
+    if (navigation !== "open" && navigation !== "closed") return;
+    document.querySelectorAll('a[href]').forEach((link) => {
+      const href = link.getAttribute("href") || "";
+      if (!href || href.startsWith("#")) return;
+      try {
+        const url = new URL(href, window.location.href);
+        const isLocalTarget = url.protocol === window.location.protocol
+          && (url.protocol === "file:" || url.origin === window.location.origin);
+        if (!isLocalTarget) return;
+        if (!url.pathname.toLowerCase().endsWith(".html")) return;
+        url.searchParams.set("navigation", navigation);
+        if (navigationPages) url.searchParams.set("navigationPages", navigationPages);
+        link.setAttribute("href", url.href);
+      } catch {
+        // Leave malformed or unsupported links unchanged.
+      }
+    });
+  })();`;
+}
+
+function buildPdfDocumentHtml(
+  title: string,
+  pdfFilename: string,
+  darkMode: boolean,
+  highlightingTheme?: HighlightingThemeChoice,
+  canvasHref?: string,
+  backHref?: string,
+  contents?: ContentsNavigation,
+  navigationPageId?: string,
+): string {
+  const theme = getTheme(darkMode);
+  const pageNavigation = buildPackagePageNavigation(contents, navigationPageId, canvasHref, theme);
+  const ownerCanvasNavigationPageId = navigationPageId?.split(":page:")[0] || "";
+  const backRestoreAttr = ownerCanvasNavigationPageId
+    ? ` data-restore-canvas-view="${escapeHtmlAttr(ownerCanvasNavigationPageId)}"`
+    : "";
+  const canvasRestoreAttr = navigationPageId ? ` data-restore-canvas-view="root"` : "";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="${EXPORTER_SIGNATURE}">
+  <meta name="canvas-html-exporter-build" content="${EXPORTER_VERSION}-${highlightingTheme || "shiki"}">
+  <title>${escapeHtmlAttr(title)}</title>
+  <!-- Exported by ${EXPORTER_SIGNATURE} -->
+  <style>
+    *{box-sizing:border-box;}
+    html,body{margin:0;padding:0;height:100%;}
+    body{display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:${theme.bodyBackground};color:${theme.text};}
+    .pdf-viewer-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:12px 16px;border-bottom:1px solid ${theme.canvasBorder};background:${theme.canvasBackground};}
+    .pdf-viewer-back-link,.pdf-viewer-canvas-link{color:${theme.link};text-decoration:none;font-size:0.95em;font-weight:600;}
+    .pdf-viewer-back-link:hover,.pdf-viewer-canvas-link:hover{text-decoration:underline;}
+    iframe{display:block;width:100%;flex:1 1 auto;min-height:0;border:none;}
+    ${pageNavigation.css}
+  </style>
+</head>
+<body>
+  <div class="pdf-viewer-toolbar">${backHref ? `<a class="pdf-viewer-back-link" href="${escapeHtmlAttr(backHref)}"${backRestoreAttr}>Back</a>` : ""}<a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHref || "")}"${canvasRestoreAttr}>Canvas</a>${pageNavigation.buttonHtml}</div>
+  <iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(title)}"></iframe>
+  ${pageNavigation.contentsHtml}
+  <script>
+    (() => {
+      ${pageNavigation.script}
+      ${buildPackageNavigationLinkScript()}
+    })();
+  </script>
+</body>
+</html>`;
+}
+
 function buildLinkDocumentHtml(
   title: string,
   url: string,
@@ -1107,8 +1521,17 @@ function buildLinkDocumentHtml(
   canvasColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
   canvasHref?: string,
+  backHref?: string,
+  contents?: ContentsNavigation,
+  navigationPageId?: string,
 ): string {
   const theme = getLinkPageTheme(darkMode);
+  const pageNavigation = buildPackagePageNavigation(contents, navigationPageId, canvasHref, getTheme(darkMode));
+  const ownerCanvasNavigationPageId = navigationPageId?.split(":page:")[0] || "";
+  const backRestoreAttr = ownerCanvasNavigationPageId
+    ? ` data-restore-canvas-view="${escapeHtmlAttr(ownerCanvasNavigationPageId)}"`
+    : "";
+  const canvasRestoreAttr = navigationPageId ? ` data-restore-canvas-view="root"` : "";
   const safeTitle = escapeHtmlAttr(url || title || "Link");
   const safeUrl = escapeHtmlAttr(safeNavigationUrl(url));
   const previewUrl = escapeHtmlAttr(safeWebPreviewUrl(url));
@@ -1160,12 +1583,19 @@ function buildLinkDocumentHtml(
     .link-page-title:hover {
       text-decoration: underline;
     }
+    .link-page-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .link-page-back-link,
     .link-page-canvas-link {
       color: ${theme.text};
       text-decoration: none;
       font-weight: 600;
       white-space: nowrap;
     }
+    .link-page-back-link:hover,
     .link-page-canvas-link:hover {
       text-decoration: underline;
     }
@@ -1237,6 +1667,7 @@ function buildLinkDocumentHtml(
       padding: 0 0.08em;
       border-radius: 3px;
     }
+    ${pageNavigation.css}
   </style>
 </head>
 <body>
@@ -1244,7 +1675,11 @@ function buildLinkDocumentHtml(
     <div class="link-page-nav">
       <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
     </div>
-    ${canvasHref ? `<a class="link-page-canvas-link" href="${escapeHtmlAttr(canvasHref)}">Canvas</a>` : ""}
+    <div class="link-page-nav-links">
+      ${backHref ? `<a class="link-page-back-link" href="${escapeHtmlAttr(backHref)}"${backRestoreAttr}>Back</a>` : ""}
+      ${canvasHref ? `<a class="link-page-canvas-link" href="${escapeHtmlAttr(canvasHref)}"${canvasRestoreAttr}>Canvas</a>` : ""}
+      ${pageNavigation.buttonHtml}
+    </div>
   </div>
   <div id="link-status" class="link-page-status"></div>
   <div class="link-page-body">
@@ -1258,8 +1693,11 @@ function buildLinkDocumentHtml(
       </div>
     </div>
   </div>
+  ${pageNavigation.contentsHtml}
   <script>
     (() => {
+      ${pageNavigation.script}
+      ${buildPackageNavigationLinkScript()}
       const status = document.getElementById("link-status");
       const preview = document.getElementById("link-preview");
       const fallback = document.getElementById("link-fallback");

@@ -2,8 +2,8 @@ import { safeNavigationUrl, safeWebPreviewUrl } from "../helpers/link-helpers";
 import { getNodeFrame, getNodeMediaKind } from "./geometry";
 import { escapeAttribute, escapeHtml } from "./html";
 import { markdownToHtml } from "./markdown";
-import { getTheme, resolveNodeColors } from "./theme";
-import type { CanvasNode, HighlightingThemeChoice } from "./types";
+import { buildCanvasEdgeColorMap, getTheme, resolveNodeColors } from "./theme";
+import type { CanvasData, CanvasNode, HighlightingThemeChoice, SearchEntry } from "./types";
 
 const FOCUS_ICON_SVG = `<svg class="branch-focus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"></circle><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>`;
 
@@ -38,11 +38,11 @@ export async function renderNode(
   ].filter(Boolean).join("\n    ");
 
   let title = "";
-  if (type !== "group" && type !== "link" && node.label) {
+  if (type !== "group" && type !== "link" && node.fileKind !== "canvas" && node.label) {
     title = `<div class="node-title">${await markdownToHtml(node.label, { darkMode, highlightingTheme })}</div>`;
   }
 
-  const content = type === "group" ? "" : await renderNodeContent(node, darkMode, highlightingTheme);
+  const content = type === "group" ? "" : await renderNodeContent(node, darkMode, highlightingTheme, canvasColors);
   const foldingControlHiddenAttribute = foldingControlsInitiallyHidden ? " hidden" : "";
   const focusTarget = type === "group" ? "group" : "node";
   const focusControl = `<button class="branch-focus-control" type="button" data-focus-node-id="${escapeAttribute(node.id)}" aria-label="${descendantCount > 0 ? "Focus branch" : `Focus ${focusTarget}`}" aria-pressed="false" title="${descendantCount > 0 ? `Focus branch · ${descendantCount} ${descendantCount === 1 ? "descendant" : "descendants"}` : `Focus ${focusTarget}`}"${foldingControlHiddenAttribute}>${FOCUS_ICON_SVG}</button>`;
@@ -123,7 +123,7 @@ export function buildSearchEntry(
   node: CanvasNode,
   offsetX: number,
   offsetY: number,
-): { id: string; title: string; snippet: string; text: string; kindLabel: string; positionLabel: string; openHref?: string } {
+): SearchEntry {
   const frame = getNodeFrame(node, offsetX, offsetY);
   const previewText = node.previewHtml
     ? normalizeSearchText(htmlToSearchText(node.previewHtml))
@@ -139,14 +139,21 @@ export function buildSearchEntry(
     .filter(Boolean);
   const title = parts[0] || defaultNodeTitle(node);
   const snippet = parts.slice(1).join(" ").slice(0, 220) || title;
+  const fullSearchText = normalizeSearchText(node.searchText);
+  const sourceFile = (node.type || "").toLowerCase() === "file"
+    ? String(node.file || "").trim()
+    : "";
   return {
     id: node.id,
+    focusNodeId: node.id,
     title,
     snippet,
-    text: parts.join(" ").trim(),
+    text: [...parts, fullSearchText].filter(Boolean).join(" ").trim(),
     kindLabel: humanizeNodeKind(node),
     positionLabel: `x ${Math.round(frame.left)} · y ${Math.round(frame.top)}`,
+    dedupeKey: sourceFile ? `file:${sourceFile}` : undefined,
     openHref: resolveNodeOpenHref(node),
+    openTarget: node.canvasNavigationTarget,
   };
 }
 
@@ -163,6 +170,7 @@ function defaultNodeTitle(node: CanvasNode): string {
 function humanizeNodeKind(node: CanvasNode): string {
   const type = (node.type || "text").toLowerCase();
   if (type === "file" && node.fileKind === "markdown") return "Markdown";
+  if (type === "file" && node.fileKind === "canvas") return "Canvas";
   if (type === "file" && node.fileKind === "image") return "Image";
   if (type === "file" && node.fileKind === "pdf") return "PDF";
   if (type === "file" && node.fileKind === "audio") return "Audio";
@@ -194,19 +202,21 @@ function htmlToSearchText(html: string | undefined): string {
     .replace(/&quot;/gi, '"');
 }
 
-function buildAnchorAttributes(href: string): string {
+function buildAnchorAttributes(href: string, target?: "_parent"): string {
   const safeHref = escapeAttribute(href);
-  if (href.startsWith("#page-")) {
+  const targetAttr = target ? ` target="${target}"` : "";
+  if (href.startsWith("#page-") && !target) {
     const pageId = href.replace(/^#page-/, "").split(/[?#]/)[0];
     return `href="${safeHref}" data-inline-page="${escapeAttribute(pageId)}"`;
   }
-  return `href="${safeHref}"`;
+  return `href="${safeHref}"${targetAttr}`;
 }
 
 async function renderNodeContent(
   node: CanvasNode,
   darkMode: boolean,
   highlightingTheme?: HighlightingThemeChoice,
+  canvasColors?: Record<string, string>,
 ): Promise<string> {
   const type = (node.type || "text").toLowerCase();
 
@@ -233,7 +243,7 @@ async function renderNodeContent(
   if (type === "file") {
     const displayName = escapeHtml(node.displayName || node.file || "File");
     const href = escapeAttribute(
-      node.fileKind === "markdown" && node.canvasHref
+      (node.fileKind === "markdown" || node.fileKind === "canvas") && node.canvasHref
         ? node.canvasHref
         : node.exportHtmlPath || node.exportPath || node.file || "",
     );
@@ -248,6 +258,14 @@ async function renderNodeContent(
         : (node.previewText ? `<p class="md-card-preview-text">${escapeHtml(node.previewText)}</p>` : "");
 
       return `<div class="md-card"><a class="md-card-title-link" ${buildAnchorAttributes(href)}><div class="md-card-title">${displayName}</div></a>${preview}</div>`;
+    }
+
+    if (node.fileKind === "canvas") {
+      const canvasTitle = node.label?.trim() || node.displayName || node.file || "Canvas";
+      const preview = node.canvasPreview
+        ? renderCanvasCardPreview(node.canvasPreview, canvasTitle, darkMode, canvasColors)
+        : "";
+      return `<a class="canvas-card-link" ${buildAnchorAttributes(href, node.canvasNavigationTarget)}><span class="canvas-card-title">${escapeHtml(canvasTitle)}</span>${preview}</a>`;
     }
 
     if (node.fileKind === "pdf") {
@@ -276,4 +294,38 @@ async function renderNodeContent(
   const text = typeof node.text === "string" ? node.text : "";
   if (!text.trim()) return "";
   return node.renderedTextHtml ?? markdownToHtml(text, { darkMode, highlightingTheme });
+}
+
+function renderCanvasCardPreview(
+  data: CanvasData,
+  title: string,
+  darkMode: boolean,
+  canvasColors?: Record<string, string>,
+): string {
+  const nodes = data.nodes || [];
+  if (nodes.length === 0) return "";
+  const theme = getTheme(darkMode);
+  const minX = Math.min(...nodes.map((node) => node.x));
+  const minY = Math.min(...nodes.map((node) => node.y));
+  const maxX = Math.max(...nodes.map((node) => node.x + node.width));
+  const maxY = Math.max(...nodes.map((node) => node.y + node.height));
+  const width = Math.max(1, maxX - minX);
+  const height = Math.max(1, maxY - minY);
+  const padding = Math.max(24, Math.min(width, height) * 0.04);
+  const offsetX = padding - minX;
+  const offsetY = padding - minY;
+  const frames = new Map(nodes.map((node) => [node.id, getNodeFrame(node, offsetX, offsetY)]));
+  const edgeColors = buildCanvasEdgeColorMap(canvasColors);
+  const edges = (data.edges || []).map((edge) => {
+    const from = frames.get(edge.fromNode);
+    const to = frames.get(edge.toNode);
+    if (!from || !to) return "";
+    const color = edge.color?.startsWith("#") ? edge.color : edgeColors[edge.color || ""] || theme.edge;
+    return `<line x1="${from.left + from.width / 2}" y1="${from.top + from.height / 2}" x2="${to.left + to.width / 2}" y2="${to.top + to.height / 2}" stroke="${escapeAttribute(color)}"></line>`;
+  }).join("");
+  const orderedNodes = [...nodes].sort((left, right) => Number(left.type !== "group") - Number(right.type !== "group"));
+  const previewNodes = orderedNodes.map((node) => renderMinimapNode(node, offsetX, offsetY, theme, canvasColors)).join("");
+  const viewWidth = width + padding * 2;
+  const viewHeight = height + padding * 2;
+  return `<svg class="canvas-card-preview" viewBox="0 0 ${viewWidth} ${viewHeight}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Preview of ${escapeAttribute(title)}"><g class="canvas-card-preview-edges">${edges}</g><g class="canvas-card-preview-nodes">${previewNodes}</g></svg>`;
 }
