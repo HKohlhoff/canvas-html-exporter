@@ -39,15 +39,16 @@ export function buildBrowserSearch(): string {
         }
       }
 
-      function appendSearchQueryToHref(href, query, nodeId) {
+      function appendSearchQueryToHref(href, query, nodeId, pageHref) {
         const rawHref = String(href || "");
         if (!rawHref) return "";
-        if ((!query || !query.trim()) && !nodeId) return rawHref;
+        if ((!query || !query.trim()) && !nodeId && !pageHref) return rawHref;
         if (rawHref.startsWith("#page-")) {
           const [pageRef, existingQuery = ""] = rawHref.slice(1).split("?");
           const params = new URLSearchParams(existingQuery);
           if (query && query.trim()) params.set("q", query);
           if (nodeId) params.set("node", nodeId);
+          if (pageHref) params.set("page", pageHref);
           return "#" + pageRef + "?" + params.toString();
         }
         const hashIndex = rawHref.indexOf("#");
@@ -57,17 +58,18 @@ export function buildBrowserSearch(): string {
         const params = new URLSearchParams();
         if (query && query.trim()) params.set("q", query);
         if (nodeId) params.set("node", nodeId);
+        if (pageHref) params.set("page", pageHref);
         return base + separator + params.toString() + hash;
       }
 
-      function applyLinkAttrs(link, href, query, target, nodeId) {
+      function applyLinkAttrs(link, href, query, target, nodeId, pageHref) {
         if (target) link.setAttribute("target", target);
         if (String(href).startsWith("#page-") && !target) {
-          link.setAttribute("href", appendSearchQueryToHref(href, query, nodeId));
+          link.setAttribute("href", appendSearchQueryToHref(href, query, nodeId, pageHref));
           link.setAttribute("data-inline-page", parseInlinePageIdFromHref(href));
           return;
         }
-        link.setAttribute("href", appendSearchQueryToHref(href, query, nodeId));
+        link.setAttribute("href", appendSearchQueryToHref(href, query, nodeId, pageHref));
       }
 
       function getSearchResultSnippet(entry, query) {
@@ -115,7 +117,7 @@ export function buildBrowserSearch(): string {
             result.type = "button";
             result.setAttribute("data-node-id", entry.focusNodeId);
           } else if (entry.openHref) {
-            applyLinkAttrs(result, entry.openHref, query, entry.openTarget, entry.openNodeId);
+            applyLinkAttrs(result, entry.openHref, query, entry.openTarget, entry.openNodeId, entry.openPageHref);
             result.setAttribute("data-search-open", "true");
           }
           result.className = "search-result";

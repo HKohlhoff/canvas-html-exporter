@@ -30,7 +30,7 @@ const documents: ContentsCanvasDocument[] = [
     href: "canvas-child.html",
     data: {
       nodes: [
-        { id: "note", type: "file", fileKind: "markdown", displayName: "Note", previewText: "Visible", searchText: "Hidden full-page term", x: 0, y: 0, width: 1, height: 1 },
+        { id: "note", type: "file", fileKind: "markdown", displayName: "Note", previewText: "Visible", searchText: "Hidden full-page term", canvasHref: "assets/files/note.html", x: 0, y: 0, width: 1, height: 1 },
         { id: "grand", type: "file", fileKind: "canvas", canvasSourcePath: "grand.canvas", x: 2, y: 0, width: 1, height: 1 },
       ],
       edges: [],
@@ -56,9 +56,9 @@ test("indexes every reachable descendant canvas once", () => {
   assert.ok(entries.some((entry) => entry.text.includes("Hidden full page term")));
   assert.ok(entries.some((entry) => entry.text.includes("Deep result")));
   assert.ok(entries.every((entry) => entry.focusNodeId === undefined));
-  assert.ok(entries.some((entry) => entry.openNodeId === "note"));
   assert.ok(entries.some((entry) => entry.openNodeId === "deep"));
-  assert.ok(entries.some((entry) => entry.openHref === "canvas-child.html" && entry.positionLabel === "Child"));
+  assert.ok(entries.some((entry) => entry.openHref === "assets/files/note.html" && entry.openNodeId === undefined));
+  assert.ok(entries.some((entry) => entry.openHref === "assets/files/note.html" && entry.positionLabel === "Child"));
   assert.ok(entries.some((entry) => entry.openHref === "canvas-grand.html" && entry.positionLabel === "Grand"));
 });
 
@@ -66,10 +66,17 @@ test("targets the parent document from a single-html subcanvas", () => {
   const singleDocuments = documents.map((document) => ({
     ...document,
     href: document.sourcePath === "root.canvas" ? "#" : `#page-${document.title.toLowerCase()}`,
+    data: document.sourcePath === "child.canvas"
+      ? {
+        ...document.data,
+        nodes: document.data.nodes.map((node) => node.id === "note" ? { ...node, canvasHref: "#page-p1" } : node),
+      }
+      : document.data,
   }));
   const rootEntries = buildDescendantSearchEntries(singleDocuments, "root.canvas", "root.canvas", "single-html");
   const childEntries = buildDescendantSearchEntries(singleDocuments, "root.canvas", "child.canvas", "single-html");
   assert.ok(rootEntries.every((entry) => entry.openTarget === undefined));
   assert.ok(childEntries.every((entry) => entry.openTarget === "_parent"));
   assert.ok(childEntries.every((entry) => entry.openHref === "#page-grand"));
+  assert.ok(rootEntries.some((entry) => entry.openPageHref === "#page-p1" && entry.openHref === "#page-child"));
 });

@@ -111,6 +111,7 @@ export interface SearchEntry {
   openHref?: string;
   openTarget?: "_parent";
   openNodeId?: string;
+  openPageHref?: string;
 }
 
 export interface ContentsNavigationItem {

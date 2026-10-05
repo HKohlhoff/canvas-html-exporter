@@ -92,9 +92,10 @@ controls above the Canvas:
 - `Search...` opens keyboard- and mouse-accessible search across the current
   Canvas and every recursively subordinate Canvas. Current-Canvas results are
   revealed in place and marked briefly with a prominent yellow pulse;
-  subordinate results open their owning Canvas, bring the matching card into
-  view, and retain the same search there. Markdown cards contribute the full note text to the index, not only
-  their visible preview. Tab and Shift+Tab stay inside
+  subordinate results open the matching card's HTML page directly when it has
+  one. Results without a separate page open their owning Canvas and bring the
+  card into view. Markdown cards contribute the full note text to the index,
+  not only their visible preview. Tab and Shift+Tab stay inside
   the open search dialog; closing it returns focus to the control used to open
   it.
 

@@ -217,11 +217,13 @@ export function buildBrowserContents(): string {
         }, "*");
         const searchQuery = parsePageSearchQuery(window.location.hash);
         const searchNodeId = parsePageNodeId(window.location.hash);
+        const searchPageHref = parseNestedPageHref(window.location.hash);
         if (searchQuery) {
           frame.contentWindow.postMessage({
             type: "canvas-html-search-query",
             query: searchQuery,
             nodeId: searchNodeId,
+            pageHref: searchPageHref,
           }, "*");
         }
       }
@@ -251,7 +253,11 @@ export function buildBrowserContents(): string {
           if (typeof message.query !== "string" || !message.query.trim() || !searchInput) return;
           searchInput.value = message.query.trim();
           runSearch(searchInput.value);
-          if (typeof message.nodeId === "string" && message.nodeId.trim()) {
+          if (typeof message.pageHref === "string" && parsePageHash(message.pageHref)) {
+            const pageHref = appendSearchQueryToHref(message.pageHref, searchInput.value);
+            if (window.location.hash === pageHref) syncEmbeddedPageFromHash();
+            else window.location.hash = pageHref;
+          } else if (typeof message.nodeId === "string" && message.nodeId.trim()) {
             window.setTimeout(() => focusNode(message.nodeId.trim()), 0);
           } else {
             openSearch();

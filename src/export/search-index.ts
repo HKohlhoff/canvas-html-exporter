@@ -54,15 +54,22 @@ export function buildDescendantSearchEntries(
     return document.data.nodes
       .map((node) => buildSearchEntry(node, bounds.offsetX, bounds.offsetY))
       .filter((entry) => entry.text)
-      .map((entry) => ({
-        ...entry,
-        id: `${document.sourcePath}:${entry.id}`,
-        openNodeId: entry.focusNodeId,
-        focusNodeId: undefined,
-        positionLabel: document.title,
-        openHref: document.href,
-        openTarget,
-        text: `${entry.text} ${document.title}`.trim(),
-      }));
+      .map((entry) => {
+        const directHref = entry.openHref;
+        const isLocalSinglePage = exportFormat === "single-html"
+          && Boolean(directHref?.startsWith("#page-"))
+          && entry.openTarget !== "_parent";
+        return {
+          ...entry,
+          id: `${document.sourcePath}:${entry.id}`,
+          openNodeId: directHref ? undefined : entry.focusNodeId,
+          openPageHref: isLocalSinglePage ? directHref : undefined,
+          focusNodeId: undefined,
+          positionLabel: document.title,
+          openHref: directHref && !isLocalSinglePage ? directHref : document.href,
+          openTarget,
+          text: `${entry.text} ${document.title}`.trim(),
+        };
+      });
   });
 }
