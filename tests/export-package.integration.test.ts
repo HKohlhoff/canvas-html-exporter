@@ -1015,7 +1015,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       assert.match(rootPreviewHtml, /class="canvas-card-title">Child canvas<\/span>/);
       assert.match(rootPreviewHtml, /id="contents-toolbar-button"[^>]*>Navigation<\/button>/);
       assert.match(rootPreviewHtml, /id="contents-panel"[\s\S]*?<h3>Canvases<\/h3>/);
-      assert.match(rootPreviewHtml, /class="contents-link is-current" aria-current="page">root<\/span>/);
+      assert.match(rootPreviewHtml, /class="contents-link is-current" aria-current="page" data-contents-current-canvas="true">root<\/span>/);
       assert.doesNotMatch(childHtml, /Open canvas/);
       assert.doesNotMatch(rootPreviewHtml, /Open canvas/);
       assert.match(childHtml, /<div class="page-header-meta">\s+<p>[\s\S]*?<\/p>\s+<span class="canvas-return-label">\(back to: <a class="canvas-return-link"[\s\S]*?<\/a>\)<\/span>\s+<\/div>/);

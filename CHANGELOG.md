@@ -33,6 +33,8 @@ first.
 - Present embedded single-HTML canvases as full-page Canvas views without a
   surrounding page card, and route parent Canvas links through the outer page
   so local files do not open a file chooser.
+- Highlight the currently open embedded Markdown, PDF, or link page in
+  **Navigation** instead of leaving its owning Canvas highlighted.
 - Add **Back** beside **Canvas** on HTML pages owned by a subcanvas, returning
   to that subcanvas while **Canvas** continues to open the main overview.
 

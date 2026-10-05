@@ -62,7 +62,8 @@ single HTML:
 - from a subcanvas open a Markdown page, PDF viewer, and link page; confirm
   **Back** returns to that subcanvas and **Canvas** returns to the root
   overview. Repeat in single HTML and confirm a root-owned page has no
-  redundant **Back** link;
+  redundant **Back** link; while each embedded page is open, confirm
+  **Navigation** highlights that page rather than its owning Canvas;
 - confirm zoom, pan, fit/reset, search, minimap and folding inside each linked
   Canvas;
 - confirm a shared target is present once and every reference opens it;

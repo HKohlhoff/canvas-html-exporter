@@ -127,8 +127,26 @@ export function buildBrowserPages(): string {
         singlePageView.classList.remove("is-canvas-page");
         canvasShell.hidden = false;
         singlePageView.hidden = true;
+        syncContentsCurrentPage("");
         restoreContentsForCanvasView();
         document.title = baseDocumentTitle;
+      }
+
+      function syncContentsCurrentPage(pageId) {
+        if (!contentsPanel) return;
+        const contentsLinks = Array.from(contentsPanel.querySelectorAll(".contents-link"));
+        contentsLinks.forEach((link) => {
+          link.classList.remove("is-current");
+          link.removeAttribute("aria-current");
+        });
+        const pageLink = pageId
+          ? contentsLinks.find((link) => link.getAttribute("data-inline-page") === pageId)
+          : null;
+        const currentCanvasLink = contentsPanel.querySelector('[data-contents-current-canvas="true"]');
+        const activeLink = pageLink || currentCanvasLink;
+        if (!activeLink) return;
+        activeLink.classList.add("is-current");
+        activeLink.setAttribute("aria-current", "page");
       }
 
       function clearSearchHighlights(root) {
@@ -231,6 +249,7 @@ export function buildBrowserPages(): string {
             window.setTimeout(() => sendNavigationStateToCanvasFrame(frame), 0);
           }
         } else {
+          syncContentsCurrentPage(pageId);
           restoreContentsForCanvasView();
         }
         document.title = (template.dataset.pageTitle || "Page") + " - " + baseDocumentTitle;
