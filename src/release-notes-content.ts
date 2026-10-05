@@ -18,7 +18,7 @@ are never changed.
 ## 1. Optional Navigation panel
 
 For the first time, readers can see and navigate the complete structure of a
-multi-Canvas export from every page. They no longer have to return to the main
+Canvas export from every page. They no longer have to return to the main
 overview simply to reach another section or document.
 
 **Navigation** opens a fixed panel on the left while the current Canvas or file
@@ -47,7 +47,7 @@ away from the Canvas or document being viewed.
 ## 2. Canvas nodes open as Canvas pages
 
 A Canvas node is no longer just a reference to another file. It can now become
-a complete, interactive page within the exported publication. This is the key
+a complete, interactive page. This is the key
 to splitting a large overview into manageable chapters, project areas, process
 stages, or any other structure that suits the content.
 
@@ -57,8 +57,7 @@ subcanvases.
 
 - The Canvas card shows a small offline preview of the referenced layout,
   including its groups, nodes, colors, and connections.
-- The title and preview form one clickable area. A separate **Open canvas**
-  label is no longer needed.
+- The title and preview form one clickable area.
 - The subcanvas uses the full browser area and offers the same zoom, minimap,
   search, and folding controls as the main overview.
 - Further Canvas links are followed as well, so a subcanvas can contain another
@@ -98,8 +97,8 @@ so you know where the match was found before opening it.
 - A result for a Markdown, PDF, or link card opens the matching page directly.
 - A result without a separate page opens its Canvas, moves the matching card
   into view, and highlights it.
-- Repeated references to the same Vault file are combined into one clear
-  result, while independent Canvas nodes remain separate results.
+- If the same exported page is referenced more than once, Search shows one
+  clear result, while independent Canvas nodes remain separate results.
 - After opening a result, **Back** and **Canvas** return with the same query and
   reopen Search on the destination Canvas. The result can then be opened again
   without losing its title or origin.

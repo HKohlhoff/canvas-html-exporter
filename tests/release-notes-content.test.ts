@@ -37,12 +37,14 @@ assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Canvas nodes, pages belonging to\s
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /complete text of Markdown notes/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Every result also names its owning Canvas/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /same query and\s+reopen Search/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /same exported page is referenced more than once/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /package folders and single HTML files/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /substantial gain/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Export the main overview Canvas again/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /marked as\s+read\s+only after you close/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /source Canvases and notes\s+are never changed/);
 assert.doesNotMatch(CURRENT_RELEASE_NOTES_MARKDOWN, /API v1/);
+assert.doesNotMatch(CURRENT_RELEASE_NOTES_MARKDOWN, /multi-Canvas|Vault file|Open canvas/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /leaves no note or other content file in your Vault/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Show last update/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /buy me a coffee on\s+Ko-fi/);
