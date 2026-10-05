@@ -91,8 +91,23 @@ export interface ExportOptions {
   exportFormat?: "package" | "single-html";
   canvasHomeHref?: string;
   canvasHomeTarget?: "_parent";
+  contents?: ContentsNavigation;
   embeddedPages?: EmbeddedPage[];
   initialFoldState?: CanvasFoldState;
+}
+
+export interface ContentsNavigationItem {
+  title: string;
+  href: string;
+  kind: "canvas" | "markdown" | "link" | "pdf";
+  current?: boolean;
+  target?: "_parent";
+  children?: ContentsNavigationItem[];
+}
+
+export interface ContentsNavigation {
+  canvases: ContentsNavigationItem[];
+  pages: ContentsNavigationItem[];
 }
 
 export interface EmbeddedPage {

@@ -105,6 +105,10 @@ npm run build:prod
   target fallback work in package and single HTML.
 - Canvas cards show the linked diagram preview in both formats without an
   **Open canvas** label or external preview asset.
+- **Contents** opens on every Canvas page, shows each shared/cyclic Canvas only
+  once, highlights the current Canvas, and opens its directly contained
+  Markdown, PDF-viewer, and link-node pages in the correct package or embedded
+  single-HTML scope. Close, backdrop click, `Esc`, and keyboard focus work.
 - Test the documentation Canvas from `examples/demo-vault/`.
 - Test `Advanced Canvas Attributes.canvas` from the same demo vault as package
   and single HTML. Compare all supported shapes, borders, alignments, colors,

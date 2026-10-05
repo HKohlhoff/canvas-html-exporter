@@ -84,6 +84,32 @@ await test("renders markdown file nodes with title link and preview", async () =
   assert.match(html, /class="md-card-preview"><p>Vorschau<\/p>/);
 });
 
+await test("renders an accessible contents drawer with canvas and local page navigation", async () => {
+  const html = await convertCanvasToHtml({ nodes: [], edges: [] }, {
+    ...baseOptions,
+    exportFormat: "single-html",
+    contents: {
+      canvases: [{
+        title: "Overview",
+        href: "#",
+        kind: "canvas",
+        current: true,
+        children: [{ title: "Act I", href: "#page-canvas-c1", kind: "canvas" }],
+      }],
+      pages: [{ title: "Chapter 1", href: "#page-p1", kind: "markdown" }],
+    },
+  });
+  assert.match(html, /id="contents-toolbar-button"[^>]*>Contents<\/button>/);
+  assert.match(html, /id="contents-panel"[^>]+role="dialog"[^>]+aria-modal="true"/);
+  assert.match(html, /<span class="contents-link is-current" aria-current="page">Overview<\/span>/);
+  assert.match(html, /href="#page-canvas-c1" data-inline-page="canvas-c1">Act I<\/a>/);
+  assert.match(html, /<h3>Pages in this canvas<\/h3>[\s\S]+href="#page-p1" data-inline-page="p1">Chapter 1<\/a>/);
+  assert.match(html, /function trapContentsFocus\(event\)/);
+  assert.match(html, /if \(event\.key === "Escape" && contentsOverlay && !contentsOverlay\.hidden\)/);
+  const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
+  assert.doesNotThrow(() => new vm.Script(runtime));
+});
+
 await test("keeps inline markdown styling visible in markdown file previews", async () => {
   const data: CanvasData = {
     name: "Test",

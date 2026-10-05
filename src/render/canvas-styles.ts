@@ -776,6 +776,100 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       opacity: 0.5;
       cursor: default;
     }
+    .contents-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      background: rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(3px);
+    }
+    .contents-overlay[hidden] {
+      display: none;
+    }
+    .contents-panel {
+      width: min(420px, calc(100vw - 32px));
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid ${theme.canvasBorder};
+      background: ${theme.canvasBackground};
+      box-shadow: 12px 0 36px rgba(0,0,0,0.22);
+    }
+    .contents-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px;
+      border-bottom: 1px solid ${theme.canvasBorder};
+    }
+    .contents-header h2 {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+    .contents-close-button {
+      border: 1px solid ${theme.canvasBorder};
+      background: ${theme.nodeBackground};
+      color: ${theme.text};
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.875rem;
+    }
+    .contents-close-button:hover {
+      background: ${theme.chipBackground};
+    }
+    .contents-navigation {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      padding: 10px 20px 24px;
+    }
+    .contents-section h3 {
+      margin: 16px 0 8px;
+      color: ${theme.mutedText};
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .contents-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .contents-list .contents-list {
+      margin-left: 10px;
+      padding-left: 14px;
+      border-left: 1px solid ${theme.canvasBorder};
+    }
+    .contents-item {
+      margin: 2px 0;
+    }
+    .contents-link {
+      display: block;
+      padding: 7px 9px;
+      border-radius: 7px;
+      color: ${theme.link};
+      line-height: 1.35;
+      text-decoration: none;
+      overflow-wrap: anywhere;
+    }
+    .contents-link:hover {
+      background: ${theme.chipBackground};
+      text-decoration: none;
+    }
+    .contents-link.is-current {
+      background: ${theme.chipBackground};
+      color: ${theme.text};
+      font-weight: 600;
+    }
+    .contents-empty {
+      margin: 18px 0 0;
+      color: ${theme.mutedText};
+      font-size: 0.9rem;
+    }
     .single-page-view {
       max-width: 960px;
       margin: 32px auto;

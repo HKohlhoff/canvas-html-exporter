@@ -1,4 +1,5 @@
 import { buildBrowserEdges } from "./browser-edges";
+import { buildBrowserContents } from "./browser-contents";
 import { buildBrowserFolding } from "./browser-folding";
 import { buildBrowserInteraction } from "./browser-interaction";
 import { buildBrowserPages } from "./browser-pages";
@@ -44,6 +45,9 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       const searchResults = document.getElementById("search-results");
       const searchSummary = document.getElementById("search-summary");
       const searchCloseButton = document.getElementById("search-close-button");
+      const contentsOverlay = document.getElementById("contents-overlay");
+      const contentsPanel = document.getElementById("contents-panel");
+      const contentsCloseButton = document.getElementById("contents-close-button");
       const embeddedPageTemplates = Array.from(document.querySelectorAll("#embedded-pages-store template"));
       const edgeColor = ${serializeScriptData(
         normalizeCssColorValue(options.canvasColors?.["0"] || "") || theme.edge,
@@ -87,7 +91,7 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       let searchHighlightTimer = null;
       let activeSearchIndex = -1;
 
-${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}${buildBrowserPages()}${buildBrowserFolding({ hasImportedFolding })}${buildBrowserInteraction()}      applyImportedFolding(${serializeScriptData(hasImportedFolding)});
+${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}${buildBrowserContents()}${buildBrowserPages()}${buildBrowserFolding({ hasImportedFolding })}${buildBrowserInteraction()}      applyImportedFolding(${serializeScriptData(hasImportedFolding)});
       syncLinkOfflineState();
       window.resetZoom();
       window.addEventListener("resize", () => {
@@ -207,6 +211,14 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
           }
         });
       }
+      if (contentsCloseButton) {
+        contentsCloseButton.addEventListener("click", closeContents);
+      }
+      if (contentsOverlay) {
+        contentsOverlay.addEventListener("click", (event) => {
+          if (event.target === contentsOverlay) closeContents();
+        });
+      }
       document.addEventListener("click", (event) => {
         const link = event.target instanceof Element ? event.target.closest("[data-inline-page]") : null;
         if (!link) return;
@@ -235,6 +247,7 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
         window.addEventListener("hashchange", syncEmbeddedPageFromHash);
       }
       window.addEventListener("keydown", (event) => {
+        if (trapContentsFocus(event)) return;
         if (trapSearchFocus(event)) return;
         const target = event.target instanceof HTMLElement ? event.target : null;
         const targetTag = target?.tagName || "";
@@ -248,6 +261,10 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
           event.preventDefault();
           cancelledZoomAreaPointerId = zoomAreaDrag.pointerId;
           cancelZoomAreaDrag();
+          return;
+        }
+        if (event.key === "Escape" && contentsOverlay && !contentsOverlay.hidden) {
+          closeContents();
           return;
         }
         if (event.key === "Escape" && searchOverlay && !searchOverlay.hidden) {

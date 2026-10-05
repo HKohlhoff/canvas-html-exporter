@@ -1,6 +1,7 @@
 import { buildCanvasFoldingGraph, getCanvasDescendants } from "../folding/graph";
 import { buildBrowserRuntime } from "./browser-runtime";
 import { buildCanvasStyles } from "./canvas-styles";
+import { renderContents } from "./contents";
 import { getBounds, normalizeEdgeEnd, normalizeEdgeLineStyle, normalizeEdgeWidth, normalizeSide } from "./geometry";
 import { escapeAttribute, escapeHtml } from "./html";
 import { buildExporterBuildMeta, EXPORTER_SIGNATURE } from "./metadata";
@@ -19,6 +20,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     ? `<span class="canvas-return-label">(back to: <a class="canvas-return-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a>)</span>`
     : "";
   const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
+  const contentsHtml = renderContents(options.contents);
   const initialFoldState = foldingInitiallyEnabled ? options.initialFoldState : undefined;
   const hasImportedFolding = Boolean(
     initialFoldState
@@ -172,6 +174,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     </div></details>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
+    ${contentsHtml ? `<button id="contents-toolbar-button" type="button" onclick="openContents()">Contents</button>` : ""}
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>
@@ -191,6 +194,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   </div>
   ${minimapHtml}
   ${searchHtml}
+  ${contentsHtml}
   </div>
   ${embeddedPagesHtml}
   <script>${buildBrowserRuntime({ exportFormat, options, theme, edgePaletteColors, edgesData, searchEntries, foldingGraph, groupNodeIds, initialFoldState, nodes, foldingInitiallyEnabled, bounds, hasImportedFolding })}  </script>

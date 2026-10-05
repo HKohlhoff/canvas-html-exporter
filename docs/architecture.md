@@ -59,6 +59,16 @@ renderer turns this projection into inline SVG. This keeps previews identical
 in package and single HTML, offline-capable, cycle-safe, and independent of
 screenshots or browser automation.
 
+The export layer also derives a read-only contents model after recursive
+preparation. A deterministic first-visit traversal turns the Canvas graph into
+a finite navigation hierarchy; shared targets and cycles are not expanded a
+second time. Every Canvas document receives the same hierarchy plus the
+Markdown, PDF-viewer, and link-node pages directly represented by nodes in
+that document. The renderer owns the drawer DOM and interaction. Package links
+remain relative files, while links from an embedded single-HTML subcanvas to a
+Canvas target navigate its parent page; local page entries remain inside that
+subcanvas's isolated virtual-page scope.
+
 ## Canvas Folding boundary
 
 Canvas Folding is an optional provider. The exporter may discover the plugin by

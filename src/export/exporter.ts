@@ -12,6 +12,7 @@ import {
   HighlightingThemeChoice,
   markdownToHtml,
 } from "../render/converter";
+import { buildContentsNavigation } from "./contents";
 import { isAbsoluteFilesystemPath, requireDesktopNodeApis } from "../helpers/desktop-paths";
 import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePath } from "./files";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./canvas-data";
@@ -50,6 +51,7 @@ type PreparedCanvasData = CanvasData;
 export type ExportedCanvasPage = {
   sourcePath: string;
   title: string;
+  href: string;
   data: PreparedCanvasData;
   options: ExportOptions;
   outputPath?: string;
@@ -253,6 +255,34 @@ export async function exportCanvasPackage(
     rootEntry.status = "complete";
   }
   attachCanvasPreviews(ctx, [root.data, ...ctx.canvasPages.map((page) => page.data)]);
+  const contentsDocuments = [
+    {
+      sourcePath: canvasFile.path,
+      title: root.options.title,
+      href: useSingleHtml ? "#" : "index.html",
+      data: root.data,
+    },
+    ...ctx.canvasPages.map((page) => ({
+      sourcePath: page.sourcePath,
+      title: page.title,
+      href: page.href,
+      data: page.data,
+    })),
+  ];
+  root.options.contents = buildContentsNavigation(
+    contentsDocuments,
+    canvasFile.path,
+    canvasFile.path,
+    ctx.exportFormat,
+  );
+  for (const page of ctx.canvasPages) {
+    page.options.contents = buildContentsNavigation(
+      contentsDocuments,
+      canvasFile.path,
+      page.sourcePath,
+      ctx.exportFormat,
+    );
+  }
   if (useSingleHtml && ctx.canvasPages.length > 0) {
     root.options.embeddedPages = [
       ...(root.options.embeddedPages || []),
@@ -378,6 +408,7 @@ async function exportCanvasTarget(ctx: MarkdownContext, canvasFile: TFile): Prom
     ctx.canvasPages.push({
       sourcePath: canvasFile.path,
       title: prepared.options.title,
+      href,
       data: prepared.data,
       options: prepared.options,
       outputPath,

@@ -18,6 +18,10 @@ first.
   used by single HTML rather than as an extra outlined button; both render
   **(back to: Canvas)** directly after the node/group/connection status with a
   20 px gap, with only **Canvas** linked.
+- Add a **Contents** drawer to exported Canvas pages. It shows a cycle-safe
+  Canvas hierarchy, highlights the current Canvas, and lists the Markdown,
+  PDF-viewer, and link-node HTML pages directly contained in that Canvas in
+  both package and single-HTML exports.
 
 ### Development
 

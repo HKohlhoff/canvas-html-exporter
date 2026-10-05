@@ -4,4 +4,4 @@ export { buildBlockAnchorId, markdownToHtml } from "./markdown";
 export { buildMarkdownDocumentHtml } from "./markdown-document";
 export { EXPORTER_SIGNATURE, EXPORTER_VERSION } from "./metadata";
 export { buildCanvasColorVariables } from "./theme";
-export type { CanvasData, CanvasEdge, CanvasNode, CanvasNodeBorderStyle, CanvasNodeShape, CanvasNodeTextAlign, EmbeddedPage, ExportOptions, HighlightingThemeChoice } from "./types";
+export type { CanvasData, CanvasEdge, CanvasNode, CanvasNodeBorderStyle, CanvasNodeShape, CanvasNodeTextAlign, ContentsNavigation, ContentsNavigationItem, EmbeddedPage, ExportOptions, HighlightingThemeChoice } from "./types";

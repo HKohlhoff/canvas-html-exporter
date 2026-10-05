@@ -943,6 +943,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
               { id: "root-card", type: "file", file: "root.canvas", x: 0, y: 0, width: 320, height: 180 },
               { id: "grand-card", type: "file", file: "nested/grand.canvas", x: 360, y: 0, width: 320, height: 180 },
               { id: "root-link", type: "text", text: "[[root.canvas|Root link]]", x: 720, y: 0, width: 320, height: 180 },
+              { id: "chapter", type: "file", file: "notes/chapter.md", label: "Chapter One", x: 1080, y: 0, width: 320, height: 180 },
             ],
             edges: [{ id: "child-edge", fromNode: "grand-card", toNode: "root-link", color: "4" }],
           }),
@@ -956,6 +957,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
             edges: [],
           }),
         },
+        { path: "notes/chapter.md", text: "# Chapter One\n\nText" },
       ]);
 
       const result = await exportCanvasPackage(app as never, files.get("root.canvas") as never, {
@@ -1002,12 +1004,17 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       assert.match(childHtml, /class="canvas-card-preview"/);
       assert.match(rootPreviewHtml, /class="canvas-card-preview-edges"><line /);
       assert.match(rootPreviewHtml, /class="canvas-card-title">Child canvas<\/span>/);
+      assert.match(rootPreviewHtml, /id="contents-toolbar-button"[^>]*>Contents<\/button>/);
+      assert.match(rootPreviewHtml, /id="contents-panel"[\s\S]*?<h3>Canvases<\/h3>/);
+      assert.match(rootPreviewHtml, /class="contents-link is-current" aria-current="page">root<\/span>/);
       assert.doesNotMatch(childHtml, /Open canvas/);
       assert.doesNotMatch(rootPreviewHtml, /Open canvas/);
       assert.match(childHtml, /<div class="page-header-meta">\s+<p>[\s\S]*?<\/p>\s+<span class="canvas-return-label">\(back to: <a class="canvas-return-link"[\s\S]*?<\/a>\)<\/span>\s+<\/div>/);
       assert.match(childHtml, /\.page-header-meta \{[\s\S]*?align-items: baseline;\s+gap: 20px;[\s\S]*?\}/);
+      assert.match(childHtml, /<h3>Pages in this canvas<\/h3>[\s\S]*?>Chapter One<\/a>/);
       if (exportFormat === "single-html") {
         assert.match(childHtml, /class="canvas-return-link" href="#" target="_parent">Canvas<\/a>/);
+        assert.match(childHtml, /class="contents-link" href="#" target="_parent">root<\/a>/);
         for (const page of result.canvasPages) {
           const pageHtml = await convertCanvasToHtml(page.data, page.options);
           const embedded = result.options.embeddedPages?.find((entry) => entry.id === page.pageId);
