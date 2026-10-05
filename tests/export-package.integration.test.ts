@@ -1071,6 +1071,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         assert.doesNotMatch(chapterHtml, /data-contents-current-canvas/);
         assert.match(chapterHtml, /const navigationPageId = "c\d+:page:assets\/files\/\d+_chapter\.html"/);
         assert.match(chapterHtml, /hasLocalState \? navigationPageStates\[navigationPageId\] === true : false/);
+        assert.match(chapterHtml, /const returnSearchQuery = new URLSearchParams\(window\.location\.search\)\.get\("q"\)/);
+        assert.match(chapterHtml, /link\.matches\("\.md-page-back-link, \.md-page-canvas-link"\)/);
         assert.match(chapterHtml, /viewportStates: packageViewportStates/);
         assert.match(chapterHtml, /const viewportValue = params\.get\("canvasViews"\)/);
         assert.match(chapterHtml, /url\.searchParams\.set\("canvasViews", JSON\.stringify/);

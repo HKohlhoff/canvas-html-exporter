@@ -145,6 +145,8 @@ export function buildBrowserPages(): string {
 
       function renderCanvasShell() {
         if (!canvasShell || !singlePageView) return;
+        const restoreNestedSearch = restoreNestedSearchOnCanvasReturn;
+        restoreNestedSearchOnCanvasReturn = false;
         singlePageView.classList.remove("is-canvas-page");
         delete singlePageView.dataset.pageKind;
         canvasShell.hidden = false;
@@ -152,6 +154,12 @@ export function buildBrowserPages(): string {
         syncContentsCurrentPage("");
         restoreContentsForCanvasView();
         document.title = baseDocumentTitle;
+        if (restoreNestedSearch) {
+          openSearch();
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => window.resetZoom());
+          });
+        }
       }
 
       function syncContentsCurrentPage(pageId) {

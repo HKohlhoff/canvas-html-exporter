@@ -254,6 +254,7 @@ export function buildBrowserContents(): string {
           searchInput.value = message.query.trim();
           runSearch(searchInput.value);
           if (typeof message.pageHref === "string" && parsePageHash(message.pageHref)) {
+            restoreNestedSearchOnCanvasReturn = true;
             const pageHref = appendSearchQueryToHref(message.pageHref, searchInput.value);
             if (window.location.hash === pageHref) syncEmbeddedPageFromHash();
             else window.location.hash = pageHref;

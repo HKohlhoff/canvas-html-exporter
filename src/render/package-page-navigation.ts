@@ -192,6 +192,7 @@ export function buildPackagePageNavigation(
       }
 
       function updateNavigationLinks() {
+        const returnSearchQuery = new URLSearchParams(window.location.search).get("q");
         document.querySelectorAll('a[href]').forEach((link) => {
           const href = link.getAttribute("href") || "";
           if (!href || href.startsWith("#")) return;
@@ -201,6 +202,9 @@ export function buildPackagePageNavigation(
               && (url.protocol === "file:" || url.origin === window.location.origin);
             if (!isLocalTarget || !url.pathname.toLowerCase().endsWith(".html")) return;
             applyNavigationParams(url, link.getAttribute("data-restore-canvas-view") || "");
+            if (returnSearchQuery && link.matches(".md-page-back-link, .md-page-canvas-link")) {
+              url.searchParams.set("q", returnSearchQuery);
+            }
             link.setAttribute("href", url.href);
           } catch {
             // Leave malformed or unsupported links unchanged.

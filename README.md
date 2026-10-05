@@ -295,7 +295,8 @@ a fresh visit and starts with its normal fitted view, matching single HTML.
 
 HTML pages opened from a linked subcanvas show **Back** and **Canvas** together.
 **Back** returns to the owning subcanvas, while **Canvas** returns directly to
-the main overview. Pages opened from the main overview keep the single
+the main overview. When a page was opened from Search, either return keeps the
+query and reopens Search on the destination Canvas. Pages opened from the main overview keep the single
 **Canvas** link because both destinations would otherwise be identical.
 
 ## Export Formats

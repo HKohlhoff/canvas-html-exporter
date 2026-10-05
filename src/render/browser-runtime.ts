@@ -95,6 +95,7 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       let highlightedNodeId = null;
       let searchHighlightTimer = null;
       let activeSearchIndex = -1;
+      let restoreNestedSearchOnCanvasReturn = false;
 
 ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}${buildBrowserContents()}${buildBrowserPages()}${buildBrowserFolding({ hasImportedFolding })}${buildBrowserInteraction()}      applyImportedFolding(${serializeScriptData(hasImportedFolding)});
       syncLinkOfflineState();

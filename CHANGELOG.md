@@ -58,6 +58,9 @@ first.
   or directly open the matching Markdown, PDF, or link page when the card has
   one. Cards without a separate page are brought into view and highlighted;
   Markdown pages are indexed from their full text rather than only the preview.
+- Preserve and reopen Search after using **Back** or **Canvas** from a search
+  result page in both export formats. Fit a newly revealed embedded subcanvas
+  only after it is visible, avoiding the compressed return view in single HTML.
 
 ### Development
 

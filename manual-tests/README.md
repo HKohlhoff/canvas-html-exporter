@@ -73,6 +73,9 @@ single HTML:
   page directly. For a text card without a separate page, confirm its Canvas
   opens and brings the card into view with the normal search highlight. Repeat
   from a subcanvas and confirm only its subordinate hierarchy is included;
+- from a deeply found Markdown page, use **Back** and **Canvas** separately in
+  both formats; confirm the destination Canvas is normally fitted and Search
+  reopens with the original query;
 - from a subcanvas open a Markdown page, PDF viewer, and link page; confirm
   **Back** returns to that subcanvas and **Canvas** returns to the root
   overview. Repeat in single HTML and confirm a root-owned page has no

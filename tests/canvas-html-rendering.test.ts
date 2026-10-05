@@ -1503,6 +1503,9 @@ await test("renders descendant search results as navigable page entries", async 
   assert.match(html, /params\.set\("page", pageHref\)/);
   assert.match(html, /function parseNestedPageHref\(hash\)/);
   assert.match(html, /const pageHref = appendSearchQueryToHref\(message\.pageHref, searchInput\.value\)/);
+  assert.match(html, /restoreNestedSearchOnCanvasReturn = true/);
+  assert.match(html, /const restoreNestedSearch = restoreNestedSearchOnCanvasReturn/);
+  assert.match(html, /if \(restoreNestedSearch\) \{\s+openSearch\(\);[\s\S]*?window\.resetZoom\(\)/);
   assert.match(html, /window\.setTimeout\(\(\) => focusNode\(message\.nodeId\.trim\(\)\), 0\)/);
   assert.match(html, /const initialSearchQuery = new URLSearchParams\(window\.location\.search\)\.get\("q"\)/);
   assert.match(html, /window\.setTimeout\(\(\) => focusNode\(initialSearchNodeId\.trim\(\)\), 0\)/);
