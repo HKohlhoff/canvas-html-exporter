@@ -117,6 +117,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     delete runtimeEntry.dedupeKey;
     return runtimeEntry;
   });
+  const searchesSubordinateCanvases = (options.additionalSearchEntries?.length || 0) > 0;
+  const searchScopeText = `Searching in: ${options.title}${searchesSubordinateCanvases ? " and subordinate canvases" : ""}`;
 
   const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
   const minimapHtml = showMinimap
@@ -135,9 +137,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     : "";
   const searchHtml = showSearch
     ? `<div id="search-overlay" class="search-overlay" hidden>
-    <div class="search-panel" role="dialog" aria-modal="true" aria-labelledby="search-title">
+    <div class="search-panel" role="dialog" aria-modal="true" aria-labelledby="search-title" aria-describedby="search-scope search-summary">
       <div class="search-panel-header">
-        <strong id="search-title">Search</strong>
+        <div class="search-panel-heading">
+          <strong id="search-title">Search</strong>
+          <span id="search-scope" class="search-scope">${escapeHtml(searchScopeText)}</span>
+        </div>
         <button id="search-close-button" type="button" class="search-close-button" aria-label="Close search">Close</button>
       </div>
       <input id="search-input" class="search-input" type="search" aria-label="Search canvas" placeholder="Enter a search term" autocomplete="off">

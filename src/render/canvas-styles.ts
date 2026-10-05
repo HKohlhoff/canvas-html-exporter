@@ -1224,6 +1224,18 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     .search-panel-header strong {
       font-size: 1rem;
     }
+    .search-panel-heading {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .search-scope {
+      color: ${theme.mutedText};
+      font-size: 0.82rem;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
     .search-close-button {
       border: 1px solid ${theme.canvasBorder};
       background: ${theme.nodeBackground};

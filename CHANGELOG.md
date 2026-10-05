@@ -67,6 +67,8 @@ first.
 - Make the complete Search result area open a card's HTML target, including
   local results shown after returning with **Back**; only cards without an
   HTML target use the result area to focus the Canvas node.
+- Show the active Canvas search scope directly below the Search heading and
+  state when recursively subordinate Canvases are included.
 
 ### Development
 

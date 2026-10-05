@@ -1422,6 +1422,8 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /id="search-overlay" class="search-overlay" hidden/);
   assert.match(html, /body\.contents-open \.search-overlay \{\s+left: var\(--contents-panel-width\);/);
   assert.match(html, /id="search-input" class="search-input" type="search"/);
+  assert.match(html, /id="search-scope" class="search-scope">Searching in: Test Canvas<\/span>/);
+  assert.match(html, /aria-describedby="search-scope search-summary"/);
   assert.match(html, /id="search-results" class="search-results"/);
   assert.match(html, /function runSearch\(query\)/);
   assert.match(html, /function openSearch\(\)/);
@@ -1493,6 +1495,7 @@ await test("renders descendant search results as navigable page entries", async 
   });
 
   assert.match(html, /"id":"child\.canvas:note"/);
+  assert.match(html, /Searching in: Test Canvas and subordinate canvases/);
   assert.match(html, /"text":"Untergeordnete Notiz Kurzer Ausschnitt Volltextbegriff"/);
   assert.match(html, /const result = entry\.openHref \? document\.createElement\("a"\) : document\.createElement\("button"\)/);
   assert.match(html, /result\.setAttribute\("data-search-open", "true"\)/);
