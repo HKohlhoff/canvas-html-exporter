@@ -1,19 +1,54 @@
 // Emitted inside the shared browser closure; no external runtime dependency.
 export function buildBrowserContents(): string {
-  return `      let contentsReturnFocus = null;
-      let globalNavigationOpen = navigationInitiallyOpen;
+  return `      let globalNavigationOpen = navigationInitiallyOpen;
+      let navigationPageStates = {};
 
-      function readPackageNavigationState() {
-        if (exportFormat !== "package") return null;
-        const value = new URLSearchParams(window.location.search).get("navigation");
-        if (value === "open") return true;
-        if (value === "closed") return false;
-        return null;
+      function getActiveNavigationPageId() {
+        if (exportFormat === "single-html" && singlePageView && !singlePageView.hidden) {
+          const embeddedPageId = parsePageHash(window.location.hash);
+          if (embeddedPageId) return navigationPageId + ":page:" + embeddedPageId;
+        }
+        return navigationPageId;
       }
 
-      function updatePackageNavigationLinks(open) {
+      function getStoredNavigationState(pageId) {
+        if (Object.prototype.hasOwnProperty.call(navigationPageStates, pageId)) {
+          return navigationPageStates[pageId] === true;
+        }
+        return globalNavigationOpen;
+      }
+
+      function readPackageNavigationState() {
         if (exportFormat !== "package") return;
-        const state = open ? "open" : "closed";
+        const params = new URLSearchParams(window.location.search);
+        const globalValue = params.get("navigation");
+        if (globalValue === "open") globalNavigationOpen = true;
+        if (globalValue === "closed") globalNavigationOpen = false;
+        const pageValue = params.get("navigationPages");
+        if (!pageValue) return;
+        try {
+          const parsed = JSON.parse(pageValue);
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+          navigationPageStates = Object.fromEntries(
+            Object.entries(parsed).filter((entry) => typeof entry[0] === "string" && typeof entry[1] === "boolean"),
+          );
+        } catch {
+          navigationPageStates = {};
+        }
+      }
+
+      function applyNavigationParams(url) {
+        url.searchParams.set("navigation", globalNavigationOpen ? "open" : "closed");
+        const pageEntries = Object.entries(navigationPageStates);
+        if (pageEntries.length) {
+          url.searchParams.set("navigationPages", JSON.stringify(Object.fromEntries(pageEntries)));
+        } else {
+          url.searchParams.delete("navigationPages");
+        }
+      }
+
+      function updatePackageNavigationLinks() {
+        if (exportFormat !== "package") return;
         document.querySelectorAll('a[href]').forEach((link) => {
           const href = link.getAttribute("href") || "";
           if (!href || href.startsWith("#")) return;
@@ -21,9 +56,8 @@ export function buildBrowserContents(): string {
             const url = new URL(href, window.location.href);
             const isLocalTarget = url.protocol === window.location.protocol
               && (url.protocol === "file:" || url.origin === window.location.origin);
-            if (!isLocalTarget) return;
-            if (!url.pathname.toLowerCase().endsWith(".html")) return;
-            url.searchParams.set("navigation", state);
+            if (!isLocalTarget || !url.pathname.toLowerCase().endsWith(".html")) return;
+            applyNavigationParams(url);
             link.setAttribute("href", url.href);
           } catch {
             // Leave malformed or unsupported links unchanged.
@@ -31,48 +65,62 @@ export function buildBrowserContents(): string {
         });
       }
 
-      function storeRootNavigationState(open) {
-        globalNavigationOpen = open;
-        if (exportFormat === "package") {
-          const url = new URL(window.location.href);
-          url.searchParams.set("navigation", open ? "open" : "closed");
-          try {
-            window.history.replaceState(null, "", url.href);
-          } catch {
-            // Link propagation below still preserves the chosen state.
-          }
-          updatePackageNavigationLinks(open);
+      function storePackageNavigationState() {
+        if (exportFormat !== "package") return;
+        const url = new URL(window.location.href);
+        applyNavigationParams(url);
+        try {
+          window.history.replaceState(null, "", url.href);
+        } catch {
+          // Link propagation below still preserves the chosen state.
         }
+        updatePackageNavigationLinks();
       }
 
-      function getContentsFocusableElements() {
-        if (!contentsPanel) return [];
-        return Array.from(contentsPanel.querySelectorAll("a[href], button:not([disabled])"))
-          .filter((element) => !element.hidden);
-      }
-
-      function applyContentsVisibility(open, focusCloseButton) {
+      function applyContentsVisibility(open) {
         if (!contentsOverlay) return;
         contentsOverlay.hidden = !open;
         document.body.classList.toggle("contents-open", open);
-        if (open && focusCloseButton) contentsCloseButton?.focus();
+        contentsToolbarButtons.forEach((button) => {
+          button.classList.toggle("is-active", open);
+          button.setAttribute("aria-pressed", String(open));
+        });
+      }
+
+      function storeCurrentNavigationState(open) {
+        const isMainCanvas = isRootCanvas && (!singlePageView || singlePageView.hidden);
+        if (isMainCanvas) {
+          globalNavigationOpen = open;
+        } else {
+          const pageId = getActiveNavigationPageId();
+          navigationPageStates[pageId] = open;
+          if (exportFormat === "single-html" && !isRootCanvas) {
+            window.parent.postMessage({
+              type: "canvas-html-navigation-page-state",
+              pageId,
+              open,
+            }, "*");
+          }
+        }
+        storePackageNavigationState();
       }
 
       function openContents() {
         if (!contentsOverlay) return;
-        contentsReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        if (isRootCanvas && (!singlePageView || singlePageView.hidden)) storeRootNavigationState(true);
-        applyContentsVisibility(true, true);
+        storeCurrentNavigationState(true);
+        applyContentsVisibility(true);
       }
 
       function closeContents() {
-        if (!contentsOverlay || contentsOverlay.hidden) return;
-        if (isRootCanvas && (!singlePageView || singlePageView.hidden)) storeRootNavigationState(false);
-        applyContentsVisibility(false, false);
-        if (contentsReturnFocus && contentsReturnFocus.isConnected && !contentsReturnFocus.hasAttribute("disabled")) {
-          contentsReturnFocus.focus({ preventScroll: true });
-        }
-        contentsReturnFocus = null;
+        if (!contentsOverlay) return;
+        storeCurrentNavigationState(false);
+        applyContentsVisibility(false);
+      }
+
+      function toggleContents() {
+        if (!contentsOverlay) return;
+        if (contentsOverlay.hidden) openContents();
+        else closeContents();
       }
 
       function hideContentsForEmbeddedCanvas() {
@@ -82,57 +130,46 @@ export function buildBrowserContents(): string {
       }
 
       function restoreContentsForCanvasView() {
-        applyContentsVisibility(globalNavigationOpen, false);
+        applyContentsVisibility(getStoredNavigationState(getActiveNavigationPageId()));
       }
 
       function sendNavigationStateToCanvasFrame(frame) {
         if (!frame || !frame.contentWindow) return;
         frame.contentWindow.postMessage({
           type: "canvas-html-navigation-state",
-          open: globalNavigationOpen,
+          globalOpen: globalNavigationOpen,
+          pageStates: navigationPageStates,
         }, "*");
-      }
-
-      function trapContentsFocus(event) {
-        if (!contentsOverlay || contentsOverlay.hidden || event.key !== "Tab") return false;
-        const focusable = getContentsFocusableElements();
-        if (!focusable.length) return false;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-          return true;
-        }
-        if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-          return true;
-        }
-        return false;
       }
 
       window.openContents = openContents;
       window.closeContents = closeContents;
+      window.toggleContents = toggleContents;
 
-      const packageNavigationState = readPackageNavigationState();
-      if (packageNavigationState !== null) {
-        globalNavigationOpen = packageNavigationState;
-      }
-      if (isRootCanvas && exportFormat === "package") {
-        storeRootNavigationState(globalNavigationOpen);
-      } else {
-        updatePackageNavigationLinks(globalNavigationOpen);
-      }
-      applyContentsVisibility(globalNavigationOpen, false);
+      readPackageNavigationState();
+      storePackageNavigationState();
+      restoreContentsForCanvasView();
 
       window.addEventListener("message", (event) => {
-        if (isRootCanvas || exportFormat !== "single-html") return;
-        if (event.source !== window.parent) return;
         const message = event.data;
-        if (!message || message.type !== "canvas-html-navigation-state" || typeof message.open !== "boolean") return;
-        globalNavigationOpen = message.open;
-        applyContentsVisibility(message.open, false);
+        if (!message || typeof message.type !== "string") return;
+        if (message.type === "canvas-html-navigation-page-state") {
+          if (!isRootCanvas || exportFormat !== "single-html") return;
+          const activeFrame = singlePageBody?.querySelector(".single-canvas-frame");
+          if (!activeFrame || event.source !== activeFrame.contentWindow) return;
+          if (typeof message.pageId !== "string" || typeof message.open !== "boolean") return;
+          navigationPageStates[message.pageId] = message.open;
+          return;
+        }
+        if (message.type !== "canvas-html-navigation-state") return;
+        if (isRootCanvas || exportFormat !== "single-html" || event.source !== window.parent) return;
+        if (typeof message.globalOpen === "boolean") globalNavigationOpen = message.globalOpen;
+        if (message.pageStates && typeof message.pageStates === "object" && !Array.isArray(message.pageStates)) {
+          navigationPageStates = Object.fromEntries(
+            Object.entries(message.pageStates).filter((entry) => typeof entry[0] === "string" && typeof entry[1] === "boolean"),
+          );
+        }
+        restoreContentsForCanvasView();
       });
 `;
 }

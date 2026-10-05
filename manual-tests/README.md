@@ -48,11 +48,12 @@ single HTML:
   hierarchy is finite, the current Canvas is highlighted, shared targets are
   listed once, and the current Canvas's Markdown, PDF-viewer, and link-node
   cards appear under **Pages in this canvas** and open correctly;
-- change the panel state on the main Canvas and confirm following pages inherit
-  it; change it on a subcanvas and confirm this is local, then open another page
-  and confirm the main Canvas state applies again;
-- close **Navigation** with **Close** and `Esc`; use Tab
-  and Shift+Tab to confirm focus remains inside the open panel;
+- change the panel state on the main Canvas and confirm pages without an
+  individual choice inherit it; choose a different state on a subcanvas and an
+  embedded page, leave each page, and confirm its state returns when reopened;
+- use **Navigation** itself to open and close the panel like **Minimap**;
+  confirm there is no separate Close button and keyboard Tab navigation can
+  move naturally between the panel and the page;
 - from a subcanvas open a Markdown page, PDF viewer, and link page; confirm
   **Back** returns to that subcanvas and **Canvas** returns to the root
   overview. Repeat in single HTML and confirm a root-owned page has no

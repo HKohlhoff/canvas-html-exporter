@@ -207,7 +207,7 @@ export class CanvasHtmlExporterSettingTab extends PluginSettingTab {
           },
           {
             name: "Navigation",
-            desc: "Choose whether the navigation panel is initially open. The main Canvas controls its global state; subcanvases can temporarily override it.",
+            desc: "Choose whether the navigation panel is initially open. The main Canvas controls the default; each page remembers its own later choice.",
             aliases: ["contents", "panel", "sidebar"],
             control: {
               type: "dropdown",

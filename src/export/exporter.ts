@@ -61,6 +61,7 @@ export type ExportedCanvasPage = {
 
 type CanvasRegistryEntry = {
   href: string;
+  navigationPageId: string;
   outputPath?: string;
   pageId?: string;
   data?: PreparedCanvasData;
@@ -247,6 +248,7 @@ export async function exportCanvasPackage(
 
   ctx.canvasRegistry.set(canvasFile.path, {
     href: useSingleHtml ? "#" : "index.html",
+    navigationPageId: "root",
     status: "preparing",
   });
   const root = await prepareCanvasDocument(ctx, canvasFile, settings.initialFoldState, rootParsed);
@@ -342,6 +344,7 @@ async function prepareCanvasDocument(
       showSearch: ctx.settings.showSearch,
       foldingInitiallyEnabled: ctx.settings.foldingInitiallyEnabled === true,
       navigationInitiallyOpen: ctx.settings.navigationInitiallyOpen === true,
+      navigationPageId: ctx.canvasRegistry.get(canvasFile.path)?.navigationPageId || "root",
       canvasColors: ctx.settings.canvasColors,
       calloutColors: ctx.settings.calloutColors,
       headingColors: ctx.settings.headingColors,
@@ -398,6 +401,7 @@ async function exportCanvasTarget(ctx: MarkdownContext, canvasFile: TFile): Prom
     : undefined;
   const entry: CanvasRegistryEntry = {
     href,
+    navigationPageId: `c${pageNumber}`,
     outputPath,
     pageId,
     status: "preparing",
@@ -1364,7 +1368,9 @@ function buildMarkdownAnchorSuffix(section: string): string {
 
 function buildPackageNavigationLinkScript(): string {
   return `(() => {
-    const navigation = new URLSearchParams(window.location.search).get("navigation");
+    const params = new URLSearchParams(window.location.search);
+    const navigation = params.get("navigation");
+    const navigationPages = params.get("navigationPages");
     if (navigation !== "open" && navigation !== "closed") return;
     document.querySelectorAll('a[href]').forEach((link) => {
       const href = link.getAttribute("href") || "";
@@ -1376,6 +1382,7 @@ function buildPackageNavigationLinkScript(): string {
         if (!isLocalTarget) return;
         if (!url.pathname.toLowerCase().endsWith(".html")) return;
         url.searchParams.set("navigation", navigation);
+        if (navigationPages) url.searchParams.set("navigationPages", navigationPages);
         link.setAttribute("href", url.href);
       } catch {
         // Leave malformed or unsupported links unchanged.

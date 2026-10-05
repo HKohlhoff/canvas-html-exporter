@@ -121,7 +121,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
 
         const embeddedPage = result.options.embeddedPages?.find((entry) => entry.id === page.pageId);
         if (!embeddedPage) throw new Error(`Missing single-HTML page for subcanvas ${page.sourcePath}`);
-        embeddedPage.bodyHtml = `<div class="single-canvas-page"><iframe class="single-canvas-frame" srcdoc="${escapeAttribute(pageHtml)}" title="${escapeAttribute(page.title)}"></iframe></div>`;
+        embeddedPage.bodyHtml = `<div class="single-canvas-page"><iframe class="single-canvas-frame" data-navigation-page-id="${escapeAttribute(page.options.navigationPageId || "")}" srcdoc="${escapeAttribute(pageHtml)}" title="${escapeAttribute(page.title)}"></iframe></div>`;
       }
       const html = await convertCanvasToHtml(result.data, result.options);
       await this.writeOutput(result.outputPath, result.outputKind, html);

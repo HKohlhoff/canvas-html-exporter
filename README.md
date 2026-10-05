@@ -271,13 +271,12 @@ Canvas card.
 The drawer uses real relative links in a package and virtual page links in a
 single HTML export. Each embedded subcanvas keeps its own local page list, so
 its Markdown and other HTML pages open inside the correct embedded page scope.
-Close the panel with **Close** or `Esc`; keyboard focus remains inside it while
-it is open.
+Click **Navigation** again to close the panel, just like the Minimap control.
 
 The plugin setting **Navigation** chooses whether this panel starts open or
-closed. Opening or closing it on the main Canvas changes the global state used
-for the next page. A subcanvas may open or close its panel locally without
-changing that global choice; the next page again follows the main Canvas state.
+closed. Opening or closing it on the main Canvas changes the default for pages
+without an individual choice. Every Canvas and embedded page remembers its own
+later open/closed state and restores it when reopened.
 
 HTML pages opened from a linked subcanvas show **Back** and **Canvas** together.
 **Back** returns to the owning subcanvas, while **Canvas** returns directly to

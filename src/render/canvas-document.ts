@@ -23,8 +23,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const contentsHtml = renderContents(options.contents);
   const singlePageNavigation = options.canvasHomeHref
     ? `<a id="single-page-back-link" class="single-page-back-link" href="#">Back</a>
-      <a class="single-page-canvas-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a>`
-    : `<a id="single-page-canvas-link" class="single-page-canvas-link" href="#">Canvas</a>`;
+      <a class="single-page-canvas-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a>
+      ${contentsHtml ? `<button class="single-page-navigation-button" type="button" onclick="toggleContents()" aria-pressed="false">Navigation</button>` : ""}`
+    : `<a id="single-page-canvas-link" class="single-page-canvas-link" href="#">Canvas</a>
+      ${contentsHtml ? `<button class="single-page-navigation-button" type="button" onclick="toggleContents()" aria-pressed="false">Navigation</button>` : ""}`;
   const initialFoldState = foldingInitiallyEnabled ? options.initialFoldState : undefined;
   const hasImportedFolding = Boolean(
     initialFoldState
@@ -178,7 +180,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     </div></details>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
-    ${contentsHtml ? `<button id="contents-toolbar-button" type="button" onclick="openContents()">Navigation</button>` : ""}
+    ${contentsHtml ? `<button id="contents-toolbar-button" type="button" onclick="toggleContents()" aria-pressed="false">Navigation</button>` : ""}
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>

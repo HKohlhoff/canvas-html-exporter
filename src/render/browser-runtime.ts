@@ -18,6 +18,7 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       const baseDocumentTitle = ${serializeScriptData(options.title)};
       const isRootCanvas = ${serializeScriptData(!options.canvasHomeHref)};
       const navigationInitiallyOpen = ${serializeScriptData(options.navigationInitiallyOpen === true)};
+      const navigationPageId = ${serializeScriptData(options.navigationPageId || "root")};
       const toolbar = document.querySelector(".toolbar");
       const canvasShell = document.getElementById("canvas-shell");
       const edgeLayer = document.getElementById("edge-layer");
@@ -50,7 +51,7 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       const searchCloseButton = document.getElementById("search-close-button");
       const contentsOverlay = document.getElementById("contents-overlay");
       const contentsPanel = document.getElementById("contents-panel");
-      const contentsCloseButton = document.getElementById("contents-close-button");
+      const contentsToolbarButtons = Array.from(document.querySelectorAll("#contents-toolbar-button, .single-page-navigation-button"));
       const embeddedPageTemplates = Array.from(document.querySelectorAll("#embedded-pages-store template"));
       const edgeColor = ${serializeScriptData(
         normalizeCssColorValue(options.canvasColors?.["0"] || "") || theme.edge,
@@ -214,9 +215,6 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
           }
         });
       }
-      if (contentsCloseButton) {
-        contentsCloseButton.addEventListener("click", closeContents);
-      }
       document.addEventListener("click", (event) => {
         const link = event.target instanceof Element ? event.target.closest("[data-inline-page]") : null;
         if (!link) return;
@@ -249,7 +247,6 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
         window.addEventListener("hashchange", syncEmbeddedPageFromHash);
       }
       window.addEventListener("keydown", (event) => {
-        if (trapContentsFocus(event)) return;
         if (trapSearchFocus(event)) return;
         const target = event.target instanceof HTMLElement ? event.target : null;
         const targetTag = target?.tagName || "";
@@ -263,10 +260,6 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
           event.preventDefault();
           cancelledZoomAreaPointerId = zoomAreaDrag.pointerId;
           cancelZoomAreaDrag();
-          return;
-        }
-        if (event.key === "Escape" && contentsOverlay && !contentsOverlay.hidden) {
-          closeContents();
           return;
         }
         if (event.key === "Escape" && searchOverlay && !searchOverlay.hidden) {

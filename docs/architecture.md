@@ -67,8 +67,8 @@ Markdown, PDF-viewer, and link-node pages directly represented by nodes in
 that document. The renderer owns the fixed side-panel DOM and interaction;
 opening it adds page padding equal to the panel width so the current view stays
 visible beside it, and closing it restores the full width. The main Canvas owns
-the global open/closed state; subcanvas changes are local and the next page
-again applies the global state. Package links
+the default open/closed state, while each Canvas and embedded page can retain a
+local override that is restored when that page is reopened. Package links
 remain relative files, while links from an embedded single-HTML subcanvas to a
 Canvas target navigate its parent page; local page entries remain inside that
 subcanvas's isolated virtual-page scope.

@@ -810,19 +810,6 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       margin: 0;
       font-size: 1.15rem;
     }
-    .contents-close-button {
-      border: 1px solid ${theme.canvasBorder};
-      background: ${theme.nodeBackground};
-      color: ${theme.text};
-      border-radius: 8px;
-      padding: 6px 10px;
-      cursor: pointer;
-      font: inherit;
-      font-size: 0.875rem;
-    }
-    .contents-close-button:hover {
-      background: ${theme.chipBackground};
-    }
     .contents-navigation {
       flex: 1 1 auto;
       min-height: 0;
@@ -914,6 +901,19 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     .single-page-back-link,
     .single-page-canvas-link {
       font-size: 0.95em;
+    }
+    .single-page-navigation-button {
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: ${theme.link};
+      font: inherit;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .single-page-navigation-button.is-active {
+      text-decoration: underline;
     }
     .canvas-return-link:hover,
     .single-page-back-link:hover,

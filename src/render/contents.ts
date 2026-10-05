@@ -18,17 +18,14 @@ function renderContentsItems(items: ContentsNavigationItem[]): string {
 
 export function renderContents(navigation: ContentsNavigation | undefined): string {
   if (!navigation || (!navigation.canvases.length && !navigation.pages.length)) return "";
-  const canvasSection = navigation.canvases.length
-    ? `<section class="contents-section"><h3>Canvases</h3>${renderContentsItems(navigation.canvases)}</section>`
-    : "";
+  const canvasSection = `<section class="contents-section"><h3>Canvases</h3>${renderContentsItems(navigation.canvases)}</section>`;
   const pagesSection = navigation.pages.length
     ? `<section class="contents-section"><h3>Pages in this canvas</h3>${renderContentsItems(navigation.pages)}</section>`
     : `<p class="contents-empty">No additional pages in this canvas.</p>`;
   return `<div id="contents-overlay" class="contents-overlay" hidden>
-    <aside id="contents-panel" class="contents-panel" role="dialog" aria-modal="true" aria-labelledby="contents-title">
+    <aside id="contents-panel" class="contents-panel" aria-labelledby="contents-title">
       <header class="contents-header">
         <h2 id="contents-title">Navigation</h2>
-        <button id="contents-close-button" class="contents-close-button" type="button" aria-label="Close navigation">Close</button>
       </header>
       <nav class="contents-navigation" aria-label="Exported pages">
         ${canvasSection}

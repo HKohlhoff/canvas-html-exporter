@@ -968,7 +968,12 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       });
       assert.equal(result.canvasPages.length, 2);
       assert.equal(result.options.navigationInitiallyOpen, true);
+      assert.equal(result.options.navigationPageId, "root");
       assert.ok(result.canvasPages.every((page) => page.options.navigationInitiallyOpen === true));
+      assert.deepEqual(
+        new Set(result.canvasPages.map((page) => page.options.navigationPageId)),
+        new Set(["c1", "c2"]),
+      );
       assert.deepEqual(
         new Set(result.canvasPages.map((page) => page.sourcePath)),
         new Set(["nested/child.canvas", "nested/grand.canvas"]),
@@ -1025,11 +1030,12 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
           const pageHtml = await convertCanvasToHtml(page.data, page.options);
           const embedded = result.options.embeddedPages?.find((entry) => entry.id === page.pageId);
           assert.ok(embedded);
-          embedded.bodyHtml = `<div class="single-canvas-page"><iframe class="single-canvas-frame" srcdoc="${escapeAttribute(pageHtml)}" title="${escapeAttribute(page.title)}"></iframe></div>`;
+          embedded.bodyHtml = `<div class="single-canvas-page"><iframe class="single-canvas-frame" data-navigation-page-id="${escapeAttribute(page.options.navigationPageId || "")}" srcdoc="${escapeAttribute(pageHtml)}" title="${escapeAttribute(page.title)}"></iframe></div>`;
         }
         const rootHtml = await convertCanvasToHtml(result.data, result.options);
         assert.match(rootHtml, /data-page-kind="canvas"/);
         assert.match(rootHtml, /class="single-canvas-frame"/);
+        assert.match(rootHtml, /data-navigation-page-id="c1"/);
         assert.match(rootHtml, /id="single-page-canvas-link"[^>]*>Canvas<\/a>/);
         assert.match(rootHtml, /singlePageToolbar\.hidden = template\.dataset\.pageKind === "canvas"/);
         assert.doesNotMatch(rootHtml, /srcdoc="<!DOCTYPE html>/);

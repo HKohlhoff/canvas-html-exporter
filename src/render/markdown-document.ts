@@ -190,6 +190,7 @@ export function buildMarkdownDocumentHtml(
       const params = new URLSearchParams(window.location.search);
       const query = (params.get("q") || "").trim();
       const navigation = params.get("navigation");
+      const navigationPages = params.get("navigationPages");
       if (navigation === "open" || navigation === "closed") {
         document.querySelectorAll('a[href]').forEach((link) => {
           const href = link.getAttribute("href") || "";
@@ -201,6 +202,7 @@ export function buildMarkdownDocumentHtml(
             if (!isLocalTarget) return;
             if (!url.pathname.toLowerCase().endsWith(".html")) return;
             url.searchParams.set("navigation", navigation);
+            if (navigationPages) url.searchParams.set("navigationPages", navigationPages);
             link.setAttribute("href", url.href);
           } catch {
             // Leave malformed or unsupported links unchanged.
