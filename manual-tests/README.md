@@ -81,7 +81,9 @@ single HTML:
   both formats; confirm the destination Canvas is normally fitted and Search
   reopens with the original query; click the same local result again and
   confirm its title remains visible inside the result card and the complete
-  result area reopens its file page;
+  result area reopens its file page. Before and after **Back**, confirm the
+  metadata line reads `type · owning Canvas` and never changes to node
+  coordinates;
 - from a subcanvas open a Markdown page, PDF viewer, and link page; confirm
   **Back** returns to that subcanvas and **Canvas** returns to the root
   overview. Repeat in single HTML and confirm a root-owned page has no

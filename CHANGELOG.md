@@ -71,6 +71,9 @@ first.
   state when recursively subordinate Canvases are included.
 - Keep every result title inside its bordered clickable result card so it
   remains visible when Search is restored after **Back**.
+- Identify local Search results by their owning Canvas after **Back**, matching
+  initial descendant results instead of replacing the Canvas name with node
+  coordinates.
 
 ### Development
 

@@ -1451,6 +1451,8 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /function applyLinkAttrs\(link, href, query, target, nodeId, pageHref\)/);
   assert.match(html, /link\.setAttribute\("href", appendSearchQueryToHref\(href, query, nodeId, pageHref\)\)/);
   assert.match(html, /"kindLabel":"Markdown"/);
+  assert.match(html, /"positionLabel":"Test Canvas"/);
+  assert.doesNotMatch(html, /"positionLabel":"x /);
 });
 
 await test("indexes visible markdown preview html instead of hidden raw preview text", async () => {
@@ -1497,6 +1499,7 @@ await test("renders descendant search results as navigable page entries", async 
   assert.match(html, /"id":"child\.canvas:note"/);
   assert.match(html, /Searching in: Test Canvas and subordinate canvases/);
   assert.match(html, /"text":"Untergeordnete Notiz Kurzer Ausschnitt Volltextbegriff"/);
+  assert.match(html, /"positionLabel":"Untercanvas"/);
   assert.match(html, /const result = entry\.openHref \? document\.createElement\("a"\) : document\.createElement\("button"\)/);
   assert.match(html, /result\.setAttribute\("data-search-open", "true"\)/);
   assert.match(html, /result\.setAttribute\("aria-label", "Open " \+ entry\.title\)/);

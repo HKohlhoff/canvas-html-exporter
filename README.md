@@ -97,7 +97,9 @@ controls above the Canvas:
   card into view. Markdown cards contribute the full note text to the index,
   not only their visible preview. Multiple cards referencing the same Vault
   file produce one result, preferring the current Canvas. The dialog names its
-  current Canvas scope and indicates when subordinate Canvases are included.
+  current Canvas scope and indicates when subordinate Canvases are included;
+  every result identifies its owning Canvas, including after returning with
+  `Back`.
   Tab and Shift+Tab stay inside
   the open search dialog; closing it returns focus to the control used to open
   it.

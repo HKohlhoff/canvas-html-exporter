@@ -109,7 +109,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   }));
   const searchEntries = deduplicateSearchEntries(
     nodes
-      .map((node) => buildSearchEntry(node, bounds.offsetX, bounds.offsetY))
+      .map((node) => ({
+        ...buildSearchEntry(node, bounds.offsetX, bounds.offsetY),
+        positionLabel: options.title,
+      }))
       .filter((entry) => entry.text)
       .concat(options.additionalSearchEntries || []),
   ).map((entry) => {
