@@ -45,6 +45,30 @@ export function buildBrowserViewport({ bounds }: Pick<BrowserRuntimeParameters, 
         window.requestAnimationFrame(updateMinimapViewport);
       }
 
+      function storePackageViewportState() {
+        if (exportFormat !== "package" || !viewport) return;
+        packageViewportStates[navigationPageId] = {
+          scale: currentScale,
+          left: viewport.scrollLeft,
+          top: viewport.scrollTop,
+        };
+        writePackageWindowState();
+      }
+
+      function restorePackageViewportState() {
+        if (exportFormat !== "package" || !viewport) return false;
+        const state = packageViewportStates[navigationPageId];
+        if (!state) return false;
+        currentScale = clamp(state.scale, 0.2, 4);
+        setCssProps(canvas, { transform: "scale(" + currentScale + ")" });
+        drawEdges();
+        window.requestAnimationFrame(() => {
+          viewport.scrollTo({ left: state.left, top: state.top, behavior: "auto" });
+          updateMinimapViewport();
+        });
+        return true;
+      }
+
       function getFitNodeBounds() {
         const activeNodes = Array.from(document.querySelectorAll(".node[data-node-id]"))
           .filter((node) => {

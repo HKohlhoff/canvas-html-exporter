@@ -6,13 +6,16 @@ import {
   buildMarkdownDocumentHtml,
   CanvasData,
   CanvasNode,
+  ContentsNavigation,
   ExportOptions,
   EXPORTER_SIGNATURE,
   EXPORTER_VERSION,
   HighlightingThemeChoice,
   markdownToHtml,
 } from "../render/converter";
-import { buildContentsNavigation } from "./contents";
+import { buildContentsNavigation, rebaseContentsNavigation, type ContentsCanvasDocument } from "./contents";
+import { buildPackagePageNavigation } from "../render/package-page-navigation";
+import { getTheme } from "../render/theme";
 import { isAbsoluteFilesystemPath, requireDesktopNodeApis } from "../helpers/desktop-paths";
 import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePath } from "./files";
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./canvas-data";
@@ -93,7 +96,15 @@ type MarkdownContext = {
   canvasRegistry: Map<string, CanvasRegistryEntry>;
   canvasPages: ExportedCanvasPage[];
   canvasPageCounter: { value: number };
+  packagePages: DeferredPackagePage[];
   settings: ExportSettings;
+};
+
+type DeferredPackagePage = {
+  ownerCanvasPath: string;
+  relativePath: string;
+  outputPath: string;
+  render: (contents: ContentsNavigation, navigationPageId: string) => string;
 };
 
 type LinkBase = "canvas" | "page";
@@ -243,6 +254,7 @@ export async function exportCanvasPackage(
     canvasRegistry: new Map<string, CanvasRegistryEntry>(),
     canvasPages: [],
     canvasPageCounter: { value: 0 },
+    packagePages: [],
     settings,
   };
 
@@ -286,6 +298,9 @@ export async function exportCanvasPackage(
       ctx.exportFormat,
     );
   }
+  if (!useSingleHtml) {
+    await writeDeferredPackagePages(ctx, contentsDocuments);
+  }
   if (useSingleHtml && ctx.canvasPages.length > 0) {
     root.options.embeddedPages = [
       ...(root.options.embeddedPages || []),
@@ -305,6 +320,32 @@ export async function exportCanvasPackage(
     options: root.options,
     canvasPages: ctx.canvasPages,
   };
+}
+
+async function writeDeferredPackagePages(
+  ctx: MarkdownContext,
+  documents: ContentsCanvasDocument[],
+): Promise<void> {
+  for (const page of ctx.packagePages) {
+    const contents = rebaseContentsNavigation(
+      buildContentsNavigation(
+        documents,
+        ctx.rootCanvasPath,
+        page.ownerCanvasPath,
+        "package",
+        page.relativePath,
+      ),
+      page.relativePath,
+    );
+    const ownerNavigationPageId = ctx.canvasRegistry.get(page.ownerCanvasPath)?.navigationPageId || "root";
+    const navigationPageId = `${ownerNavigationPageId}:page:${page.relativePath}`;
+    await writeTextFile(
+      ctx.app,
+      page.outputPath,
+      page.render(contents, navigationPageId),
+      ctx.outputMode,
+    );
+  }
 }
 
 async function prepareCanvasDocument(
@@ -574,28 +615,22 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
     const viewerRel = normalizeExportHref(`assets/files/${viewerName}`);
     const canvasHrefForViewer = normalizeExportHref(getHrefForMarkdownPage(viewerRel, "index.html"));
     const backHrefForViewer = getPackageBackHref(ctx, viewerRel);
-    const viewerHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="generator" content="${EXPORTER_SIGNATURE}">
-  <meta name="canvas-html-exporter-build" content="${EXPORTER_VERSION}-${ctx.highlightingTheme || "shiki"}">
-  <title>${escapeHtmlAttr(file.basename)}</title>
-  <!-- Exported by ${EXPORTER_SIGNATURE} -->
-  <style>
-    html,body{margin:0;padding:0;height:100%;}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f5f8;color:#1b2733;}
-    .pdf-viewer-toolbar{display:flex;justify-content:flex-end;gap:14px;padding:12px 16px;border-bottom:1px solid #d6dde7;background:#fff;}
-    .pdf-viewer-back-link,.pdf-viewer-canvas-link{color:#1967d2;text-decoration:none;font-size:0.95em;font-weight:600;}
-    .pdf-viewer-back-link:hover,.pdf-viewer-canvas-link:hover{text-decoration:underline;}
-    iframe{display:block;width:100%;height:calc(100vh - 53px);border:none;}
-  </style>
-</head>
-<body><div class="pdf-viewer-toolbar">${backHrefForViewer ? `<a class="pdf-viewer-back-link" href="${escapeHtmlAttr(backHrefForViewer)}">Back</a>` : ""}<a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHrefForViewer)}">Canvas</a></div><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe><script>${buildPackageNavigationLinkScript()}</script></body>
-</html>`;
     if (ctx.exportFormat !== "single-html") {
-      await writeTextFile(ctx.app, viewerPath, viewerHtml, ctx.outputMode);
+      ctx.packagePages.push({
+        ownerCanvasPath: ctx.canvasFile.path,
+        relativePath: viewerRel,
+        outputPath: viewerPath,
+        render: (contents, navigationPageId) => buildPdfDocumentHtml(
+          file.basename,
+          pdfFilename,
+          ctx.darkMode,
+          ctx.highlightingTheme,
+          canvasHrefForViewer,
+          backHrefForViewer,
+          contents,
+          navigationPageId,
+        ),
+      });
     }
     const canvasHref = ctx.exportFormat === "single-html"
       ? registerSingleHtmlPage(
@@ -681,8 +716,22 @@ async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promi
   const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
   const canvasHref = normalizeExportHref(getHrefForMarkdownPage(rel, "index.html"));
   const backHref = getPackageBackHref(ctx, rel);
-  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme, canvasHref, backHref);
-  await writeTextFile(ctx.app, outputPath, html, ctx.outputMode);
+  ctx.packagePages.push({
+    ownerCanvasPath: ctx.canvasFile.path,
+    relativePath: rel,
+    outputPath,
+    render: (contents, navigationPageId) => buildLinkDocumentHtml(
+      title,
+      url,
+      ctx.darkMode,
+      ctx.canvasColors,
+      ctx.highlightingTheme,
+      canvasHref,
+      backHref,
+      contents,
+      navigationPageId,
+    ),
+  });
   return rel;
 }
 
@@ -874,19 +923,25 @@ async function renderMarkdownFileToHtml(
     const title = (pageTitle || file.basename || file.name).trim();
     const canvasHref = getHrefForMarkdownPage(rel, "index.html");
     const backHref = getPackageBackHref(ctx, rel);
-    const htmlDoc = buildMarkdownDocumentHtml(
-      title,
-      htmlBody,
-      ctx.darkMode,
-      ctx.canvasColors,
-      ctx.calloutColors,
-      ctx.headingColors,
-      ctx.inlineStyleColors,
-      ctx.highlightingTheme,
-      canvasHref,
-      backHref,
-    );
-    await writeTextFile(ctx.app, outputPath, htmlDoc, ctx.outputMode);
+    ctx.packagePages.push({
+      ownerCanvasPath: ctx.canvasFile.path,
+      relativePath: rel,
+      outputPath,
+      render: (contents, navigationPageId) => buildMarkdownDocumentHtml(
+        title,
+        htmlBody,
+        ctx.darkMode,
+        ctx.canvasColors,
+        ctx.calloutColors,
+        ctx.headingColors,
+        ctx.inlineStyleColors,
+        ctx.highlightingTheme,
+        canvasHref,
+        backHref,
+        contents,
+        navigationPageId,
+      ),
+    });
     return rel;
   } catch (error) {
     if (mode === "page") {
@@ -1391,6 +1446,52 @@ function buildPackageNavigationLinkScript(): string {
   })();`;
 }
 
+function buildPdfDocumentHtml(
+  title: string,
+  pdfFilename: string,
+  darkMode: boolean,
+  highlightingTheme?: HighlightingThemeChoice,
+  canvasHref?: string,
+  backHref?: string,
+  contents?: ContentsNavigation,
+  navigationPageId?: string,
+): string {
+  const theme = getTheme(darkMode);
+  const pageNavigation = buildPackagePageNavigation(contents, navigationPageId, canvasHref, theme);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="${EXPORTER_SIGNATURE}">
+  <meta name="canvas-html-exporter-build" content="${EXPORTER_VERSION}-${highlightingTheme || "shiki"}">
+  <title>${escapeHtmlAttr(title)}</title>
+  <!-- Exported by ${EXPORTER_SIGNATURE} -->
+  <style>
+    *{box-sizing:border-box;}
+    html,body{margin:0;padding:0;height:100%;}
+    body{display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:${theme.bodyBackground};color:${theme.text};}
+    .pdf-viewer-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:12px 16px;border-bottom:1px solid ${theme.canvasBorder};background:${theme.canvasBackground};}
+    .pdf-viewer-back-link,.pdf-viewer-canvas-link{color:${theme.link};text-decoration:none;font-size:0.95em;font-weight:600;}
+    .pdf-viewer-back-link:hover,.pdf-viewer-canvas-link:hover{text-decoration:underline;}
+    iframe{display:block;width:100%;flex:1 1 auto;min-height:0;border:none;}
+    ${pageNavigation.css}
+  </style>
+</head>
+<body>
+  <div class="pdf-viewer-toolbar">${backHref ? `<a class="pdf-viewer-back-link" href="${escapeHtmlAttr(backHref)}">Back</a>` : ""}<a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHref || "")}">Canvas</a>${pageNavigation.buttonHtml}</div>
+  <iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(title)}"></iframe>
+  ${pageNavigation.contentsHtml}
+  <script>
+    (() => {
+      ${pageNavigation.script}
+      ${buildPackageNavigationLinkScript()}
+    })();
+  </script>
+</body>
+</html>`;
+}
+
 function buildLinkDocumentHtml(
   title: string,
   url: string,
@@ -1399,8 +1500,11 @@ function buildLinkDocumentHtml(
   highlightingTheme?: HighlightingThemeChoice,
   canvasHref?: string,
   backHref?: string,
+  contents?: ContentsNavigation,
+  navigationPageId?: string,
 ): string {
   const theme = getLinkPageTheme(darkMode);
+  const pageNavigation = buildPackagePageNavigation(contents, navigationPageId, canvasHref, getTheme(darkMode));
   const safeTitle = escapeHtmlAttr(url || title || "Link");
   const safeUrl = escapeHtmlAttr(safeNavigationUrl(url));
   const previewUrl = escapeHtmlAttr(safeWebPreviewUrl(url));
@@ -1536,6 +1640,7 @@ function buildLinkDocumentHtml(
       padding: 0 0.08em;
       border-radius: 3px;
     }
+    ${pageNavigation.css}
   </style>
 </head>
 <body>
@@ -1546,6 +1651,7 @@ function buildLinkDocumentHtml(
     <div class="link-page-nav-links">
       ${backHref ? `<a class="link-page-back-link" href="${escapeHtmlAttr(backHref)}">Back</a>` : ""}
       ${canvasHref ? `<a class="link-page-canvas-link" href="${escapeHtmlAttr(canvasHref)}">Canvas</a>` : ""}
+      ${pageNavigation.buttonHtml}
     </div>
   </div>
   <div id="link-status" class="link-page-status"></div>
@@ -1560,8 +1666,10 @@ function buildLinkDocumentHtml(
       </div>
     </div>
   </div>
+  ${pageNavigation.contentsHtml}
   <script>
     (() => {
+      ${pageNavigation.script}
       ${buildPackageNavigationLinkScript()}
       const status = document.getElementById("link-status");
       const preview = document.getElementById("link-preview");

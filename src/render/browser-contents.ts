@@ -2,6 +2,7 @@
 export function buildBrowserContents(): string {
   return `      let globalNavigationOpen = navigationInitiallyOpen;
       let navigationPageStates = {};
+      let packageViewportStates = {};
       const navigationWindowStatePrefix = "canvas-html-exporter-navigation:";
 
       function normalizeNavigationPageStates(value) {
@@ -9,6 +10,18 @@ export function buildBrowserContents(): string {
         return Object.fromEntries(
           Object.entries(value).filter((entry) => typeof entry[0] === "string" && typeof entry[1] === "boolean"),
         );
+      }
+
+      function normalizePackageViewportStates(value) {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+        return Object.fromEntries(Object.entries(value).filter((entry) => {
+          const state = entry[1];
+          return typeof entry[0] === "string"
+            && state && typeof state === "object" && !Array.isArray(state)
+            && Number.isFinite(state.scale)
+            && Number.isFinite(state.left)
+            && Number.isFinite(state.top);
+        }));
       }
 
       function getActiveNavigationPageId() {
@@ -63,6 +76,7 @@ export function buildBrowserContents(): string {
           if (!stored || stored.scope !== getPackageNavigationScope()) return;
           if (typeof stored.globalOpen === "boolean") globalNavigationOpen = stored.globalOpen;
           navigationPageStates = normalizeNavigationPageStates(stored.pageStates);
+          packageViewportStates = normalizePackageViewportStates(stored.viewportStates);
         } catch {
           // Ignore unrelated or malformed window state.
         }
@@ -74,6 +88,7 @@ export function buildBrowserContents(): string {
           scope: getPackageNavigationScope(),
           globalOpen: globalNavigationOpen,
           pageStates: navigationPageStates,
+          viewportStates: packageViewportStates,
         });
       }
 

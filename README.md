@@ -267,8 +267,9 @@ finite hierarchy; shared targets and cycles are listed only once, and the
 current Canvas is highlighted. **Pages in this canvas** lists the Markdown,
 PDF-viewer, and link-node HTML pages directly represented by cards in the
 current Canvas. Selecting an entry opens the same portable target used by its
-Canvas card. In a single HTML export, the highlight follows an opened embedded
-page and returns to its owning Canvas when that page is closed.
+Canvas card. These file pages also provide the **Navigation** toggle and panel.
+The highlight follows the opened file page and returns to its owning Canvas
+when that page is closed.
 
 The drawer uses real relative links in a package and virtual page links in a
 single HTML export. Each embedded subcanvas keeps its own local page list, so
@@ -276,11 +277,13 @@ its Markdown and other HTML pages open inside the correct embedded page scope.
 Click **Navigation** again to close the panel, just like the Minimap control.
 
 The plugin setting **Navigation** chooses whether this panel starts open or
-closed. Opening or closing it on the main Canvas changes the default for pages
-without an individual choice. Every Canvas and embedded page remembers its own
-later open/closed state and restores it when reopened. Embedded Markdown, PDF,
-and link pages start with Navigation closed on their first visit, regardless of
-the global default; users can open it there and that local choice is remembered.
+closed. Opening or closing it on the main Canvas changes the default for Canvas
+pages without an individual choice. Every Canvas and file page remembers its
+own later open/closed state and restores it when reopened. Markdown, PDF, and
+link pages start with Navigation closed on their first visit in either export
+format, regardless of the global default; users can open it there and that
+local choice is remembered. Package navigation also restores each Canvas's
+zoom level and visible position when returning from another page.
 
 HTML pages opened from a linked subcanvas show **Back** and **Canvas** together.
 **Back** returns to the owning subcanvas, while **Canvas** returns directly to

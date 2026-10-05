@@ -3,7 +3,9 @@ import type { ContentsNavigation, ContentsNavigationItem } from "./types";
 
 function renderContentsItems(items: ContentsNavigationItem[]): string {
   return `<ul class="contents-list">${items.map((item) => {
-    const currentAttr = item.current ? ` aria-current="page" data-contents-current-canvas="true"` : "";
+    const currentAttr = item.current
+      ? ` aria-current="page"${item.kind === "canvas" ? ` data-contents-current-canvas="true"` : ""}`
+      : "";
     const targetAttr = item.target ? ` target="${item.target}"` : "";
     const inlinePageAttr = item.href.startsWith("#page-") && !item.target
       ? ` data-inline-page="${escapeAttribute(item.href.replace(/^#page-/, "").split(/[?#]/)[0])}"`

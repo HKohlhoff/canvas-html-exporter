@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import vm from "node:vm";
 import { convertCanvasToHtml } from "../src/render/converter";
 import { exportCanvasPackage } from "../src/export/exporter";
 import { escapeAttribute } from "../src/render/html";
@@ -274,7 +275,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       if (exportFormat === "package") {
         for (const node of result.data.nodes) {
           assert.doesNotMatch(node.canvasHref!, /[# ]/);
-          assert.ok(files.get(`out/pdf/${node.canvasHref}`)?.text?.includes(node.exportPath!.split("/").pop()!));
+          const viewerHtml = files.get(`out/pdf/${node.canvasHref}`)?.text || "";
+          assert.ok(viewerHtml.includes(node.exportPath!.split("/").pop()!));
+          assert.match(viewerHtml, /id="page-navigation-button"[^>]*>Navigation<\/button>/);
+          assert.match(viewerHtml, /id="contents-panel"/);
+          assert.doesNotThrow(() => new vm.Script(viewerHtml.match(/<script>([\s\S]+)<\/script>/)?.[1] || ""));
         }
       }
     });
@@ -788,6 +793,9 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.ok(exportedLinkPage);
     const linkHtml = exportedLinkPage?.text || "";
     assert.match(linkHtml, /<a class="link-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
+    assert.match(linkHtml, /id="page-navigation-button"[^>]*>Navigation<\/button>/);
+    assert.match(linkHtml, /id="contents-panel"/);
+    assert.doesNotThrow(() => new vm.Script(linkHtml.match(/<script>([\s\S]+)<\/script>/)?.[1] || ""));
     assert.match(linkHtml, /No internet connection is available\./);
     assert.match(linkHtml, /This website may not allow embedded previews\. Use the link above\./);
     assert.match(linkHtml, /Use the link above if the website blocks embedding or if you want to open the page in its own browser tab\./);
@@ -1047,6 +1055,15 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         const chapterHtml = files.get(`out/root/${chapter?.exportHtmlPath || ""}`)?.text || "";
         assert.match(chapterHtml, /class="md-page-back-link" href="\.\.\/\.\.\/canvas-\d{3}-child\.html">Back<\/a>/);
         assert.match(chapterHtml, /class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
+        assert.match(chapterHtml, /id="page-navigation-button"[^>]*>Navigation<\/button>/);
+        assert.match(chapterHtml, /id="contents-panel"[\s\S]*?<h3>Canvases<\/h3>/);
+        assert.match(chapterHtml, /class="contents-link is-current" aria-current="page">Chapter One<\/span>/);
+        assert.doesNotMatch(chapterHtml, /data-contents-current-canvas/);
+        assert.match(chapterHtml, /const navigationPageId = "c\d+:page:assets\/files\/\d+_chapter\.html"/);
+        assert.match(chapterHtml, /hasLocalState \? navigationPageStates\[navigationPageId\] === true : false/);
+        assert.match(chapterHtml, /viewportStates: packageViewportStates/);
+        assert.match(chapterHtml, /class="contents-link" href="\.\.\/\.\.\/index\.html">root<\/a>/);
+        assert.doesNotThrow(() => new vm.Script(chapterHtml.match(/<script>([\s\S]+)<\/script>/)?.[1] || ""));
         assert.match(childHtml, /\.canvas-return-link,\s+\.single-page-back-link,\s+\.single-page-canvas-link \{\s+color: #1967d2;/);
       }
     });

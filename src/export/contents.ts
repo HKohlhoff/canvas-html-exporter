@@ -1,4 +1,5 @@
 import type { CanvasData, ContentsNavigation, ContentsNavigationItem } from "../render/types";
+import { getHrefForMarkdownPage } from "../helpers/path-helpers";
 
 export type ContentsCanvasDocument = {
   sourcePath: string;
@@ -12,6 +13,7 @@ export function buildContentsNavigation(
   rootSourcePath: string,
   currentSourcePath: string,
   exportFormat: "package" | "single-html",
+  currentPageHref?: string,
 ): ContentsNavigation {
   const documentsByPath = new Map(documents.map((document) => [document.sourcePath, document]));
   const visited = new Set<string>();
@@ -37,7 +39,7 @@ export function buildContentsNavigation(
       title: linkTitle || document.title,
       href: document.href,
       kind: "canvas",
-      current: sourcePath === currentSourcePath,
+      current: !currentPageHref && sourcePath === currentSourcePath,
       target,
       children: children.length ? children : undefined,
     };
@@ -62,6 +64,7 @@ export function buildContentsNavigation(
         title: (node.label || node.displayName || node.file || node.url || kind).trim(),
         href,
         kind,
+        current: href === currentPageHref,
       };
     })
     .filter((item): item is ContentsNavigationItem => item !== null);
@@ -73,5 +76,23 @@ export function buildContentsNavigation(
   return {
     canvases: [...(root ? [root] : []), ...additionalCanvases],
     pages,
+  };
+}
+
+export function rebaseContentsNavigation(
+  navigation: ContentsNavigation,
+  currentHtmlPath: string,
+): ContentsNavigation {
+  function rebaseItems(items: ContentsNavigationItem[]): ContentsNavigationItem[] {
+    return items.map((item) => ({
+      ...item,
+      href: getHrefForMarkdownPage(currentHtmlPath, item.href),
+      children: item.children ? rebaseItems(item.children) : undefined,
+    }));
+  }
+
+  return {
+    canvases: rebaseItems(navigation.canvases),
+    pages: rebaseItems(navigation.pages),
   };
 }

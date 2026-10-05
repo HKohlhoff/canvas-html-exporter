@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildContentsNavigation, type ContentsCanvasDocument } from "../src/export/contents";
+import { buildContentsNavigation, rebaseContentsNavigation, type ContentsCanvasDocument } from "../src/export/contents";
 
 function test(name: string, fn: () => void): void {
   try {
@@ -63,4 +63,22 @@ test("uses parent navigation for canvas links inside a single-html subcanvas", (
   assert.equal(contents.canvases[0]?.target, "_parent");
   assert.equal(contents.canvases[0]?.children?.[0]?.target, "_parent");
   assert.equal(contents.pages[0]?.target, undefined);
+});
+
+test("marks and rebases the current package file page", () => {
+  const contents = buildContentsNavigation(
+    documents,
+    "root.canvas",
+    "a.canvas",
+    "package",
+    "assets/files/chapter-1.html",
+  );
+  assert.equal(contents.canvases[0]?.children?.[0]?.current, false);
+  assert.equal(contents.pages[0]?.current, true);
+
+  const rebased = rebaseContentsNavigation(contents, "assets/files/chapter-1.html");
+  assert.equal(rebased.canvases[0]?.href, "../../index.html");
+  assert.equal(rebased.canvases[0]?.children?.[0]?.href, "../../canvas-a.html");
+  assert.equal(rebased.pages[0]?.href, "chapter-1.html");
+  assert.equal(rebased.pages[1]?.href, "appendix.html");
 });

@@ -1,7 +1,8 @@
 import { escapeHtml } from "./html";
 import { buildExporterBuildMeta, EXPORTER_SIGNATURE } from "./metadata";
+import { buildPackagePageNavigation } from "./package-page-navigation";
 import { buildCalloutCss, buildCanvasColorVariables, buildHeadingColorCss, buildInlineStyleCss, getTheme, indentCssBlock } from "./theme";
-import type { HighlightingThemeChoice } from "./types";
+import type { ContentsNavigation, HighlightingThemeChoice } from "./types";
 
 export function buildMarkdownDocumentHtml(
   title: string,
@@ -14,8 +15,11 @@ export function buildMarkdownDocumentHtml(
   highlightingTheme?: HighlightingThemeChoice,
   canvasHref?: string,
   backHref?: string,
+  contents?: ContentsNavigation,
+  navigationPageId?: string,
 ): string {
   const theme = getTheme(darkMode);
+  const pageNavigation = buildPackagePageNavigation(contents, navigationPageId, canvasHref, theme);
   const calloutCss = buildCalloutCss(calloutColors);
   const headingCss = buildHeadingColorCss("", headingColors);
   const inlineStyleCss = buildInlineStyleCss("", inlineStyleColors);
@@ -28,6 +32,7 @@ export function buildMarkdownDocumentHtml(
     }
     .md-page-toolbar {
       display: flex;
+      align-items: center;
       justify-content: flex-end;
       gap: 14px;
       margin-bottom: 1em;
@@ -174,6 +179,7 @@ export function buildMarkdownDocumentHtml(
       color: #d64545;
       font-style: italic;
     }
+    ${pageNavigation.css}
   </style>
 </head>
 <body>
@@ -181,12 +187,15 @@ export function buildMarkdownDocumentHtml(
     <div class="md-page-toolbar">
       ${backHref ? `<a class="md-page-back-link" href="${escapeHtml(backHref)}">Back</a>` : ""}
       ${canvasHref ? `<a class="md-page-canvas-link" href="${escapeHtml(canvasHref)}">Canvas</a>` : ""}
+      ${pageNavigation.buttonHtml}
     </div>
     <h1>${escapeHtml(title)}</h1>
     ${bodyHtml}
   </main>
+  ${pageNavigation.contentsHtml}
   <script>
     (() => {
+      ${pageNavigation.script}
       const params = new URLSearchParams(window.location.search);
       const query = (params.get("q") || "").trim();
       const navigation = params.get("navigation");

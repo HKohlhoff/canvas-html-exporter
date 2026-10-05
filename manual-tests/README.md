@@ -52,7 +52,8 @@ single HTML:
   individual choice inherit it; choose a different state on a subcanvas and an
   embedded page, leave each page, and confirm its state returns when reopened;
 - repeat the same local-state check with browser Back and Forward in a package
-  export;
+  export; confirm its Markdown, PDF, and link pages contain the same
+  **Navigation** toggle and panel and highlight the opened file page;
 - in single HTML, confirm every linked Canvas fills the page like the overview,
   without a surrounding card or reduced-height frame, and that its upper-right
   **Canvas** link returns to the overview without opening a file chooser;
@@ -64,9 +65,13 @@ single HTML:
   overview. Repeat in single HTML and confirm a root-owned page has no
   redundant **Back** link; while each embedded page is open, confirm
   **Navigation** highlights that page rather than its owning Canvas;
-- with the global Navigation default set to open, visit each embedded file page
-  for the first time and confirm Navigation starts closed; open it locally,
-  leave the page, and confirm the local open choice is restored when revisited;
+- with the global Navigation default set to open, visit each file page in both
+  formats for the first time and confirm Navigation starts closed; open it
+  locally, leave the page, and confirm the local open choice is restored when
+  revisited;
+- in a package, change zoom and pan on a Canvas, visit a Canvas or file page,
+  then return with **Back** or the navigation links and confirm the previous
+  zoom level and visible position are restored;
 - confirm zoom, pan, fit/reset, search, minimap and folding inside each linked
   Canvas;
 - confirm a shared target is present once and every reference opens it;

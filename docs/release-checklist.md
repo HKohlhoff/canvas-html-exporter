@@ -109,12 +109,16 @@ npm run build:prod
   visible beside it, restores full width on close, shows each shared/cyclic Canvas only
   once, highlights the current Canvas, and opens its directly contained
   Markdown, PDF-viewer, and link-node pages in the correct package or embedded
-  single-HTML scope. Close, `Esc`, and keyboard focus work.
+  single-HTML scope. Package file pages provide the same toggle and panel and
+  highlight themselves. Close, `Esc`, and keyboard focus work.
 - The configured initial Navigation state is respected. Toggling it on the
   main Canvas changes the default for pages without an individual choice.
-  Every Canvas and embedded page restores its own later state when reopened.
+  Every Canvas and file page restores its own later state when reopened; file
+  pages start closed on their first visit in both export formats.
   **Navigation** itself toggles the panel; no panel-internal Close button is
   shown.
+- Returning to a package Canvas restores that Canvas's previous zoom level and
+  visible position after a Canvas or file-page visit.
 - HTML pages owned by a subcanvas show **Back** to that subcanvas and **Canvas**
   to the root overview in both formats; root-owned pages omit redundant
   **Back** navigation.

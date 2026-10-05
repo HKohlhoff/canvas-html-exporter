@@ -97,7 +97,11 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
 
 ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}${buildBrowserContents()}${buildBrowserPages()}${buildBrowserFolding({ hasImportedFolding })}${buildBrowserInteraction()}      applyImportedFolding(${serializeScriptData(hasImportedFolding)});
       syncLinkOfflineState();
-      window.resetZoom();
+      if (!restorePackageViewportState()) window.resetZoom();
+      if (exportFormat === "package") {
+        window.addEventListener("pagehide", storePackageViewportState);
+        window.addEventListener("pageshow", restorePackageViewportState);
+      }
       window.addEventListener("resize", () => {
         drawEdges();
         window.resetZoom();

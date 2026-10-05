@@ -127,6 +127,13 @@ await test("renders an accessible fixed navigation panel with global root and lo
   assert.match(html, /parentLink\.getAttribute\("href"\) \|\| "#"/);
   assert.match(html, /const navigationWindowStatePrefix = "canvas-html-exporter-navigation:"/);
   assert.match(html, /window\.name = navigationWindowStatePrefix \+ JSON\.stringify/);
+  assert.match(html, /viewportStates: packageViewportStates/);
+  assert.match(html, /function storePackageViewportState\(\)/);
+  assert.match(html, /packageViewportStates\[navigationPageId\] = \{/);
+  assert.match(html, /function restorePackageViewportState\(\)/);
+  assert.match(html, /viewport\.scrollTo\(\{ left: state\.left, top: state\.top, behavior: "auto" \}\)/);
+  assert.match(html, /window\.addEventListener\("pagehide", storePackageViewportState\)/);
+  assert.match(html, /if \(!restorePackageViewportState\(\)\) window\.resetZoom\(\)/);
   assert.match(html, /readPackageNavigationState\(\);\s+readPackageWindowState\(\);/);
   assert.match(html, /window\.addEventListener\("pageshow", \(\) => \{/);
   assert.match(html, /\.single-page-view\.is-canvas-page \{[\s\S]*?max-width: none;[\s\S]*?height: 100dvh;[\s\S]*?margin: 0;[\s\S]*?border: 0;/);
