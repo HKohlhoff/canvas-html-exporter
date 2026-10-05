@@ -16,18 +16,21 @@ assert.ok(
     `Canvas HTML Exporter ${releaseNoteVersion}`,
   ),
 );
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Consistent group folding/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /aligns group folding[\s\S]*latest Canvas[\s\S]*Folding release, version 1\.2\.8/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /consistently in Obsidian and\s+in the exported page/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /directly to the right of its name/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Empty groups/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /only its name and control remain visible/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Other groups remain independent/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /above crossing connections/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Export the original Canvas again/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /connections are hidden together/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Large Canvases as connected pages/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /overview and\s+several linked Canvases/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /small offline preview/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Circular\s+links remain usable/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Canvases[\s\S]*Pages in this canvas/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Back[\s\S]*returns to the Canvas that owns the file card/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /previous zoom level and\s+visible position are restored/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Search\.\.\.[\s\S]*every Canvas below it/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /complete note text/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Every result names the Canvas it belongs to/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /same query, result information, and usable links/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Package exports use separate HTML pages[\s\S]*Single HTML exports/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Export the main overview Canvas again/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /marked as\s+read\s+only after you close/);
-assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /never modifies the source[\s\S]*\.canvas[\s\S]*file/);
+assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /does not alter\s+your source Canvases or notes/);
 assert.doesNotMatch(CURRENT_RELEASE_NOTES_MARKDOWN, /API v1/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /leaves no note or other content file in your Vault/);
 assert.match(CURRENT_RELEASE_NOTES_MARKDOWN, /Show last update/);

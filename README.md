@@ -40,7 +40,7 @@ You can choose the export format and other options in the plugin settings.
 
 An **interactive export example** of the Canvas shown above is available as a
 [single HTML file](documentation/Canvas-HTML-Exporter-Documentation.html).
-It is a large file of about 19.3 MB and was refreshed for version 1.4.1.
+It is a large file of about 19.3 MB.
 This README contains the current feature documentation.
 
 A **demo-vault** with the complete content showcase can be downloaded from the
@@ -72,6 +72,31 @@ A **demo-vault** with the complete content showcase can be downloaded from the
 - Show hidden node and group counts separately in the exported page header
 - Highlight selected search results with a strong yellow pulse
 - Preserve light/dark mode and selected Obsidian theme colors where possible
+
+## Organize a large Canvas as connected pages
+
+Start with an overview Canvas and add ordinary Canvas file cards for the areas
+you want to keep separately—for example acts of a book, project phases, or
+departments. A linked Canvas can contain further linked Canvases. Export the
+overview, and the complete hierarchy is included automatically.
+
+In the exported result:
+
+- each Canvas card shows a small preview and opens the linked Canvas with one
+  click;
+- every linked Canvas uses the full browser area and provides the same zoom,
+  minimap, search, and folding controls as the overview;
+- **Navigation** shows the Canvas hierarchy and the Markdown, PDF, and link
+  pages belonging to the current Canvas;
+- **Back** returns from a file page to its owning Canvas, while **Canvas** goes
+  directly to the main overview;
+- Search started on the overview includes all linked Canvases and their full
+  Markdown note text.
+
+You can therefore split a crowded Canvas into smaller, readable parts without
+turning the export into a loose collection of files. Shared Canvases are not
+duplicated, circular links remain finite, and both export formats provide the
+same page structure. The source Canvases and notes are never changed.
 
 ## Interactive Canvas Controls
 
@@ -364,6 +389,8 @@ If quick startup matters more than distributing one file, use `Package folder`.
    choose a level, focus a branch, or restore the imported state.
 5. Use `Navigation` to move between the Canvas overview, linked subcanvases, and
    HTML pages directly contained in the current Canvas.
+6. Use `Search...` on the overview to search the complete linked hierarchy, or
+   on a subcanvas to search only that Canvas and the Canvases below it.
 
 You can also use the ribbon icon to trigger the export.
 
@@ -404,6 +431,9 @@ Install from Obsidian Community Plugins, or copy `manifest.json`, `main.js`, and
 - `Dark default theme`: use a dark default theme for exported HTML
 - `Show minimap`: include a minimap on the exported canvas page
 - `Show search`: include a search overlay on the exported canvas page
+- `Navigation`: choose whether the fixed Navigation panel starts open or
+  closed on Canvas pages; visitors can change and remember the choice for each
+  page in the exported result
 - `Folding`: start with folding switched off (default), start enabled with a
   fully expanded Canvas, or import the current effective state from the
   optional Canvas Folding plugin; folding can still be switched on or off at
