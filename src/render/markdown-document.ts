@@ -1,4 +1,4 @@
-import { escapeHtml } from "./html";
+import { escapeAttribute, escapeHtml } from "./html";
 import { buildExporterBuildMeta, EXPORTER_SIGNATURE } from "./metadata";
 import { buildPackagePageNavigation } from "./package-page-navigation";
 import { buildCalloutCss, buildCanvasColorVariables, buildHeadingColorCss, buildInlineStyleCss, getTheme, indentCssBlock } from "./theme";
@@ -20,6 +20,11 @@ export function buildMarkdownDocumentHtml(
 ): string {
   const theme = getTheme(darkMode);
   const pageNavigation = buildPackagePageNavigation(contents, navigationPageId, canvasHref, theme);
+  const ownerCanvasNavigationPageId = navigationPageId?.split(":page:")[0] || "";
+  const backRestoreAttr = ownerCanvasNavigationPageId
+    ? ` data-restore-canvas-view="${escapeAttribute(ownerCanvasNavigationPageId)}"`
+    : "";
+  const canvasRestoreAttr = navigationPageId ? ` data-restore-canvas-view="root"` : "";
   const calloutCss = buildCalloutCss(calloutColors);
   const headingCss = buildHeadingColorCss("", headingColors);
   const inlineStyleCss = buildInlineStyleCss("", inlineStyleColors);
@@ -185,8 +190,8 @@ export function buildMarkdownDocumentHtml(
 <body>
   <main class="md-page">
     <div class="md-page-toolbar">
-      ${backHref ? `<a class="md-page-back-link" href="${escapeHtml(backHref)}">Back</a>` : ""}
-      ${canvasHref ? `<a class="md-page-canvas-link" href="${escapeHtml(canvasHref)}">Canvas</a>` : ""}
+      ${backHref ? `<a class="md-page-back-link" href="${escapeHtml(backHref)}"${backRestoreAttr}>Back</a>` : ""}
+      ${canvasHref ? `<a class="md-page-canvas-link" href="${escapeHtml(canvasHref)}"${canvasRestoreAttr}>Canvas</a>` : ""}
       ${pageNavigation.buttonHtml}
     </div>
     <h1>${escapeHtml(title)}</h1>

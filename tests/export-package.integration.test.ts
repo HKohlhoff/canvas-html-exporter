@@ -364,7 +364,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.ok(exportedMarkdown);
     assert.ok(exportedImage);
     assert.match(exportedMarkdown?.text || "", /<h1>Canvas Titel<\/h1>/);
-    assert.match(exportedMarkdown?.text || "", /<a class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
+    assert.match(exportedMarkdown?.text || "", /<a class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html" data-restore-canvas-view="root">Canvas<\/a>/);
     assert.doesNotMatch(exportedMarkdown?.text || "", /<a class="md-page-back-link"/);
     assert.match(exportedMarkdown?.text || "", /zweite Notiz/);
     assert.match(exportedMarkdown?.text || "", /<a href="[^"]+\.html">zweite Notiz<\/a>/);
@@ -792,7 +792,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const exportedLinkPage = files.get(`Canvas-Exports/link/${linkNode?.exportHtmlPath || ""}`);
     assert.ok(exportedLinkPage);
     const linkHtml = exportedLinkPage?.text || "";
-    assert.match(linkHtml, /<a class="link-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
+    assert.match(linkHtml, /<a class="link-page-canvas-link" href="\.\.\/\.\.\/index\.html" data-restore-canvas-view="root">Canvas<\/a>/);
     assert.match(linkHtml, /id="page-navigation-button"[^>]*>Navigation<\/button>/);
     assert.match(linkHtml, /id="contents-panel"/);
     assert.doesNotThrow(() => new vm.Script(linkHtml.match(/<script>([\s\S]+)<\/script>/)?.[1] || ""));
@@ -1051,10 +1051,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         assert.match(childPage?.outputPath || "", /^out\/root\/canvas-\d{3}-child\.html$/);
         assert.match(grandPage?.outputPath || "", /^out\/root\/canvas-\d{3}-grand\.html$/);
         assert.doesNotMatch(childHtml, /<a[^>]+target="_parent"/);
-        assert.match(childHtml, /class="canvas-return-link" href="index\.html">Canvas<\/a>/);
+        assert.match(childHtml, /class="canvas-return-link" href="index\.html" data-restore-canvas-view="root">Canvas<\/a>/);
+        assert.doesNotMatch(rootPreviewHtml, /class="canvas-card-link"[^>]*data-restore-canvas-view/);
         const chapterHtml = files.get(`out/root/${chapter?.exportHtmlPath || ""}`)?.text || "";
-        assert.match(chapterHtml, /class="md-page-back-link" href="\.\.\/\.\.\/canvas-\d{3}-child\.html">Back<\/a>/);
-        assert.match(chapterHtml, /class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
+        assert.match(chapterHtml, /class="md-page-back-link" href="\.\.\/\.\.\/canvas-\d{3}-child\.html" data-restore-canvas-view="c\d+">Back<\/a>/);
+        assert.match(chapterHtml, /class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html" data-restore-canvas-view="root">Canvas<\/a>/);
         assert.match(chapterHtml, /id="page-navigation-button"[^>]*>Navigation<\/button>/);
         assert.match(chapterHtml, /\.page-navigation-button \{\s+border: 0;\s+padding: 0;\s+background: transparent;\s+color: #1967d2;/);
         assert.match(chapterHtml, /id="contents-panel"[\s\S]*?<h3>Canvases<\/h3>/);

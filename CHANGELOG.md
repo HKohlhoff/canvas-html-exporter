@@ -44,7 +44,9 @@ first.
   another Canvas or file page. Save the view before following a package link
   and carry it through local package URLs as well as the browser-window state,
   so local-file privacy boundaries cannot discard it. Do not replace the
-  restored view with an automatic resize fit.
+  restored view with an automatic resize fit. Restore it only for **Back**,
+  **Canvas**, and browser-history returns; explicitly reopening a subcanvas
+  starts with the normal fitted view, matching single HTML.
 - Keep the search overlay inside the remaining Canvas area while the fixed
   **Navigation** panel is open, so the panel no longer covers the search field.
 - Add **Back** beside **Canvas** on HTML pages owned by a subcanvas, returning

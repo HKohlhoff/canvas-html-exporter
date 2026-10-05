@@ -118,7 +118,9 @@ npm run build:prod
   **Navigation** itself toggles the panel; no panel-internal Close button is
   shown.
 - Returning to a package Canvas restores that Canvas's previous zoom level and
-  visible position after a Canvas or file-page visit.
+  visible position through **Back**, **Canvas**, or browser history. Explicitly
+  reopening a subcanvas from a card or **Navigation** starts with the normal
+  fitted view, matching single HTML.
 - HTML pages owned by a subcanvas show **Back** to that subcanvas and **Canvas**
   to the root overview in both formats; root-owned pages omit redundant
   **Back** navigation.

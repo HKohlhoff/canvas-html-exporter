@@ -16,8 +16,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const showSearch = options.showSearch !== false;
   const foldingInitiallyEnabled = options.foldingInitiallyEnabled === true;
   const exportFormat = options.exportFormat || "package";
+  const canvasHomeRestoreAttr = exportFormat === "package" ? ` data-restore-canvas-view="root"` : "";
   const canvasHomeLink = options.canvasHomeHref
-    ? `<span class="canvas-return-label">(back to: <a class="canvas-return-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a>)</span>`
+    ? `<span class="canvas-return-label">(back to: <a class="canvas-return-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}${canvasHomeRestoreAttr}>Canvas</a>)</span>`
     : "";
   const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
   const contentsHtml = renderContents(options.contents);

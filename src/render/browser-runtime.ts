@@ -19,6 +19,7 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       const isRootCanvas = ${serializeScriptData(!options.canvasHomeHref)};
       const navigationInitiallyOpen = ${serializeScriptData(options.navigationInitiallyOpen === true)};
       const navigationPageId = ${serializeScriptData(options.navigationPageId || "root")};
+      const initialRestoreCanvasViewId = new URLSearchParams(window.location.search).get("canvasView");
       const toolbar = document.querySelector(".toolbar");
       const canvasShell = document.getElementById("canvas-shell");
       const edgeLayer = document.getElementById("edge-layer");
@@ -102,7 +103,9 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
         document.addEventListener("click", storePackageViewportBeforeNavigation, true);
         window.addEventListener("beforeunload", storePackageViewportState);
         window.addEventListener("pagehide", storePackageViewportState);
-        window.addEventListener("pageshow", restorePackageViewportState);
+        window.addEventListener("pageshow", (event) => {
+          if (event.persisted) restorePackageViewportState(true);
+        });
       }
       window.addEventListener("resize", () => {
         drawEdges();

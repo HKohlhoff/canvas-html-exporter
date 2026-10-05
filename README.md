@@ -284,7 +284,9 @@ own later open/closed state and restores it when reopened. Markdown, PDF, and
 link pages start with Navigation closed on their first visit in either export
 format, regardless of the global default; users can open it there and that
 local choice is remembered. Package navigation also restores each Canvas's
-zoom level and visible position when returning from another page.
+zoom level and visible position when returning through **Back**, **Canvas**, or
+browser history. Opening a subcanvas again from a Canvas card or Navigation is
+a fresh visit and starts with its normal fitted view, matching single HTML.
 
 HTML pages opened from a linked subcanvas show **Back** and **Canvas** together.
 **Back** returns to the owning subcanvas, while **Canvas** returns directly to

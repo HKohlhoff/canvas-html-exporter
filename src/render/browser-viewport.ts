@@ -72,8 +72,9 @@ export function buildBrowserViewport({ bounds }: Pick<BrowserRuntimeParameters, 
         }
       }
 
-      function restorePackageViewportState() {
+      function restorePackageViewportState(forceRestore) {
         if (exportFormat !== "package" || !viewport) return false;
+        if (!forceRestore && initialRestoreCanvasViewId !== navigationPageId) return false;
         const state = packageViewportStates[navigationPageId];
         if (!state) return false;
         currentScale = clamp(state.scale, 0.2, 4);

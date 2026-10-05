@@ -75,8 +75,10 @@ single HTML:
   locally, leave the page, and confirm the local open choice is restored when
   revisited;
 - in a package, change zoom and pan on a Canvas, visit a Canvas or file page,
-  then return with **Back** or the navigation links and confirm the previous
-  zoom level and visible position are restored;
+  then return with **Back**, **Canvas**, or browser history and confirm the
+  previous zoom level and visible position are restored; leave a subcanvas,
+  then open it again explicitly from its card or **Navigation** and confirm it
+  starts with the normal fitted view like the single-HTML export;
 - confirm zoom, pan, fit/reset, search, minimap and folding inside each linked
   Canvas;
 - confirm a shared target is present once and every reference opens it;

@@ -1458,6 +1458,11 @@ function buildPdfDocumentHtml(
 ): string {
   const theme = getTheme(darkMode);
   const pageNavigation = buildPackagePageNavigation(contents, navigationPageId, canvasHref, theme);
+  const ownerCanvasNavigationPageId = navigationPageId?.split(":page:")[0] || "";
+  const backRestoreAttr = ownerCanvasNavigationPageId
+    ? ` data-restore-canvas-view="${escapeHtmlAttr(ownerCanvasNavigationPageId)}"`
+    : "";
+  const canvasRestoreAttr = navigationPageId ? ` data-restore-canvas-view="root"` : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1479,7 +1484,7 @@ function buildPdfDocumentHtml(
   </style>
 </head>
 <body>
-  <div class="pdf-viewer-toolbar">${backHref ? `<a class="pdf-viewer-back-link" href="${escapeHtmlAttr(backHref)}">Back</a>` : ""}<a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHref || "")}">Canvas</a>${pageNavigation.buttonHtml}</div>
+  <div class="pdf-viewer-toolbar">${backHref ? `<a class="pdf-viewer-back-link" href="${escapeHtmlAttr(backHref)}"${backRestoreAttr}>Back</a>` : ""}<a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHref || "")}"${canvasRestoreAttr}>Canvas</a>${pageNavigation.buttonHtml}</div>
   <iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(title)}"></iframe>
   ${pageNavigation.contentsHtml}
   <script>
@@ -1505,6 +1510,11 @@ function buildLinkDocumentHtml(
 ): string {
   const theme = getLinkPageTheme(darkMode);
   const pageNavigation = buildPackagePageNavigation(contents, navigationPageId, canvasHref, getTheme(darkMode));
+  const ownerCanvasNavigationPageId = navigationPageId?.split(":page:")[0] || "";
+  const backRestoreAttr = ownerCanvasNavigationPageId
+    ? ` data-restore-canvas-view="${escapeHtmlAttr(ownerCanvasNavigationPageId)}"`
+    : "";
+  const canvasRestoreAttr = navigationPageId ? ` data-restore-canvas-view="root"` : "";
   const safeTitle = escapeHtmlAttr(url || title || "Link");
   const safeUrl = escapeHtmlAttr(safeNavigationUrl(url));
   const previewUrl = escapeHtmlAttr(safeWebPreviewUrl(url));
@@ -1649,8 +1659,8 @@ function buildLinkDocumentHtml(
       <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
     </div>
     <div class="link-page-nav-links">
-      ${backHref ? `<a class="link-page-back-link" href="${escapeHtmlAttr(backHref)}">Back</a>` : ""}
-      ${canvasHref ? `<a class="link-page-canvas-link" href="${escapeHtmlAttr(canvasHref)}">Canvas</a>` : ""}
+      ${backHref ? `<a class="link-page-back-link" href="${escapeHtmlAttr(backHref)}"${backRestoreAttr}>Back</a>` : ""}
+      ${canvasHref ? `<a class="link-page-canvas-link" href="${escapeHtmlAttr(canvasHref)}"${canvasRestoreAttr}>Canvas</a>` : ""}
       ${pageNavigation.buttonHtml}
     </div>
   </div>

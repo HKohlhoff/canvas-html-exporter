@@ -103,7 +103,7 @@ export function buildBrowserContents(): string {
         });
       }
 
-      function applyNavigationParams(url) {
+      function applyNavigationParams(url, restoreCanvasViewId) {
         url.searchParams.set("navigation", globalNavigationOpen ? "open" : "closed");
         const pageEntries = Object.entries(navigationPageStates);
         if (pageEntries.length) {
@@ -117,6 +117,8 @@ export function buildBrowserContents(): string {
         } else {
           url.searchParams.delete("canvasViews");
         }
+        if (restoreCanvasViewId) url.searchParams.set("canvasView", restoreCanvasViewId);
+        else url.searchParams.delete("canvasView");
       }
 
       function updatePackageNavigationLinks() {
@@ -129,7 +131,7 @@ export function buildBrowserContents(): string {
             const isLocalTarget = url.protocol === window.location.protocol
               && (url.protocol === "file:" || url.origin === window.location.origin);
             if (!isLocalTarget || !url.pathname.toLowerCase().endsWith(".html")) return;
-            applyNavigationParams(url);
+            applyNavigationParams(url, link.getAttribute("data-restore-canvas-view") || "");
             link.setAttribute("href", url.href);
           } catch {
             // Leave malformed or unsupported links unchanged.
@@ -141,7 +143,7 @@ export function buildBrowserContents(): string {
         if (exportFormat !== "package") return;
         writePackageWindowState();
         const url = new URL(window.location.href);
-        applyNavigationParams(url);
+        applyNavigationParams(url, navigationPageId);
         try {
           window.history.replaceState(null, "", url.href);
         } catch {

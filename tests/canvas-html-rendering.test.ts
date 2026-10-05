@@ -130,11 +130,15 @@ await test("renders an accessible fixed navigation panel with global root and lo
   assert.match(html, /viewportStates: packageViewportStates/);
   assert.match(html, /const viewportValue = params\.get\("canvasViews"\)/);
   assert.match(html, /url\.searchParams\.set\("canvasViews", JSON\.stringify/);
+  assert.match(html, /if \(restoreCanvasViewId\) url\.searchParams\.set\("canvasView", restoreCanvasViewId\)/);
   assert.match(html, /Object\.prototype\.hasOwnProperty\.call\(stored, "viewportStates"\)/);
   assert.match(html, /function storePackageViewportState\(\)/);
   assert.match(html, /packageViewportStates\[navigationPageId\] = \{/);
   assert.match(html, /top: viewport\.scrollTop,\s+\};\s+storePackageNavigationState\(\);/);
-  assert.match(html, /function restorePackageViewportState\(\)/);
+  assert.match(html, /function restorePackageViewportState\(forceRestore\)/);
+  assert.match(html, /const initialRestoreCanvasViewId = new URLSearchParams\(window\.location\.search\)\.get\("canvasView"\)/);
+  assert.match(html, /if \(!forceRestore && initialRestoreCanvasViewId !== navigationPageId\) return false/);
+  assert.match(html, /if \(event\.persisted\) restorePackageViewportState\(true\)/);
   assert.match(html, /viewport\.scrollTo\(\{ left: state\.left, top: state\.top, behavior: "auto" \}\)/);
   assert.match(html, /window\.addEventListener\("pagehide", storePackageViewportState\)/);
   assert.match(html, /document\.addEventListener\("click", storePackageViewportBeforeNavigation, true\)/);
