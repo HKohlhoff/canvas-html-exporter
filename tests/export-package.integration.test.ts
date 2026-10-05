@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import vm from "node:vm";
 import { convertCanvasToHtml } from "../src/render/converter";
 import { exportCanvasPackage } from "../src/export/exporter";
+import { escapeAttribute } from "../src/render/html";
 
 type MockFile = {
   path: string;
@@ -273,7 +275,11 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       if (exportFormat === "package") {
         for (const node of result.data.nodes) {
           assert.doesNotMatch(node.canvasHref!, /[# ]/);
-          assert.ok(files.get(`out/pdf/${node.canvasHref}`)?.text?.includes(node.exportPath!.split("/").pop()!));
+          const viewerHtml = files.get(`out/pdf/${node.canvasHref}`)?.text || "";
+          assert.ok(viewerHtml.includes(node.exportPath!.split("/").pop()!));
+          assert.match(viewerHtml, /id="page-navigation-button"[^>]*>Navigation<\/button>/);
+          assert.match(viewerHtml, /id="contents-panel"/);
+          assert.doesNotThrow(() => new vm.Script(viewerHtml.match(/<script>([\s\S]+)<\/script>/)?.[1] || ""));
         }
       }
     });
@@ -358,9 +364,9 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.ok(exportedMarkdown);
     assert.ok(exportedImage);
     assert.match(exportedMarkdown?.text || "", /<h1>Canvas Titel<\/h1>/);
-    assert.match(exportedMarkdown?.text || "", /<a class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
+    assert.match(exportedMarkdown?.text || "", /<a class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html" data-restore-canvas-view="root">Canvas<\/a>/);
+    assert.doesNotMatch(exportedMarkdown?.text || "", /<a class="md-page-back-link"/);
     assert.match(exportedMarkdown?.text || "", /zweite Notiz/);
-    assert.doesNotMatch(exportedMarkdown?.text || "", /md-page-back-link/);
     assert.match(exportedMarkdown?.text || "", /<a href="[^"]+\.html">zweite Notiz<\/a>/);
     assert.match(exportedMarkdown?.text || "", /<ul><li>Punkt eins<br>\nFortsetzung<\/li><li>Punkt zwei<\/li><\/ul>/);
     assert.match(exportedMarkdown?.text || "", /<p>Normal danach<\/p>/);
@@ -786,12 +792,15 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     const exportedLinkPage = files.get(`Canvas-Exports/link/${linkNode?.exportHtmlPath || ""}`);
     assert.ok(exportedLinkPage);
     const linkHtml = exportedLinkPage?.text || "";
-    assert.match(linkHtml, /<a class="link-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
+    assert.match(linkHtml, /<a class="link-page-canvas-link" href="\.\.\/\.\.\/index\.html" data-restore-canvas-view="root">Canvas<\/a>/);
+    assert.match(linkHtml, /id="page-navigation-button"[^>]*>Navigation<\/button>/);
+    assert.match(linkHtml, /id="contents-panel"/);
+    assert.doesNotThrow(() => new vm.Script(linkHtml.match(/<script>([\s\S]+)<\/script>/)?.[1] || ""));
     assert.match(linkHtml, /No internet connection is available\./);
     assert.match(linkHtml, /This website may not allow embedded previews\. Use the link above\./);
     assert.match(linkHtml, /Use the link above if the website blocks embedding or if you want to open the page in its own browser tab\./);
     assert.match(linkHtml, /<a class="link-page-title" href="https:\/\/openai\.com\/index\/"/);
-    assert.doesNotMatch(linkHtml, /link-page-back/);
+    assert.doesNotMatch(linkHtml, /<a class="link-page-back-link"/);
     assert.doesNotMatch(linkHtml, /class="link-page-action"/);
     assert.match(linkHtml, /<iframe id="link-preview-frame" src="https:\/\/openai\.com\/index\/" title="https:\/\/openai\.com\/index\/" loading="lazy"><\/iframe>/);
     assert.match(linkHtml, /window\.setTimeout\(\(\) => \{/);
@@ -921,6 +930,191 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.match(markdownPage?.bodyHtml || "", /data-inline-page="p\d+"/);
     assert.match(markdownPage?.bodyHtml || "", /href="#page-p\d+"/);
   });
+
+  for (const exportFormat of ["package", "single-html"] as const) {
+    await test(`exports linked subcanvases recursively and terminates cycles in ${exportFormat}`, async () => {
+      const { app, files } = createMockApp([
+        {
+          path: "root.canvas",
+          text: JSON.stringify({
+            nodes: [
+              { id: "child-card", type: "file", file: "nested/child.canvas", label: "Child canvas", x: 0, y: 0, width: 320, height: 180 },
+              { id: "child-link", type: "text", text: "[[nested/child.canvas|Child link]]", x: 360, y: 0, width: 320, height: 180 },
+            ],
+            edges: [],
+          }),
+        },
+        {
+          path: "nested/child.canvas",
+          text: JSON.stringify({
+            nodes: [
+              { id: "root-card", type: "file", file: "root.canvas", x: 0, y: 0, width: 320, height: 180 },
+              { id: "grand-card", type: "file", file: "nested/grand.canvas", x: 360, y: 0, width: 320, height: 180 },
+              { id: "root-link", type: "text", text: "[[root.canvas|Root link]]", x: 720, y: 0, width: 320, height: 180 },
+              { id: "chapter", type: "file", file: "notes/chapter.md", label: "Chapter One", x: 1080, y: 0, width: 320, height: 180 },
+            ],
+            edges: [{ id: "child-edge", fromNode: "grand-card", toNode: "root-link", color: "4" }],
+          }),
+        },
+        {
+          path: "nested/grand.canvas",
+          text: JSON.stringify({
+            nodes: [
+              { id: "child-card", type: "file", file: "nested/child.canvas", x: 0, y: 0, width: 320, height: 180 },
+            ],
+            edges: [],
+          }),
+        },
+        { path: "notes/chapter.md", text: "# Chapter One\n\nText" },
+      ]);
+
+      const result = await exportCanvasPackage(app as never, files.get("root.canvas") as never, {
+        darkMode: false,
+        outputDir: "out",
+        exportFormat,
+        navigationInitiallyOpen: true,
+      });
+      assert.equal(result.canvasPages.length, 2);
+      assert.equal(result.options.navigationInitiallyOpen, true);
+      assert.equal(result.options.navigationPageId, "root");
+      assert.ok(result.canvasPages.every((page) => page.options.navigationInitiallyOpen === true));
+      assert.deepEqual(
+        new Set(result.canvasPages.map((page) => page.options.navigationPageId)),
+        new Set(["c1", "c2"]),
+      );
+      assert.deepEqual(
+        new Set(result.canvasPages.map((page) => page.sourcePath)),
+        new Set(["nested/child.canvas", "nested/grand.canvas"]),
+      );
+
+      const rootCard = result.data.nodes.find((node) => node.id === "child-card");
+      const rootText = result.data.nodes.find((node) => node.id === "child-link");
+      assert.equal(rootCard?.fileKind, "canvas");
+      assert.equal(rootCard?.canvasNavigationTarget, undefined);
+      assert.equal(rootCard?.canvasPreview?.edges.length, 1);
+      assert.ok(rootCard?.canvasPreview?.nodes.some((node) => node.id === "grand-card"));
+      assert.match(rootCard?.canvasHref || "", exportFormat === "single-html" ? /^#page-canvas-c\d+$/ : /^canvas-\d{3}-child\.html$/);
+      assert.match(rootText?.renderedTextHtml || "", exportFormat === "single-html" ? /data-inline-page="canvas-c\d+"/ : /href="canvas-\d{3}-child\.html"/);
+
+      const childPage = result.canvasPages.find((page) => page.sourcePath === "nested/child.canvas");
+      const grandPage = result.canvasPages.find((page) => page.sourcePath === "nested/grand.canvas");
+      assert.ok(childPage);
+      assert.ok(grandPage);
+      const backToRoot = childPage.data.nodes.find((node) => node.id === "root-card");
+      const grandCard = childPage.data.nodes.find((node) => node.id === "grand-card");
+      const rootLink = childPage.data.nodes.find((node) => node.id === "root-link");
+      const chapter = childPage.data.nodes.find((node) => node.id === "chapter");
+      assert.equal(backToRoot, undefined);
+      assert.equal(childPage.options.canvasHomeHref, exportFormat === "package" ? "index.html" : "#");
+      assert.equal(childPage.options.canvasHomeTarget, exportFormat === "single-html" ? "_parent" : undefined);
+      assert.equal(grandCard?.canvasNavigationTarget, exportFormat === "single-html" ? "_parent" : undefined);
+      assert.ok(grandCard?.canvasPreview?.nodes.some((node) => node.id === "child-card"));
+      assert.equal(grandPage.data.nodes[0].canvasHref, rootCard?.canvasHref);
+      assert.match(chapter?.searchText || "", /Chapter One[\s\S]*Text/);
+      assert.ok(result.options.additionalSearchEntries?.some((entry) => entry.text.includes("Chapter One")));
+      assert.ok(result.options.additionalSearchEntries?.some((entry) => exportFormat === "single-html"
+        ? entry.openPageHref === chapter?.canvasHref && entry.openHref === childPage.href
+        : entry.openHref === chapter?.canvasHref && entry.openNodeId === undefined));
+      assert.ok(result.options.additionalSearchEntries?.some((entry) => entry.positionLabel === "grand"));
+      assert.ok(childPage.options.additionalSearchEntries?.some((entry) => entry.positionLabel === "grand"));
+      assert.ok(grandPage.options.additionalSearchEntries?.every((entry) => entry.positionLabel !== "child"));
+      assert.match(
+        rootLink?.renderedTextHtml || "",
+        exportFormat === "single-html" ? /href="#" target="_parent"/ : /href="index\.html"/,
+      );
+
+      const childHtml = await convertCanvasToHtml(childPage.data, childPage.options);
+      const rootPreviewHtml = await convertCanvasToHtml(result.data, result.options);
+      assert.match(childHtml, /class="canvas-card-link"/);
+      assert.match(childHtml, /class="canvas-card-preview"/);
+      assert.match(rootPreviewHtml, /class="canvas-card-preview-edges"><line /);
+      assert.match(rootPreviewHtml, /class="canvas-card-title">Child canvas<\/span>/);
+      assert.match(rootPreviewHtml, /id="contents-toolbar-button"[^>]*>Navigation<\/button>/);
+      assert.match(rootPreviewHtml, /id="contents-panel"[\s\S]*?<h3>Canvases<\/h3>/);
+      assert.match(rootPreviewHtml, /class="contents-link is-current" aria-current="page" data-contents-current-canvas="true">root<\/span>/);
+      assert.doesNotMatch(childHtml, /Open canvas/);
+      assert.doesNotMatch(rootPreviewHtml, /Open canvas/);
+      assert.match(childHtml, /<div class="page-header-meta">\s+<p>[\s\S]*?<\/p>\s+<span class="canvas-return-label">\(back to: <a class="canvas-return-link"[\s\S]*?<\/a>\)<\/span>\s+<\/div>/);
+      assert.match(childHtml, /\.page-header-meta \{[\s\S]*?align-items: baseline;\s+gap: 20px;[\s\S]*?\}/);
+      assert.match(childHtml, /<h3>Pages in this canvas<\/h3>[\s\S]*?>Chapter One<\/a>/);
+      if (exportFormat === "single-html") {
+        assert.match(childHtml, /class="canvas-return-link" href="#" target="_parent">Canvas<\/a>/);
+        assert.match(childHtml, /class="contents-link" href="#" target="_parent">root<\/a>/);
+        assert.match(childHtml, /id="single-page-back-link" class="single-page-back-link" href="#">Back<\/a>/);
+        assert.match(childHtml, /class="single-page-canvas-link" href="#" target="_parent">Canvas<\/a>/);
+        for (const page of result.canvasPages) {
+          const pageHtml = await convertCanvasToHtml(page.data, page.options);
+          const embedded = result.options.embeddedPages?.find((entry) => entry.id === page.pageId);
+          assert.ok(embedded);
+          embedded.bodyHtml = `<div class="single-canvas-page"><iframe class="single-canvas-frame" data-navigation-page-id="${escapeAttribute(page.options.navigationPageId || "")}" srcdoc="${escapeAttribute(pageHtml)}" title="${escapeAttribute(page.title)}"></iframe></div>`;
+        }
+        const rootHtml = await convertCanvasToHtml(result.data, result.options);
+        assert.match(rootHtml, /data-page-kind="canvas"/);
+        assert.match(rootHtml, /class="single-canvas-frame"/);
+        assert.match(rootHtml, /data-navigation-page-id="c1"/);
+        assert.match(rootHtml, /id="single-page-canvas-link"[^>]*>Canvas<\/a>/);
+        assert.match(rootHtml, /singlePageToolbar\.hidden = template\.dataset\.pageKind === "canvas"/);
+        assert.doesNotMatch(rootHtml, /srcdoc="<!DOCTYPE html>/);
+      } else {
+        assert.match(childPage?.outputPath || "", /^out\/root\/canvas-\d{3}-child\.html$/);
+        assert.match(grandPage?.outputPath || "", /^out\/root\/canvas-\d{3}-grand\.html$/);
+        assert.doesNotMatch(childHtml, /<a[^>]+target="_parent"/);
+        assert.match(childHtml, /class="canvas-return-link" href="index\.html" data-restore-canvas-view="root">Canvas<\/a>/);
+        assert.doesNotMatch(rootPreviewHtml, /class="canvas-card-link"[^>]*data-restore-canvas-view/);
+        const chapterHtml = files.get(`out/root/${chapter?.exportHtmlPath || ""}`)?.text || "";
+        assert.match(chapterHtml, /class="md-page-back-link" href="\.\.\/\.\.\/canvas-\d{3}-child\.html" data-restore-canvas-view="c\d+">Back<\/a>/);
+        assert.match(chapterHtml, /class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html" data-restore-canvas-view="root">Canvas<\/a>/);
+        assert.match(chapterHtml, /id="page-navigation-button"[^>]*>Navigation<\/button>/);
+        assert.match(chapterHtml, /\.page-navigation-button \{\s+border: 0;\s+padding: 0;\s+background: transparent;\s+color: #1967d2;/);
+        assert.match(chapterHtml, /id="contents-panel"[\s\S]*?<h3>Canvases<\/h3>/);
+        assert.match(chapterHtml, /class="contents-link is-current" aria-current="page">Chapter One<\/span>/);
+        assert.doesNotMatch(chapterHtml, /data-contents-current-canvas/);
+        assert.match(chapterHtml, /const navigationPageId = "c\d+:page:assets\/files\/\d+_chapter\.html"/);
+        assert.match(chapterHtml, /hasLocalState \? navigationPageStates\[navigationPageId\] === true : false/);
+        assert.match(chapterHtml, /const returnSearchQuery = new URLSearchParams\(window\.location\.search\)\.get\("q"\)/);
+        assert.match(chapterHtml, /link\.matches\("\.md-page-back-link, \.md-page-canvas-link"\)/);
+        assert.match(chapterHtml, /viewportStates: packageViewportStates/);
+        assert.match(chapterHtml, /const viewportValue = params\.get\("canvasViews"\)/);
+        assert.match(chapterHtml, /url\.searchParams\.set\("canvasViews", JSON\.stringify/);
+        assert.match(chapterHtml, /class="contents-link" href="\.\.\/\.\.\/index\.html">root<\/a>/);
+        assert.doesNotThrow(() => new vm.Script(chapterHtml.match(/<script>([\s\S]+)<\/script>/)?.[1] || ""));
+        assert.match(childHtml, /\.canvas-return-link,\s+\.single-page-back-link,\s+\.single-page-canvas-link \{\s+color: #1967d2;/);
+      }
+    });
+
+    await test(`falls back to a generic file for invalid linked canvases in ${exportFormat}`, async () => {
+      const { app, files } = createMockApp([
+        {
+          path: "root.canvas",
+          text: JSON.stringify({
+            nodes: [{ id: "broken", type: "file", file: "broken.canvas", x: 0, y: 0, width: 320, height: 180 }],
+            edges: [],
+          }),
+        },
+        { path: "broken.canvas", text: "{not valid JSON" },
+      ]);
+      const originalConsoleError = console.error;
+      console.error = () => undefined;
+      try {
+        const result = await exportCanvasPackage(app as never, files.get("root.canvas") as never, {
+          darkMode: false,
+          outputDir: "out",
+          exportFormat,
+        });
+        assert.equal(result.canvasPages.length, 0);
+        assert.equal(result.data.nodes[0].fileKind, "file");
+        if (exportFormat === "single-html") {
+          assert.match(result.data.nodes[0].exportPath || "", /^data:application\/octet-stream;base64,/);
+        } else {
+          const copiedPath = result.data.nodes[0].exportPath || "";
+          assert.match(copiedPath, /^assets\/files\/\d{3}_broken\.canvas$/);
+          assert.ok(files.has(`out/root/${copiedPath}`));
+        }
+      } finally {
+        console.error = originalConsoleError;
+      }
+    });
+  }
 })().catch((error) => {
   console.error(error);
   process.exit(1);

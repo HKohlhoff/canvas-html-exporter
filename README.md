@@ -40,7 +40,7 @@ You can choose the export format and other options in the plugin settings.
 
 An **interactive export example** of the Canvas shown above is available as a
 [single HTML file](documentation/Canvas-HTML-Exporter-Documentation.html).
-It is a large file of about 19.3 MB and was refreshed for version 1.4.1.
+It is a large file of about 19.3 MB and was refreshed for version 1.5.0.
 This README contains the current feature documentation.
 
 A **demo-vault** with the complete content showcase can be downloaded from the
@@ -56,6 +56,9 @@ A **demo-vault** with the complete content showcase can be downloaded from the
   page
 - Render text nodes and Markdown file nodes with Markdown formatting
 - Show Markdown file nodes with a preview and export them as standalone HTML pages or embedded single-file pages
+- Follow linked Canvas file nodes and Canvas wiki links recursively, with cycle-safe navigation between overview and subcanvases
+- Show linked Canvas cards with an offline diagram preview of their groups, nodes, colors, and connections
+- Open a portable fixed Navigation panel with the alphabetically sorted Canvas hierarchy and the HTML pages directly contained in the current Canvas
 - Rewrite internal Markdown links, wiki links, heading links, section embeds, and block references
 - Copy assets into package exports or inline them into single HTML exports
 - Support image, PDF, audio, video, and generic file nodes
@@ -69,6 +72,31 @@ A **demo-vault** with the complete content showcase can be downloaded from the
 - Show hidden node and group counts separately in the exported page header
 - Highlight selected search results with a strong yellow pulse
 - Preserve light/dark mode and selected Obsidian theme colors where possible
+
+## Organize a large Canvas as connected pages
+
+Start with an overview Canvas and add ordinary Canvas file cards for the areas
+you want to keep separately—for example acts of a book, project phases, or
+departments. A linked Canvas can contain further linked Canvases. Export the
+overview, and the complete hierarchy is included automatically.
+
+In the exported result:
+
+- each Canvas card shows a small preview and opens the linked Canvas with one
+  click;
+- every linked Canvas uses the full browser area and provides the same zoom,
+  minimap, search, and folding controls as the overview;
+- **Navigation** shows the Canvas hierarchy and the Markdown, PDF, and link
+  pages belonging to the current Canvas;
+- **Back** returns from a file page to its owning Canvas, while **Canvas** goes
+  directly to the main overview;
+- Search started on the overview includes all linked Canvases and their full
+  Markdown note text.
+
+You can therefore split a crowded Canvas into smaller, readable parts without
+turning the export into a loose collection of files. Shared Canvases are not
+duplicated, circular links remain finite, and both export formats provide the
+same page structure. The source Canvases and notes are never changed.
 
 ## Interactive Canvas Controls
 
@@ -86,9 +114,18 @@ controls above the Canvas:
   browser windows.
 - `Minimap` shows the Canvas overview, hidden/focused state, and current
   viewport. It can be moved and used for navigation.
-- `Search...` opens keyboard- and mouse-accessible node search. Selecting a
-  result reveals it when necessary, scrolls it into view, and marks it briefly
-  with a prominent yellow pulse highlight. Tab and Shift+Tab stay inside
+- `Search...` opens keyboard- and mouse-accessible search across the current
+  Canvas and every recursively subordinate Canvas. Current-Canvas results are
+  revealed in place and marked briefly with a prominent yellow pulse;
+  subordinate results open the matching card's HTML page directly when it has
+  one. Results without a separate page open their owning Canvas and bring the
+  card into view. Markdown cards contribute the full note text to the index,
+  not only their visible preview. Multiple cards referencing the same Vault
+  file produce one result, preferring the current Canvas. The dialog names its
+  current Canvas scope and indicates when subordinate Canvases are included;
+  every result identifies its owning Canvas, including after returning with
+  `Back`.
+  Tab and Shift+Tab stay inside
   the open search dialog; closing it returns focus to the control used to open
   it.
 
@@ -189,6 +226,7 @@ Canvas nodes:
 - text nodes
 - group nodes
 - link nodes
+- Canvas file nodes
 - Markdown file nodes
 - image, PDF, audio, video, and generic file nodes
 
@@ -226,6 +264,71 @@ Open
 from the included demo vault to see the supported visual attributes and group
 behavior in one self-contained example.
 
+### Linked subcanvases
+
+Canvas file nodes and Markdown or wiki links whose target is another `.canvas`
+file are exported recursively. Clicking a Canvas card opens the linked Canvas
+with the same layout and interactive controls as the overview. Each card shows
+a lightweight diagram preview derived from the target Canvas geometry,
+including groups, nodes, saved colors, and connections. The title and preview
+form one clickable area; no separate action label is needed. In a linked Canvas,
+the **(back to: Canvas)** label follows the node, group, connection, and
+hidden-item counts in the same status row with a 20 px gap; only **Canvas** is
+linked and returns to the overview with one click. A source Canvas file
+card that points straight back to the overview is
+omitted from the exported subcanvas because this control already provides that
+navigation; the source `.canvas` file remains unchanged.
+
+The exporter identifies each referenced Canvas by its Vault path. Shared
+subcanvases are exported once, and references that form a cycle remain finite
+and navigable. In a package, linked Canvases become real HTML pages beside
+`index.html`. In a single HTML export, they become virtual pages inside the one
+file. Embedded single-HTML Canvases use the full page like the overview rather
+than appearing inside a page card. Package and single-HTML subcanvases place the same **(back to: Canvas)**
+label immediately after those status details. Browser Back continues to follow
+the navigation history.
+
+If a linked Canvas cannot be parsed, the normal generic-file fallback is used
+for that target and the rest of the export continues.
+
+### Exported page navigation
+
+Use **Navigation** in the Canvas toolbar to open a fixed panel on the
+left. The current page remains visible beside it and returns to the full width
+when the panel is closed. The
+**Canvases** section shows the overview and recursively linked subcanvases as an
+alphabetically sorted, finite hierarchy; shared targets and cycles are listed
+only once, and the current Canvas is highlighted. **Pages in this canvas**
+lists its entries alphabetically and includes the Markdown,
+PDF-viewer, and link-node HTML pages directly represented by cards in the
+current Canvas. Selecting an entry opens the same portable target used by its
+Canvas card. These file pages also provide the **Navigation** toggle in the same
+plain-link style as **Back** and **Canvas**, plus the full panel. The highlight
+follows the opened file page and returns to its owning Canvas when that page is
+closed.
+
+The drawer uses real relative links in a package and virtual page links in a
+single HTML export. Each embedded subcanvas keeps its own local page list, so
+its Markdown and other HTML pages open inside the correct embedded page scope.
+Click **Navigation** again to close the panel, just like the Minimap control.
+
+The plugin setting **Navigation** chooses whether this panel starts open or
+closed. Opening or closing it on the main Canvas changes the default for Canvas
+pages without an individual choice. Every Canvas and file page remembers its
+own later open/closed state and restores it when reopened. Markdown, PDF, and
+link pages start with Navigation closed on their first visit in either export
+format, regardless of the global default; users can open it there and that
+local choice is remembered. Package navigation also restores each Canvas's
+zoom level and visible position when returning through **Back**, **Canvas**, or
+browser history. Opening a subcanvas again from a Canvas card or Navigation is
+a fresh visit and starts with its normal fitted view, matching single HTML.
+
+HTML pages opened from a linked subcanvas show **Back** and **Canvas** together.
+**Back** returns to the owning subcanvas, while **Canvas** returns directly to
+the main overview. When a page was opened from Search, either return keeps the
+query and reopens Search on the destination Canvas. Pages opened from the main overview keep the single
+**Canvas** link because both destinations would otherwise be identical.
+
 ## Export Formats
 
 ### Package folder
@@ -235,12 +338,15 @@ Each package export creates a dedicated folder inside the configured output dire
 Canvas-Exports/
   Canvas_Name/
     index.html
+    canvas-001-Linked_Canvas.html
     assets/
       images/
       files/
 ```
 
-Depending on the canvas contents, the export may also include additional HTML pages for Markdown and link nodes which will then reside in the files folder.
+Depending on the Canvas contents, the export may also include linked Canvas
+pages beside `index.html` and additional HTML pages for Markdown and link nodes
+inside the files folder.
 
 For large or media-heavy Canvases, this is usually the better-performing
 format. Keep the complete package folder together when moving, publishing, or
@@ -266,6 +372,8 @@ Canvas-Exports/
 ```
 
 Because assets are embedded, the file can grow to several MB for large canvases and/or many assets.
+Linked subcanvases and their local assets are embedded in the same file as
+virtual pages.
 The browser must parse the embedded content before the page becomes fully
 interactive, so initial controls may respond later than in a package export.
 If quick startup matters more than distributing one file, use `Package folder`.
@@ -279,6 +387,10 @@ If quick startup matters more than distributing one file, use `Package folder`.
    - `Canvas_Name.html` for `Single HTML file`
 4. Use the `Folding` menu to enable or disable node controls, collapse branches,
    choose a level, focus a branch, or restore the imported state.
+5. Use `Navigation` to move between the Canvas overview, linked subcanvases, and
+   HTML pages directly contained in the current Canvas.
+6. Use `Search...` on the overview to search the complete linked hierarchy, or
+   on a subcanvas to search only that Canvas and the Canvases below it.
 
 You can also use the ribbon icon to trigger the export.
 
@@ -319,6 +431,9 @@ Install from Obsidian Community Plugins, or copy `manifest.json`, `main.js`, and
 - `Dark default theme`: use a dark default theme for exported HTML
 - `Show minimap`: include a minimap on the exported canvas page
 - `Show search`: include a search overlay on the exported canvas page
+- `Navigation`: choose whether the fixed Navigation panel starts open or
+  closed on Canvas pages; visitors can change and remember the choice for each
+  page in the exported result
 - `Folding`: start with folding switched off (default), start enabled with a
   fully expanded Canvas, or import the current effective state from the
   optional Canvas Folding plugin; folding can still be switched on or off at
@@ -333,7 +448,9 @@ Install from Obsidian Community Plugins, or copy `manifest.json`, `main.js`, and
 - External websites may refuse to load inside an embedded frame because of their own security headers.
 - Exported HTML is designed to be portable, but remote website previews still need an internet connection.
 - The plugin is desktop-only because exports can use local filesystem access and desktop folder selection.
-- `Single HTML file` is convenient for sharing, but very large canvases and/or many embedded files can make the output file quite large.
+- `Single HTML file` is convenient for sharing, but very large canvases,
+  recursively linked subcanvases, and/or many embedded files can make the
+  output file quite large.
 - Browser behavior around very large inline assets, PDF rendering, and history can vary more in `Single HTML file` mode than in the `Package folder` export.
   Remember the presentation of the HTML files and their content always depends on the browser used and optional add-ons which may be installed in your system.
 - Markdown rendering covers common Obsidian syntax, but plugin-specific Markdown extensions may not render exactly like they do inside Obsidian.
@@ -380,8 +497,9 @@ Exported HTML files and package folders generated by the plugin may be used, pub
 ## Privacy and data handling
 **Canvas HTML Exporter** runs entirely locally on your computer and does not send data anywhere.
 
-The plugin reads the active Canvas and its referenced local files to create the
-export. It does not modify the source Canvas or source notes. Exported files are
+The plugin reads the active Canvas, recursively linked local Canvases, and
+their referenced local files to create the export. It does not modify the
+source Canvases or source notes. Exported files are
 created or updated only in the output folder you explicitly choose. If you
 select an absolute folder outside the Vault, filesystem access is limited to
 creating and updating the export and its assets in that folder.

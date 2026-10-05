@@ -39,30 +39,49 @@ export function buildBrowserSearch(): string {
         }
       }
 
-      function appendSearchQueryToHref(href, query) {
+      function appendSearchQueryToHref(href, query, nodeId, pageHref) {
         const rawHref = String(href || "");
         if (!rawHref) return "";
-        if (!query || !query.trim()) return rawHref;
+        if ((!query || !query.trim()) && !nodeId && !pageHref) return rawHref;
         if (rawHref.startsWith("#page-")) {
           const [pageRef, existingQuery = ""] = rawHref.slice(1).split("?");
           const params = new URLSearchParams(existingQuery);
-          params.set("q", query);
+          if (query && query.trim()) params.set("q", query);
+          if (nodeId) params.set("node", nodeId);
+          if (pageHref) params.set("page", pageHref);
           return "#" + pageRef + "?" + params.toString();
         }
         const hashIndex = rawHref.indexOf("#");
         const base = hashIndex >= 0 ? rawHref.slice(0, hashIndex) : rawHref;
         const hash = hashIndex >= 0 ? rawHref.slice(hashIndex) : "";
         const separator = base.includes("?") ? "&" : "?";
-        return base + separator + "q=" + encodeURIComponent(query) + hash;
+        const params = new URLSearchParams();
+        if (query && query.trim()) params.set("q", query);
+        if (nodeId) params.set("node", nodeId);
+        if (pageHref) params.set("page", pageHref);
+        return base + separator + params.toString() + hash;
       }
 
-      function applyLinkAttrs(link, href, query) {
-        if (String(href).startsWith("#page-")) {
-          link.setAttribute("href", appendSearchQueryToHref(href, query));
+      function applyLinkAttrs(link, href, query, target, nodeId, pageHref) {
+        if (target) link.setAttribute("target", target);
+        if (String(href).startsWith("#page-") && !target) {
+          link.setAttribute("href", appendSearchQueryToHref(href, query, nodeId, pageHref));
           link.setAttribute("data-inline-page", parseInlinePageIdFromHref(href));
           return;
         }
-        link.setAttribute("href", appendSearchQueryToHref(href, query));
+        link.setAttribute("href", appendSearchQueryToHref(href, query, nodeId, pageHref));
+      }
+
+      function getSearchResultSnippet(entry, query) {
+        const snippet = String(entry.snippet || "");
+        const normalizedQuery = String(query || "").trim().toLowerCase();
+        if (!normalizedQuery || snippet.toLowerCase().includes(normalizedQuery)) return snippet;
+        const fullText = String(entry.text || "");
+        const matchIndex = fullText.toLowerCase().indexOf(normalizedQuery);
+        if (matchIndex < 0) return snippet;
+        const start = Math.max(0, matchIndex - 80);
+        const end = Math.min(fullText.length, matchIndex + normalizedQuery.length + 120);
+        return (start > 0 ? "…" : "") + fullText.slice(start, end).trim() + (end < fullText.length ? "…" : "");
       }
 
       function renderSearchResults(matches, query) {
@@ -80,31 +99,27 @@ export function buildBrowserSearch(): string {
         for (const entry of matches) {
           const item = document.createElement("li");
           item.className = "search-result-item";
+          const result = entry.openHref ? document.createElement("a") : document.createElement("button");
           if (entry.openHref) {
-            const title = document.createElement("a");
-            title.className = "search-result-title search-result-title-link";
-            applyLinkAttrs(title, entry.openHref, query);
-            title.setAttribute("data-search-open", "true");
-            appendHighlightedText(title, entry.title, query);
-            item.appendChild(title);
-          } else {
-            const title = document.createElement("span");
-            title.className = "search-result-title";
-            appendHighlightedText(title, entry.title, query);
-            item.appendChild(title);
+            applyLinkAttrs(result, entry.openHref, query, entry.openTarget, entry.openNodeId, entry.openPageHref);
+            result.setAttribute("data-search-open", "true");
+            result.setAttribute("aria-label", "Open " + entry.title);
+          } else if (entry.focusNodeId) {
+            result.type = "button";
+            result.setAttribute("data-node-id", entry.focusNodeId);
           }
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "search-result";
-          button.setAttribute("data-node-id", entry.id);
+          result.className = "search-result";
+          const title = document.createElement("span");
+          title.className = "search-result-title";
+          appendHighlightedText(title, entry.title, query);
           const metaEl = document.createElement("span");
           metaEl.className = "search-result-meta";
           metaEl.textContent = entry.kindLabel + " · " + entry.positionLabel;
           const snippetEl = document.createElement("span");
           snippetEl.className = "search-result-snippet";
-          appendHighlightedText(snippetEl, entry.snippet, query);
-          button.append(metaEl, snippetEl);
-          item.appendChild(button);
+          appendHighlightedText(snippetEl, getSearchResultSnippet(entry, query), query);
+          result.append(title, metaEl, snippetEl);
+          item.appendChild(result);
           searchResults.appendChild(item);
         }
         updateActiveSearchResult();

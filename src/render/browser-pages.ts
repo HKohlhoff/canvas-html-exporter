@@ -122,11 +122,61 @@ export function buildBrowserPages(): string {
         return String(searchParams.get("q") || "").trim();
       }
 
+      function parsePageNodeId(hash) {
+        const value = String(hash || "").replace(/^#/, "");
+        const queryIndex = value.indexOf("?");
+        if (queryIndex >= 0) {
+          const params = new URLSearchParams(value.slice(queryIndex + 1));
+          const hashNodeId = String(params.get("node") || "").trim();
+          if (hashNodeId) return hashNodeId;
+        }
+        const searchParams = new URLSearchParams(window.location.search);
+        return String(searchParams.get("node") || "").trim();
+      }
+
+      function parseNestedPageHref(hash) {
+        const value = String(hash || "").replace(/^#/, "");
+        const queryIndex = value.indexOf("?");
+        if (queryIndex < 0) return "";
+        const params = new URLSearchParams(value.slice(queryIndex + 1));
+        const pageHref = String(params.get("page") || "").trim();
+        return parsePageHash(pageHref) ? pageHref : "";
+      }
+
       function renderCanvasShell() {
         if (!canvasShell || !singlePageView) return;
+        const restoreNestedSearch = restoreNestedSearchOnCanvasReturn;
+        restoreNestedSearchOnCanvasReturn = false;
+        singlePageView.classList.remove("is-canvas-page");
+        delete singlePageView.dataset.pageKind;
         canvasShell.hidden = false;
         singlePageView.hidden = true;
+        syncContentsCurrentPage("");
+        restoreContentsForCanvasView();
         document.title = baseDocumentTitle;
+        if (restoreNestedSearch) {
+          openSearch();
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => window.resetZoom());
+          });
+        }
+      }
+
+      function syncContentsCurrentPage(pageId) {
+        if (!contentsPanel) return;
+        const contentsLinks = Array.from(contentsPanel.querySelectorAll(".contents-link"));
+        contentsLinks.forEach((link) => {
+          link.classList.remove("is-current");
+          link.removeAttribute("aria-current");
+        });
+        const pageLink = pageId
+          ? contentsLinks.find((link) => link.getAttribute("data-inline-page") === pageId)
+          : null;
+        const currentCanvasLink = contentsPanel.querySelector('[data-contents-current-canvas="true"]');
+        const activeLink = pageLink || currentCanvasLink;
+        if (!activeLink) return;
+        activeLink.classList.add("is-current");
+        activeLink.setAttribute("aria-current", "page");
       }
 
       function clearSearchHighlights(root) {
@@ -213,10 +263,26 @@ export function buildBrowserPages(): string {
         if (!template) return false;
         clearChildren(singlePageBody);
         singlePageBody.appendChild(template.content.cloneNode(true));
+        if (singlePageToolbar) {
+          singlePageToolbar.hidden = template.dataset.pageKind === "canvas";
+        }
+        singlePageView.dataset.pageKind = template.dataset.pageKind || "";
+        singlePageView.classList.toggle("is-canvas-page", template.dataset.pageKind === "canvas");
         materializeInlineAssets(singlePageBody);
         applySearchHighlights(singlePageBody, parsePageSearchQuery(window.location.hash));
         canvasShell.hidden = true;
         singlePageView.hidden = false;
+        if (template.dataset.pageKind === "canvas") {
+          hideContentsForEmbeddedCanvas();
+          const frame = singlePageBody.querySelector(".single-canvas-frame");
+          if (frame) {
+            frame.addEventListener("load", () => sendNavigationStateToCanvasFrame(frame), { once: true });
+            window.setTimeout(() => sendNavigationStateToCanvasFrame(frame), 0);
+          }
+        } else {
+          syncContentsCurrentPage(pageId);
+          restoreContentsForCanvasView();
+        }
         document.title = (template.dataset.pageTitle || "Page") + " - " + baseDocumentTitle;
         window.scrollTo({ top: 0, behavior: "auto" });
         const anchor = parsePageAnchorHash(window.location.hash);

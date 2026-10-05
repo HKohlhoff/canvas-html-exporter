@@ -6,6 +6,83 @@ first.
 
 ## [Unreleased]
 
+## [1.5.0] – 2026-10-05
+
+### Added
+
+- Export Canvas file nodes and Canvas wiki links recursively. Package exports
+  create navigable Canvas HTML pages, while single-HTML exports embed matching
+  virtual pages; shared targets and cycles are handled once by canonical Vault
+  path. Linked pages use the upper-right **Canvas** control for the return to
+  the overview, so a redundant source return card is not rendered. Canvas
+  cards show an offline diagram preview instead of a separate **Open canvas**
+  action label. Package subpages present the return as the same plain text link
+  used by single HTML rather than as an extra outlined button; both render
+  **(back to: Canvas)** directly after the node/group/connection status with a
+  20 px gap, with only **Canvas** linked.
+- Add a fixed **Navigation** panel to exported Canvas pages. It keeps the current
+  page visible beside the navigation, shows a cycle-safe
+  Canvas hierarchy, highlights the current Canvas, and lists the Markdown,
+  PDF-viewer, and link-node HTML pages directly contained in that Canvas in
+  both package and single-HTML exports.
+- Add a **Navigation** setting for the initial open/closed state. Changes made
+  on the main Canvas become the default for pages without an individual choice;
+  each Canvas or embedded page remembers and restores its own later state.
+- Make **Navigation** a toolbar toggle like **Minimap** and remove the redundant
+  panel-internal **Close** button.
+- Preserve per-page Navigation choices across package Back/Forward history and
+  synchronize embedded single-HTML canvases only after their runtime is ready.
+- Present embedded single-HTML canvases as full-page Canvas views without a
+  surrounding page card, and route parent Canvas links through the outer page
+  so local files do not open a file chooser.
+- Highlight the currently open embedded Markdown, PDF, or link page in
+  **Navigation** instead of leaving its owning Canvas highlighted.
+- Add the **Navigation** toggle and panel to package Markdown, PDF, and link
+  pages. File pages start with Navigation closed on their first visit in both
+  formats, independent of the global default, while remembering later local
+  choices and highlighting the active file page. The package toggle uses the
+  same plain-link appearance as **Back** and **Canvas**.
+- Restore each package Canvas's zoom level and visible position after visiting
+  another Canvas or file page. Save the view before following a package link
+  and carry it through local package URLs as well as the browser-window state,
+  so local-file privacy boundaries cannot discard it. Do not replace the
+  restored view with an automatic resize fit. Restore it only for **Back**,
+  **Canvas**, and browser-history returns; explicitly reopening a subcanvas
+  starts with the normal fitted view, matching single HTML.
+- Keep the search overlay inside the remaining Canvas area while the fixed
+  **Navigation** panel is open, so the panel no longer covers the search field.
+- Add **Back** beside **Canvas** on HTML pages owned by a subcanvas, returning
+  to that subcanvas while **Canvas** continues to open the main overview.
+- Sort sibling Canvases and the current Canvas's page entries alphabetically in
+  **Navigation**, using natural number order.
+- Extend **Search...** to the complete subordinate Canvas hierarchy in package
+  and single-HTML exports. Results identify and open their owning subcanvas,
+  or directly open the matching Markdown, PDF, or link page when the card has
+  one. Cards without a separate page are brought into view and highlighted;
+  Markdown pages are indexed from their full text rather than only the preview.
+- Preserve and reopen Search after using **Back** or **Canvas** from a search
+  result page in both export formats. Fit a newly revealed embedded subcanvas
+  only after it is visible, avoiding the compressed return view in single HTML.
+- Deduplicate Search results by their referenced Vault file, preferring a card
+  in the current Canvas over copies in subordinate Canvases while keeping
+  independent text cards as separate results.
+- Make the complete Search result area open a card's HTML target, including
+  local results shown after returning with **Back**; only cards without an
+  HTML target use the result area to focus the Canvas node.
+- Show the active Canvas search scope directly below the Search heading and
+  state when recursively subordinate Canvases are included.
+- Keep every result title inside its bordered clickable result card so it
+  remains visible when Search is restored after **Back**.
+- Identify local Search results by their owning Canvas after **Back**, matching
+  initial descendant results instead of replacing the Canvas name with node
+  coordinates.
+
+### Development
+
+- Make the tag release workflow safe to rerun when a GitHub release already
+  exists, refreshing only the reviewed plugin assets without replacing its
+  release notes.
+
 ## [1.4.1] – 2026-10-04
 
 ### Fixed

@@ -32,14 +32,23 @@ jobs:
             release/main.js
             release/manifest.json
             release/styles.css
-      - name: Create release
+      - name: Publish release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
-          gh release create "$tag" \
-            --title="$tag" \
-            --notes="Release $tag for Canvas HTML Exporter." \
-            release/main.js \
-            release/manifest.json \
-            release/styles.css
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" \
+              --clobber \
+              release/main.js \
+              release/manifest.json \
+              release/styles.css
+          else
+            gh release create "$tag" \
+              --verify-tag \
+              --title="$tag" \
+              --notes="Release $tag for Canvas HTML Exporter." \
+              release/main.js \
+              release/manifest.json \
+              release/styles.css
+          fi

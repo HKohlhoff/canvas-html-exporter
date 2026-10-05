@@ -1,10 +1,12 @@
 import { buildCanvasFoldingGraph, getCanvasDescendants } from "../folding/graph";
 import { buildBrowserRuntime } from "./browser-runtime";
 import { buildCanvasStyles } from "./canvas-styles";
+import { renderContents } from "./contents";
 import { getBounds, normalizeEdgeEnd, normalizeEdgeLineStyle, normalizeEdgeWidth, normalizeSide } from "./geometry";
 import { escapeAttribute, escapeHtml } from "./html";
 import { buildExporterBuildMeta, EXPORTER_SIGNATURE } from "./metadata";
 import { buildSearchEntry, renderGroupTitle, renderMinimapNode, renderNode } from "./nodes";
+import { deduplicateSearchEntries } from "./search-entries";
 import { buildCalloutCss, buildCanvasColorVariables, buildCanvasEdgeColorMap, buildHeadingColorCss, buildInlineStyleCss, getTheme } from "./theme";
 import type { CanvasData, ExportOptions } from "./types";
 
@@ -15,7 +17,18 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const showSearch = options.showSearch !== false;
   const foldingInitiallyEnabled = options.foldingInitiallyEnabled === true;
   const exportFormat = options.exportFormat || "package";
+  const canvasHomeRestoreAttr = exportFormat === "package" ? ` data-restore-canvas-view="root"` : "";
+  const canvasHomeLink = options.canvasHomeHref
+    ? `<span class="canvas-return-label">(back to: <a class="canvas-return-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}${canvasHomeRestoreAttr}>Canvas</a>)</span>`
+    : "";
   const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
+  const contentsHtml = renderContents(options.contents);
+  const singlePageNavigation = options.canvasHomeHref
+    ? `<a id="single-page-back-link" class="single-page-back-link" href="#">Back</a>
+      <a class="single-page-canvas-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a>
+      ${contentsHtml ? `<button class="single-page-navigation-button" type="button" onclick="toggleContents()" aria-pressed="false">Navigation</button>` : ""}`
+    : `<a id="single-page-canvas-link" class="single-page-canvas-link" href="#">Canvas</a>
+      ${contentsHtml ? `<button class="single-page-navigation-button" type="button" onclick="toggleContents()" aria-pressed="false">Navigation</button>` : ""}`;
   const initialFoldState = foldingInitiallyEnabled ? options.initialFoldState : undefined;
   const hasImportedFolding = Boolean(
     initialFoldState
@@ -94,9 +107,21 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     label: edge.label ?? "",
     color: edge.color ?? "",
   }));
-  const searchEntries = nodes
-    .map((node) => buildSearchEntry(node, bounds.offsetX, bounds.offsetY))
-    .filter((entry) => entry.text);
+  const searchEntries = deduplicateSearchEntries(
+    nodes
+      .map((node) => ({
+        ...buildSearchEntry(node, bounds.offsetX, bounds.offsetY),
+        positionLabel: options.title,
+      }))
+      .filter((entry) => entry.text)
+      .concat(options.additionalSearchEntries || []),
+  ).map((entry) => {
+    const runtimeEntry = { ...entry };
+    delete runtimeEntry.dedupeKey;
+    return runtimeEntry;
+  });
+  const searchesSubordinateCanvases = (options.additionalSearchEntries?.length || 0) > 0;
+  const searchScopeText = `Searching in: ${options.title}${searchesSubordinateCanvases ? " and subordinate canvases" : ""}`;
 
   const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
   const minimapHtml = showMinimap
@@ -115,9 +140,12 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     : "";
   const searchHtml = showSearch
     ? `<div id="search-overlay" class="search-overlay" hidden>
-    <div class="search-panel" role="dialog" aria-modal="true" aria-labelledby="search-title">
+    <div class="search-panel" role="dialog" aria-modal="true" aria-labelledby="search-title" aria-describedby="search-scope search-summary">
       <div class="search-panel-header">
-        <strong id="search-title">Search</strong>
+        <div class="search-panel-heading">
+          <strong id="search-title">Search</strong>
+          <span id="search-scope" class="search-scope">${escapeHtml(searchScopeText)}</span>
+        </div>
         <button id="search-close-button" type="button" class="search-close-button" aria-label="Close search">Close</button>
       </div>
       <input id="search-input" class="search-input" type="search" aria-label="Search canvas" placeholder="Enter a search term" autocomplete="off">
@@ -128,8 +156,8 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     : "";
   const embeddedPagesHtml = exportFormat === "single-html" && embeddedPages.length
     ? `<section id="single-page-view" class="single-page-view" hidden>
-    <div class="single-page-toolbar">
-      <a id="single-page-canvas-link" class="single-page-canvas-link" href="#">Canvas</a>
+    <div id="single-page-toolbar" class="single-page-toolbar">
+      ${singlePageNavigation}
     </div>
     <main id="single-page-body" class="single-page-body"></main>
   </section>
@@ -169,10 +197,14 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     </div></details>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
+    ${contentsHtml ? `<button id="contents-toolbar-button" type="button" onclick="toggleContents()" aria-pressed="false">Navigation</button>` : ""}
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>
-    <p>${canvasCountSummary}<span id="hidden-node-summary" hidden></span></p>
+    <div class="page-header-meta">
+      <p>${canvasCountSummary}<span id="hidden-node-summary" hidden></span></p>
+      ${canvasHomeLink}
+    </div>
   </div>
   <div class="viewport">
     <div id="zoom-area-selection" class="zoom-area-selection" hidden></div>
@@ -186,6 +218,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   ${minimapHtml}
   ${searchHtml}
   </div>
+  ${contentsHtml}
   ${embeddedPagesHtml}
   <script>${buildBrowserRuntime({ exportFormat, options, theme, edgePaletteColors, edgesData, searchEntries, foldingGraph, groupNodeIds, initialFoldState, nodes, foldingInitiallyEnabled, bounds, hasImportedFolding })}  </script>
 </body>

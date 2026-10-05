@@ -45,6 +45,48 @@ export function buildBrowserViewport({ bounds }: Pick<BrowserRuntimeParameters, 
         window.requestAnimationFrame(updateMinimapViewport);
       }
 
+      function storePackageViewportState() {
+        if (exportFormat !== "package" || !viewport) return;
+        packageViewportStates[navigationPageId] = {
+          scale: currentScale,
+          left: viewport.scrollLeft,
+          top: viewport.scrollTop,
+        };
+        storePackageNavigationState();
+      }
+
+      function storePackageViewportBeforeNavigation(event) {
+        if (exportFormat !== "package") return;
+        const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+        if (!link) return;
+        const href = link.getAttribute("href") || "";
+        if (!href || href.startsWith("#")) return;
+        try {
+          const url = new URL(href, window.location.href);
+          const isLocalHtml = url.protocol === window.location.protocol
+            && (url.protocol === "file:" || url.origin === window.location.origin)
+            && url.pathname.toLowerCase().endsWith(".html");
+          if (isLocalHtml) storePackageViewportState();
+        } catch {
+          // The normal link handler remains responsible for malformed links.
+        }
+      }
+
+      function restorePackageViewportState(forceRestore) {
+        if (exportFormat !== "package" || !viewport) return false;
+        if (!forceRestore && initialRestoreCanvasViewId !== navigationPageId) return false;
+        const state = packageViewportStates[navigationPageId];
+        if (!state) return false;
+        currentScale = clamp(state.scale, 0.2, 4);
+        setCssProps(canvas, { transform: "scale(" + currentScale + ")" });
+        drawEdges();
+        window.requestAnimationFrame(() => {
+          viewport.scrollTo({ left: state.left, top: state.top, behavior: "auto" });
+          updateMinimapViewport();
+        });
+        return true;
+      }
+
       function getFitNodeBounds() {
         const activeNodes = Array.from(document.querySelectorAll(".node[data-node-id]"))
           .filter((node) => {

@@ -21,6 +21,94 @@ Test both package and single-HTML export:
 - confirm offline behavior and absence of source-Vault modifications;
 - disable/re-enable the plugin and repeat one minimal export.
 
+## Linked subcanvases
+
+Use an overview Canvas that links to at least two subcanvases. Include a return
+Canvas card in every subcanvas, a shared target referenced more than once, and
+one cycle back to an already visited Canvas. Repeat all checks as package and
+single HTML:
+
+- open every subcanvas card with one click and compare its node, group and edge
+  layout with Obsidian;
+- compare each card preview with the target Canvas: groups, node positions,
+  colors, connections, and overall aspect ratio should remain recognizable;
+  the obsolete **Open canvas** text must not appear;
+- confirm the source return card is not rendered in the HTML, then use the
+  **Canvas** link once and confirm that the overview opens immediately; in both
+  formats it must appear as **(back to: Canvas)**, with only **Canvas** linked,
+  not as an outlined button, directly after the node/group/connection status
+  with a 20 px gap;
+- follow a Canvas wiki link from a text or Markdown node as well as a Canvas
+  file-node card;
+- use browser Back and Forward across overview and subcanvas transitions;
+- test both initial values of the plugin setting **Navigation**, then open
+  **Navigation** on the overview and every subcanvas; confirm it remains a
+  fixed left panel, the current page stays visible beside it and regains the
+  full width after closing; confirm the Canvas
+  hierarchy is finite, the current Canvas is highlighted, shared targets are
+  listed once, and the current Canvas's Markdown, PDF-viewer, and link-node
+  cards appear under **Pages in this canvas** and open correctly;
+- change the panel state on the main Canvas and confirm pages without an
+  individual choice inherit it; choose a different state on a subcanvas and an
+  embedded page, leave each page, and confirm its state returns when reopened;
+- repeat the same local-state check with browser Back and Forward in a package
+  export; confirm its Markdown, PDF, and link pages contain the same
+  **Navigation** toggle and panel and highlight the opened file page; confirm
+  the toggle looks like the plain **Back** and **Canvas** links rather than an
+  outlined button;
+- in single HTML, confirm every linked Canvas fills the page like the overview,
+  without a surrounding card or reduced-height frame, and that its upper-right
+  **Canvas** link returns to the overview without opening a file chooser;
+- use **Navigation** itself to open and close the panel like **Minimap**;
+  confirm there is no separate Close button and keyboard Tab navigation can
+  move naturally between the panel and the page;
+- confirm sibling Canvases and the entries under **Pages in this canvas** are
+  alphabetically sorted, including natural ordering such as 2 before 10;
+- while **Navigation** is open, open **Search...** and confirm the complete
+  search panel and its backdrop stay inside the visible area to the right of
+  Navigation;
+- search from the overview for text that exists only in a deeply linked
+  subcanvas and for text beyond a Markdown card's visible preview; confirm both
+  appear with their owning Canvas and open the matching Markdown, PDF, or link
+  page directly. For a text card without a separate page, confirm its Canvas
+  opens and brings the card into view with the normal search highlight. Repeat
+  from a subcanvas and confirm only its subordinate hierarchy is included;
+- confirm the line below **Search** names the active Canvas and states whether
+  subordinate Canvases are part of the scope;
+- reference the same Markdown file from two cards or Canvases and confirm it
+  appears only once in Search, with a current-Canvas result taking precedence;
+- from a deeply found Markdown page, use **Back** and **Canvas** separately in
+  both formats; confirm the destination Canvas is normally fitted and Search
+  reopens with the original query; click the same local result again and
+  confirm its title remains visible inside the result card and the complete
+  result area reopens its file page. Before and after **Back**, confirm the
+  metadata line reads `type · owning Canvas` and never changes to node
+  coordinates;
+- from a subcanvas open a Markdown page, PDF viewer, and link page; confirm
+  **Back** returns to that subcanvas and **Canvas** returns to the root
+  overview. Repeat in single HTML and confirm a root-owned page has no
+  redundant **Back** link; while each embedded page is open, confirm
+  **Navigation** highlights that page rather than its owning Canvas;
+- with the global Navigation default set to open, visit each file page in both
+  formats for the first time and confirm Navigation starts closed; open it
+  locally, leave the page, and confirm the local open choice is restored when
+  revisited;
+- in a package, change zoom and pan on a Canvas, visit a Canvas or file page,
+  then return with **Back**, **Canvas**, or browser history and confirm the
+  previous zoom level and visible position are restored; leave a subcanvas,
+  then open it again explicitly from its card or **Navigation** and confirm it
+  starts with the normal fitted view like the single-HTML export;
+- confirm zoom, pan, fit/reset, search, minimap and folding inside each linked
+  Canvas;
+- confirm a shared target is present once and every reference opens it;
+- confirm a directed Canvas cycle remains navigable and does not duplicate
+  pages or stall the export;
+- move the complete package and verify all Canvas pages and assets still work
+  offline; verify the single HTML has no external local dependency;
+- include one missing or invalid Canvas target and confirm the remaining export
+  completes with the normal file fallback;
+- confirm no source Canvas is modified.
+
 ## Advanced Canvas compatibility
 
 Open `examples/demo-vault/Advanced Canvas Attributes.canvas` and repeat the

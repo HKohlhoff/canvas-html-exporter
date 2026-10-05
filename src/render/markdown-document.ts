@@ -1,7 +1,8 @@
-import { escapeHtml } from "./html";
+import { escapeAttribute, escapeHtml } from "./html";
 import { buildExporterBuildMeta, EXPORTER_SIGNATURE } from "./metadata";
+import { buildPackagePageNavigation } from "./package-page-navigation";
 import { buildCalloutCss, buildCanvasColorVariables, buildHeadingColorCss, buildInlineStyleCss, getTheme, indentCssBlock } from "./theme";
-import type { HighlightingThemeChoice } from "./types";
+import type { ContentsNavigation, HighlightingThemeChoice } from "./types";
 
 export function buildMarkdownDocumentHtml(
   title: string,
@@ -13,8 +14,17 @@ export function buildMarkdownDocumentHtml(
   inlineStyleColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
   canvasHref?: string,
+  backHref?: string,
+  contents?: ContentsNavigation,
+  navigationPageId?: string,
 ): string {
   const theme = getTheme(darkMode);
+  const pageNavigation = buildPackagePageNavigation(contents, navigationPageId, canvasHref, theme);
+  const ownerCanvasNavigationPageId = navigationPageId?.split(":page:")[0] || "";
+  const backRestoreAttr = ownerCanvasNavigationPageId
+    ? ` data-restore-canvas-view="${escapeAttribute(ownerCanvasNavigationPageId)}"`
+    : "";
+  const canvasRestoreAttr = navigationPageId ? ` data-restore-canvas-view="root"` : "";
   const calloutCss = buildCalloutCss(calloutColors);
   const headingCss = buildHeadingColorCss("", headingColors);
   const inlineStyleCss = buildInlineStyleCss("", inlineStyleColors);
@@ -27,15 +37,19 @@ export function buildMarkdownDocumentHtml(
     }
     .md-page-toolbar {
       display: flex;
+      align-items: center;
       justify-content: flex-end;
+      gap: 14px;
       margin-bottom: 1em;
     }
+    .md-page-back-link,
     .md-page-canvas-link {
       color: ${theme.link};
       text-decoration: none;
       font-size: 0.95em;
       font-weight: 600;
     }
+    .md-page-back-link:hover,
     .md-page-canvas-link:hover {
       text-decoration: underline;
     }
@@ -170,20 +184,45 @@ export function buildMarkdownDocumentHtml(
       color: #d64545;
       font-style: italic;
     }
+    ${pageNavigation.css}
   </style>
 </head>
 <body>
   <main class="md-page">
     <div class="md-page-toolbar">
-      ${canvasHref ? `<a class="md-page-canvas-link" href="${escapeHtml(canvasHref)}">Canvas</a>` : ""}
+      ${backHref ? `<a class="md-page-back-link" href="${escapeHtml(backHref)}"${backRestoreAttr}>Back</a>` : ""}
+      ${canvasHref ? `<a class="md-page-canvas-link" href="${escapeHtml(canvasHref)}"${canvasRestoreAttr}>Canvas</a>` : ""}
+      ${pageNavigation.buttonHtml}
     </div>
     <h1>${escapeHtml(title)}</h1>
     ${bodyHtml}
   </main>
+  ${pageNavigation.contentsHtml}
   <script>
     (() => {
+      ${pageNavigation.script}
       const params = new URLSearchParams(window.location.search);
       const query = (params.get("q") || "").trim();
+      const navigation = params.get("navigation");
+      const navigationPages = params.get("navigationPages");
+      if (navigation === "open" || navigation === "closed") {
+        document.querySelectorAll('a[href]').forEach((link) => {
+          const href = link.getAttribute("href") || "";
+          if (!href || href.startsWith("#")) return;
+          try {
+            const url = new URL(href, window.location.href);
+            const isLocalTarget = url.protocol === window.location.protocol
+              && (url.protocol === "file:" || url.origin === window.location.origin);
+            if (!isLocalTarget) return;
+            if (!url.pathname.toLowerCase().endsWith(".html")) return;
+            url.searchParams.set("navigation", navigation);
+            if (navigationPages) url.searchParams.set("navigationPages", navigationPages);
+            link.setAttribute("href", url.href);
+          } catch {
+            // Leave malformed or unsupported links unchanged.
+          }
+        });
+      }
       const root = document.querySelector(".md-page");
       if (!root) return;
 
