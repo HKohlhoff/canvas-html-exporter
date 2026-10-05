@@ -702,6 +702,7 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     }
     .toolbar button,
     .toolbar select,
+    .toolbar-canvas-link,
     .toolbar-menu > summary {
       border: 1px solid ${theme.canvasBorder};
       background: ${theme.nodeBackground};
@@ -714,7 +715,11 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     }
     .toolbar button:hover,
     .toolbar select:hover,
+    .toolbar-canvas-link:hover,
     .toolbar-menu > summary:hover { background: ${theme.chipBackground}; }
+    .toolbar-canvas-link {
+      text-decoration: none;
+    }
     .toolbar-menu {
       position: relative;
     }

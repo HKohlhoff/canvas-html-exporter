@@ -11,7 +11,8 @@ first.
 - Export Canvas file nodes and Canvas wiki links recursively. Package exports
   create navigable Canvas HTML pages, while single-HTML exports embed matching
   virtual pages; shared targets and cycles are handled once by canonical Vault
-  path.
+  path. Linked pages use the upper-right **Canvas** control for the return to
+  the overview, so a redundant source return card is not rendered.
 
 ### Development
 

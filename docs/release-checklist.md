@@ -98,8 +98,9 @@ npm run build:prod
   and short or interactive clicks retain their normal behavior.
 - Internal links, anchors, embeds and missing-target fallbacks work.
 - Linked Canvas file nodes and wiki links open recursively in one click;
-  overview return links, browser history, shared targets, cycles, and invalid
-  target fallback work in package and single HTML.
+  the redundant source return card stays hidden, the upper-right **Canvas**
+  control returns to the overview, and browser history, shared targets, cycles,
+  and invalid target fallback work in package and single HTML.
 - Test the documentation Canvas from `examples/demo-vault/`.
 - Test `Advanced Canvas Attributes.canvas` from the same demo vault as package
   and single HTML. Compare all supported shapes, borders, alignments, colors,

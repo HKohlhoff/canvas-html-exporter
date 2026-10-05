@@ -281,7 +281,8 @@ async function prepareCanvasDocument(
   const normalized = normalizeCanvasData(parsed, canvasFile.basename);
   const preparedNodes: CanvasNode[] = [];
   for (const node of normalized.nodes) {
-    preparedNodes.push(await prepareNode(ctx, node));
+    const preparedNode = await prepareNode(ctx, node);
+    if (preparedNode) preparedNodes.push(preparedNode);
   }
 
   const nodeIds = new Set(preparedNodes.map((node) => node.id));
@@ -309,6 +310,9 @@ async function prepareCanvasDocument(
       headingColors: ctx.settings.headingColors,
       inlineStyleColors: ctx.settings.inlineStyleColors,
       exportFormat: ctx.exportFormat,
+      canvasHomeHref: ctx.exportFormat === "package" && canvasFile.path !== ctx.rootCanvasPath
+        ? "index.html"
+        : undefined,
       embeddedPages: ctx.singleHtmlPages,
       initialFoldState,
     },
@@ -385,7 +389,7 @@ function canvasNavigationTarget(ctx: MarkdownContext): "_parent" | undefined {
     : undefined;
 }
 
-async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<CanvasNode> {
+async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<CanvasNode | null> {
   const nodeType = (node.type || "").toLowerCase();
 
   if (nodeType === "link") {
@@ -426,6 +430,9 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   const ext = file.extension.toLowerCase();
 
   if (ext === "canvas") {
+    if (ctx.canvasFile.path !== ctx.rootCanvasPath && file.path === ctx.rootCanvasPath) {
+      return null;
+    }
     try {
       const target = await exportCanvasTarget(ctx, file);
       return {

@@ -15,6 +15,9 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const showSearch = options.showSearch !== false;
   const foldingInitiallyEnabled = options.foldingInitiallyEnabled === true;
   const exportFormat = options.exportFormat || "package";
+  const canvasHomeLink = options.canvasHomeHref
+    ? `<a class="toolbar-canvas-link" href="${escapeAttribute(options.canvasHomeHref)}">Canvas</a>`
+    : "";
   const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
   const initialFoldState = foldingInitiallyEnabled ? options.initialFoldState : undefined;
   const hasImportedFolding = Boolean(
@@ -169,6 +172,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     </div></details>` : ""}
     ${showMinimap ? `<button id="minimap-toolbar-button" type="button" onclick="toggleMinimap()">Minimap</button>` : ""}
     ${showSearch ? `<button id="search-toolbar-button" type="button" onclick="openSearch()">Search...</button>` : ""}
+    ${canvasHomeLink}
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>

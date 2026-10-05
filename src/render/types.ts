@@ -87,6 +87,7 @@ export interface ExportOptions {
   showSearch?: boolean;
   foldingInitiallyEnabled?: boolean;
   exportFormat?: "package" | "single-html";
+  canvasHomeHref?: string;
   embeddedPages?: EmbeddedPage[];
   initialFoldState?: CanvasFoldState;
 }

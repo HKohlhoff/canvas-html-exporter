@@ -30,7 +30,9 @@ single HTML:
 
 - open every subcanvas card with one click and compare its node, group and edge
   layout with Obsidian;
-- use the return card once and confirm that the overview opens immediately;
+- confirm the source return card is not rendered in the HTML, then use the
+  upper-right **Canvas** control once and confirm that the overview opens
+  immediately;
 - follow a Canvas wiki link from a text or Markdown node as well as a Canvas
   file-node card;
 - use browser Back and Forward across overview and subcanvas transitions;

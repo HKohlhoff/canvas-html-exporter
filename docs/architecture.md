@@ -34,6 +34,12 @@ Canvas navigate its parent document, which preserves one-click transitions,
 browser history and the existing virtual-page runtime without introducing a
 second renderer.
 
+A Canvas file node in a linked Canvas that targets the root Canvas is treated
+as redundant export navigation and omitted from that linked page. Single HTML
+already exposes the root through its virtual-page **Canvas** control; package
+subpages receive an equivalent `index.html` toolbar link. Textual links to the
+root remain ordinary content and are preserved.
+
 Each Canvas retains its own Markdown/link subpage registry and browser state;
 asset naming is shared across the complete recursive export. Only the active
 root Canvas may import the optional live Canvas Folding state. Linked Canvases

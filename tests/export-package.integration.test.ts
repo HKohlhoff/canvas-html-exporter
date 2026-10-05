@@ -983,8 +983,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       const backToRoot = childPage.data.nodes.find((node) => node.id === "root-card");
       const grandCard = childPage.data.nodes.find((node) => node.id === "grand-card");
       const rootLink = childPage.data.nodes.find((node) => node.id === "root-link");
-      assert.equal(backToRoot?.canvasHref, exportFormat === "single-html" ? "#" : "index.html");
-      assert.equal(backToRoot?.canvasNavigationTarget, exportFormat === "single-html" ? "_parent" : undefined);
+      assert.equal(backToRoot, undefined);
+      assert.equal(childPage.options.canvasHomeHref, exportFormat === "package" ? "index.html" : undefined);
       assert.equal(grandCard?.canvasNavigationTarget, exportFormat === "single-html" ? "_parent" : undefined);
       assert.equal(grandPage.data.nodes[0].canvasHref, rootCard?.canvasHref);
       assert.match(
@@ -996,8 +996,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       assert.match(childHtml, /class="canvas-card-link"/);
       assert.match(childHtml, /<span class="canvas-card-action">Open canvas<\/span>/);
       if (exportFormat === "single-html") {
-        assert.match(childHtml, /href="#" target="_parent"/);
-        assert.doesNotMatch(childHtml, /href="#" data-inline-page=/);
+        assert.doesNotMatch(childHtml, /class="toolbar-canvas-link"/);
         for (const page of result.canvasPages) {
           const pageHtml = await convertCanvasToHtml(page.data, page.options);
           const embedded = result.options.embeddedPages?.find((entry) => entry.id === page.pageId);
@@ -1007,11 +1006,13 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         const rootHtml = await convertCanvasToHtml(result.data, result.options);
         assert.match(rootHtml, /data-page-kind="canvas"/);
         assert.match(rootHtml, /class="single-canvas-frame"/);
+        assert.match(rootHtml, /id="single-page-canvas-link"[^>]*>Canvas<\/a>/);
         assert.doesNotMatch(rootHtml, /srcdoc="<!DOCTYPE html>/);
       } else {
         assert.match(childPage?.outputPath || "", /^out\/root\/canvas-\d{3}-child\.html$/);
         assert.match(grandPage?.outputPath || "", /^out\/root\/canvas-\d{3}-grand\.html$/);
         assert.doesNotMatch(childHtml, /target="_parent"/);
+        assert.match(childHtml, /class="toolbar-canvas-link" href="index\.html">Canvas<\/a>/);
       }
     });
 
