@@ -23,6 +23,12 @@ export function buildBrowserContents(): string {
         if (Object.prototype.hasOwnProperty.call(navigationPageStates, pageId)) {
           return navigationPageStates[pageId] === true;
         }
+        const isUnvisitedEmbeddedFilePage = exportFormat === "single-html"
+          && singlePageView
+          && !singlePageView.hidden
+          && singlePageView.dataset.pageKind
+          && singlePageView.dataset.pageKind !== "canvas";
+        if (isUnvisitedEmbeddedFilePage) return false;
         return globalNavigationOpen;
       }
 

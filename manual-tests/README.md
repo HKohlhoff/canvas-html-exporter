@@ -64,6 +64,9 @@ single HTML:
   overview. Repeat in single HTML and confirm a root-owned page has no
   redundant **Back** link; while each embedded page is open, confirm
   **Navigation** highlights that page rather than its owning Canvas;
+- with the global Navigation default set to open, visit each embedded file page
+  for the first time and confirm Navigation starts closed; open it locally,
+  leave the page, and confirm the local open choice is restored when revisited;
 - confirm zoom, pan, fit/reset, search, minimap and folding inside each linked
   Canvas;
 - confirm a shared target is present once and every reference opens it;

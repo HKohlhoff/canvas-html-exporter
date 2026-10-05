@@ -116,6 +116,9 @@ await test("renders an accessible fixed navigation panel with global root and lo
   assert.match(html, /const navigationInitiallyOpen = true;/);
   assert.match(html, /const isMainCanvas = isRootCanvas && \(!singlePageView \|\| singlePageView\.hidden\)/);
   assert.match(html, /navigationPageStates\[pageId\] = open/);
+  assert.match(html, /const isUnvisitedEmbeddedFilePage = exportFormat === "single-html"/);
+  assert.match(html, /singlePageView\.dataset\.pageKind !== "canvas"/);
+  assert.match(html, /if \(isUnvisitedEmbeddedFilePage\) return false/);
   assert.match(html, /url\.searchParams\.set\("navigationPages", JSON\.stringify/);
   assert.match(html, /type: "canvas-html-navigation-state"/);
   assert.match(html, /type: "canvas-html-navigation-page-state"/);

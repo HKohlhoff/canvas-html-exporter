@@ -125,6 +125,7 @@ export function buildBrowserPages(): string {
       function renderCanvasShell() {
         if (!canvasShell || !singlePageView) return;
         singlePageView.classList.remove("is-canvas-page");
+        delete singlePageView.dataset.pageKind;
         canvasShell.hidden = false;
         singlePageView.hidden = true;
         syncContentsCurrentPage("");
@@ -236,6 +237,7 @@ export function buildBrowserPages(): string {
         if (singlePageToolbar) {
           singlePageToolbar.hidden = template.dataset.pageKind === "canvas";
         }
+        singlePageView.dataset.pageKind = template.dataset.pageKind || "";
         singlePageView.classList.toggle("is-canvas-page", template.dataset.pageKind === "canvas");
         materializeInlineAssets(singlePageBody);
         applySearchHighlights(singlePageBody, parsePageSearchQuery(window.location.hash));

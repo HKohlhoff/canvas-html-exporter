@@ -278,7 +278,9 @@ Click **Navigation** again to close the panel, just like the Minimap control.
 The plugin setting **Navigation** chooses whether this panel starts open or
 closed. Opening or closing it on the main Canvas changes the default for pages
 without an individual choice. Every Canvas and embedded page remembers its own
-later open/closed state and restores it when reopened.
+later open/closed state and restores it when reopened. Embedded Markdown, PDF,
+and link pages start with Navigation closed on their first visit, regardless of
+the global default; users can open it there and that local choice is remembered.
 
 HTML pages opened from a linked subcanvas show **Back** and **Canvas** together.
 **Back** returns to the owning subcanvas, while **Canvas** returns directly to
