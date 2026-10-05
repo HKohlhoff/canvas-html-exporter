@@ -38,8 +38,9 @@ A Canvas file node in a linked Canvas that targets the root Canvas is treated
 as redundant export navigation and omitted from that linked page. Single HTML
 already exposes the root through its virtual-page **Canvas** control; package
 subpages receive an equivalent `index.html` link. Subcanvas documents place
-this return row after the page heading and before the viewport. For embedded
-Canvas pages, the redundant outer virtual-page toolbar is hidden; non-Canvas
+the link at the right end of the page-header metadata row beside the node,
+group, connection, and hidden-item counts. For embedded Canvas pages, the
+redundant outer virtual-page toolbar is hidden; non-Canvas
 virtual pages retain it. Textual links to the root remain ordinary content and
 are preserved.
 

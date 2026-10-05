@@ -237,8 +237,9 @@ with the same layout and interactive controls as the overview. Each card shows
 a lightweight diagram preview derived from the target Canvas geometry,
 including groups, nodes, saved colors, and connections. The title and preview
 form one clickable area; no separate action label is needed. In a linked Canvas,
-the **Canvas** link at the upper right, below the page heading and above the
-Canvas content, returns to the overview with one click. A source Canvas file
+the **Canvas** link sits at the right end of the status row containing the node,
+group, connection, and hidden-item counts. It returns to the overview with one
+click. A source Canvas file
 card that points straight back to the overview is
 omitted from the exported subcanvas because this control already provides that
 navigation; the source `.canvas` file remains unchanged.
@@ -248,8 +249,8 @@ subcanvases are exported once, and references that form a cycle remain finite
 and navigable. In a package, linked Canvases become real HTML pages beside
 `index.html`. In a single HTML export, they become virtual pages inside the one
 file. Package and single-HTML subcanvases place the same plain blue **Canvas**
-text link between their heading and Canvas content. Browser Back continues to
-follow the navigation history.
+text link at the right of that status row. Browser Back continues to follow the
+navigation history.
 
 If a linked Canvas cannot be parsed, the normal generic-file fallback is used
 for that target and the rest of the export continues.

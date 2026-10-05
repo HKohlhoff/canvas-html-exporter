@@ -51,6 +51,16 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       color: ${theme.mutedText};
       font-size: 0.95rem;
     }
+    .page-header-meta {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .page-header-meta p {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
     .viewport {
       overflow: auto;
       padding: 16px 24px 28px;
@@ -795,15 +805,6 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     }
     .single-page-toolbar[hidden] {
       display: none;
-    }
-    .canvas-return-row {
-      display: flex;
-      justify-content: flex-end;
-      flex: 0 0 auto;
-      width: 100%;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 24px 4px;
     }
     .canvas-return-link,
     .single-page-canvas-link {

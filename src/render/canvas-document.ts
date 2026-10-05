@@ -16,7 +16,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const foldingInitiallyEnabled = options.foldingInitiallyEnabled === true;
   const exportFormat = options.exportFormat || "package";
   const canvasHomeLink = options.canvasHomeHref
-    ? `<div class="canvas-return-row"><a class="canvas-return-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a></div>`
+    ? `<a class="canvas-return-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a>`
     : "";
   const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
   const initialFoldState = foldingInitiallyEnabled ? options.initialFoldState : undefined;
@@ -175,9 +175,11 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   </div>
   <div class="page-header">
     <h1>${escapeHtml(options.title)}</h1>
-    <p>${canvasCountSummary}<span id="hidden-node-summary" hidden></span></p>
+    <div class="page-header-meta">
+      <p>${canvasCountSummary}<span id="hidden-node-summary" hidden></span></p>
+      ${canvasHomeLink}
+    </div>
   </div>
-  ${canvasHomeLink}
   <div class="viewport">
     <div id="zoom-area-selection" class="zoom-area-selection" hidden></div>
     <div id="zoom-area-hint" class="zoom-area-hint" role="status" hidden>Release to zoom · Esc to cancel</div>
