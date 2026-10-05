@@ -27,6 +27,7 @@ export function buildBrowserRuntime({ exportFormat, options, theme, edgePaletteC
       const singlePageBody = document.getElementById("single-page-body");
       const singlePageToolbar = document.getElementById("single-page-toolbar");
       const singlePageCanvasLink = document.getElementById("single-page-canvas-link");
+      const singlePageBackLink = document.getElementById("single-page-back-link");
       const minimapPanel = document.getElementById("minimap-panel");
       const minimapDragHandle = document.getElementById("minimap-drag-handle");
       const minimapToolbarButton = document.getElementById("minimap-toolbar-button");
@@ -214,11 +215,6 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
       if (contentsCloseButton) {
         contentsCloseButton.addEventListener("click", closeContents);
       }
-      if (contentsOverlay) {
-        contentsOverlay.addEventListener("click", (event) => {
-          if (event.target === contentsOverlay) closeContents();
-        });
-      }
       document.addEventListener("click", (event) => {
         const link = event.target instanceof Element ? event.target.closest("[data-inline-page]") : null;
         if (!link) return;
@@ -232,15 +228,19 @@ ${buildBrowserEdges()}${buildBrowserViewport({ bounds })}${buildBrowserSearch()}
         }
         window.location.hash = href;
       });
-      if (singlePageCanvasLink) {
-        singlePageCanvasLink.addEventListener("click", (event) => {
+      function returnToLocalCanvas(event) {
           event.preventDefault();
           if (window.location.hash) {
             window.location.hash = "";
           } else {
             syncEmbeddedPageFromHash();
           }
-        });
+      }
+      if (singlePageCanvasLink) {
+        singlePageCanvasLink.addEventListener("click", returnToLocalCanvas);
+      }
+      if (singlePageBackLink) {
+        singlePageBackLink.addEventListener("click", returnToLocalCanvas);
       }
       if (exportFormat === "single-html") {
         syncEmbeddedPageFromHash();

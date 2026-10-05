@@ -64,10 +64,19 @@ preparation. A deterministic first-visit traversal turns the Canvas graph into
 a finite navigation hierarchy; shared targets and cycles are not expanded a
 second time. Every Canvas document receives the same hierarchy plus the
 Markdown, PDF-viewer, and link-node pages directly represented by nodes in
-that document. The renderer owns the drawer DOM and interaction. Package links
+that document. The renderer owns the fixed side-panel DOM and interaction;
+opening it adds page padding equal to the panel width so the current view stays
+visible beside it, and closing it restores the full width. Package links
 remain relative files, while links from an embedded single-HTML subcanvas to a
 Canvas target navigate its parent page; local page entries remain inside that
 subcanvas's isolated virtual-page scope.
+
+Package HTML pages exported from a subcanvas receive two explicit destinations:
+**Back** is calculated relative to their owning Canvas page, while **Canvas**
+continues to target `index.html`. In a nested single-HTML page, **Back** clears
+the local virtual-page hash and restores the owning subcanvas; **Canvas**
+navigates the parent document to the root overview. Root-owned pages omit the
+redundant **Back** action.
 
 ## Canvas Folding boundary
 

@@ -16,7 +16,7 @@ type CanvasStyleParameters = {
 
 export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, contentInlineStyleCss, calloutCss, singlePageHeadingCss, singlePageInlineStyleCss, previewInlineStyleCss, previewHeadingCss }: CanvasStyleParameters): string {
   return `
-    :root { ${canvasColorVars} }
+    :root { ${canvasColorVars} --contents-panel-width: min(420px, calc(100vw - 32px)); }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
@@ -24,6 +24,10 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       background: ${theme.bodyBackground};
       color: ${theme.text};
       overflow: auto;
+      transition: padding-left 0.16s ease;
+    }
+    body.contents-open {
+      padding-left: var(--contents-panel-width);
     }
     #canvas-shell {
       display: flex;
@@ -778,17 +782,15 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
     }
     .contents-overlay {
       position: fixed;
-      inset: 0;
+      inset: 0 auto 0 0;
       z-index: 40;
-      display: flex;
-      background: rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(3px);
+      width: var(--contents-panel-width);
     }
     .contents-overlay[hidden] {
       display: none;
     }
     .contents-panel {
-      width: min(420px, calc(100vw - 32px));
+      width: 100%;
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -888,6 +890,7 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       z-index: 12;
       display: flex;
       justify-content: flex-end;
+      gap: 14px;
       margin: 0;
       padding: 32px 32px 0;
       background: transparent;
@@ -901,16 +904,19 @@ export function buildCanvasStyles({ canvasColorVars, theme, bounds, headingCss, 
       white-space: nowrap;
     }
     .canvas-return-link,
+    .single-page-back-link,
     .single-page-canvas-link {
       color: ${theme.link};
       text-decoration: none;
       font-weight: 600;
       white-space: nowrap;
     }
+    .single-page-back-link,
     .single-page-canvas-link {
       font-size: 0.95em;
     }
     .canvas-return-link:hover,
+    .single-page-back-link:hover,
     .single-page-canvas-link:hover {
       text-decoration: underline;
     }

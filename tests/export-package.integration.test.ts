@@ -360,8 +360,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.ok(exportedImage);
     assert.match(exportedMarkdown?.text || "", /<h1>Canvas Titel<\/h1>/);
     assert.match(exportedMarkdown?.text || "", /<a class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
+    assert.doesNotMatch(exportedMarkdown?.text || "", /<a class="md-page-back-link"/);
     assert.match(exportedMarkdown?.text || "", /zweite Notiz/);
-    assert.doesNotMatch(exportedMarkdown?.text || "", /md-page-back-link/);
     assert.match(exportedMarkdown?.text || "", /<a href="[^"]+\.html">zweite Notiz<\/a>/);
     assert.match(exportedMarkdown?.text || "", /<ul><li>Punkt eins<br>\nFortsetzung<\/li><li>Punkt zwei<\/li><\/ul>/);
     assert.match(exportedMarkdown?.text || "", /<p>Normal danach<\/p>/);
@@ -792,7 +792,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
     assert.match(linkHtml, /This website may not allow embedded previews\. Use the link above\./);
     assert.match(linkHtml, /Use the link above if the website blocks embedding or if you want to open the page in its own browser tab\./);
     assert.match(linkHtml, /<a class="link-page-title" href="https:\/\/openai\.com\/index\/"/);
-    assert.doesNotMatch(linkHtml, /link-page-back/);
+    assert.doesNotMatch(linkHtml, /<a class="link-page-back-link"/);
     assert.doesNotMatch(linkHtml, /class="link-page-action"/);
     assert.match(linkHtml, /<iframe id="link-preview-frame" src="https:\/\/openai\.com\/index\/" title="https:\/\/openai\.com\/index\/" loading="lazy"><\/iframe>/);
     assert.match(linkHtml, /window\.setTimeout\(\(\) => \{/);
@@ -987,6 +987,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       const backToRoot = childPage.data.nodes.find((node) => node.id === "root-card");
       const grandCard = childPage.data.nodes.find((node) => node.id === "grand-card");
       const rootLink = childPage.data.nodes.find((node) => node.id === "root-link");
+      const chapter = childPage.data.nodes.find((node) => node.id === "chapter");
       assert.equal(backToRoot, undefined);
       assert.equal(childPage.options.canvasHomeHref, exportFormat === "package" ? "index.html" : "#");
       assert.equal(childPage.options.canvasHomeTarget, exportFormat === "single-html" ? "_parent" : undefined);
@@ -1015,6 +1016,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       if (exportFormat === "single-html") {
         assert.match(childHtml, /class="canvas-return-link" href="#" target="_parent">Canvas<\/a>/);
         assert.match(childHtml, /class="contents-link" href="#" target="_parent">root<\/a>/);
+        assert.match(childHtml, /id="single-page-back-link" class="single-page-back-link" href="#">Back<\/a>/);
+        assert.match(childHtml, /class="single-page-canvas-link" href="#" target="_parent">Canvas<\/a>/);
         for (const page of result.canvasPages) {
           const pageHtml = await convertCanvasToHtml(page.data, page.options);
           const embedded = result.options.embeddedPages?.find((entry) => entry.id === page.pageId);
@@ -1032,7 +1035,10 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         assert.match(grandPage?.outputPath || "", /^out\/root\/canvas-\d{3}-grand\.html$/);
         assert.doesNotMatch(childHtml, /target="_parent"/);
         assert.match(childHtml, /class="canvas-return-link" href="index\.html">Canvas<\/a>/);
-        assert.match(childHtml, /\.canvas-return-link,\s+\.single-page-canvas-link \{\s+color: #1967d2;/);
+        const chapterHtml = files.get(`out/root/${chapter?.exportHtmlPath || ""}`)?.text || "";
+        assert.match(chapterHtml, /class="md-page-back-link" href="\.\.\/\.\.\/canvas-\d{3}-child\.html">Back<\/a>/);
+        assert.match(chapterHtml, /class="md-page-canvas-link" href="\.\.\/\.\.\/index\.html">Canvas<\/a>/);
+        assert.match(childHtml, /\.canvas-return-link,\s+\.single-page-back-link,\s+\.single-page-canvas-link \{\s+color: #1967d2;/);
       }
     });
 

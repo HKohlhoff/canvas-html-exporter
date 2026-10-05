@@ -21,6 +21,10 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     : "";
   const embeddedPages = Array.isArray(options.embeddedPages) ? options.embeddedPages : [];
   const contentsHtml = renderContents(options.contents);
+  const singlePageNavigation = options.canvasHomeHref
+    ? `<a id="single-page-back-link" class="single-page-back-link" href="#">Back</a>
+      <a class="single-page-canvas-link" href="${escapeAttribute(options.canvasHomeHref)}"${options.canvasHomeTarget ? ` target="${options.canvasHomeTarget}"` : ""}>Canvas</a>`
+    : `<a id="single-page-canvas-link" class="single-page-canvas-link" href="#">Canvas</a>`;
   const initialFoldState = foldingInitiallyEnabled ? options.initialFoldState : undefined;
   const hasImportedFolding = Boolean(
     initialFoldState
@@ -134,7 +138,7 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
   const embeddedPagesHtml = exportFormat === "single-html" && embeddedPages.length
     ? `<section id="single-page-view" class="single-page-view" hidden>
     <div id="single-page-toolbar" class="single-page-toolbar">
-      <a id="single-page-canvas-link" class="single-page-canvas-link" href="#">Canvas</a>
+      ${singlePageNavigation}
     </div>
     <main id="single-page-body" class="single-page-body"></main>
   </section>

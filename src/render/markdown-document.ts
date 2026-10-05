@@ -13,6 +13,7 @@ export function buildMarkdownDocumentHtml(
   inlineStyleColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
   canvasHref?: string,
+  backHref?: string,
 ): string {
   const theme = getTheme(darkMode);
   const calloutCss = buildCalloutCss(calloutColors);
@@ -28,14 +29,17 @@ export function buildMarkdownDocumentHtml(
     .md-page-toolbar {
       display: flex;
       justify-content: flex-end;
+      gap: 14px;
       margin-bottom: 1em;
     }
+    .md-page-back-link,
     .md-page-canvas-link {
       color: ${theme.link};
       text-decoration: none;
       font-size: 0.95em;
       font-weight: 600;
     }
+    .md-page-back-link:hover,
     .md-page-canvas-link:hover {
       text-decoration: underline;
     }
@@ -175,6 +179,7 @@ export function buildMarkdownDocumentHtml(
 <body>
   <main class="md-page">
     <div class="md-page-toolbar">
+      ${backHref ? `<a class="md-page-back-link" href="${escapeHtml(backHref)}">Back</a>` : ""}
       ${canvasHref ? `<a class="md-page-canvas-link" href="${escapeHtml(canvasHref)}">Canvas</a>` : ""}
     </div>
     <h1>${escapeHtml(title)}</h1>

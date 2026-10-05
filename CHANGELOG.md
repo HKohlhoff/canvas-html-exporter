@@ -18,10 +18,13 @@ first.
   used by single HTML rather than as an extra outlined button; both render
   **(back to: Canvas)** directly after the node/group/connection status with a
   20 px gap, with only **Canvas** linked.
-- Add a **Contents** drawer to exported Canvas pages. It shows a cycle-safe
+- Add a fixed **Contents** panel to exported Canvas pages. It keeps the current
+  page visible beside the navigation, shows a cycle-safe
   Canvas hierarchy, highlights the current Canvas, and lists the Markdown,
   PDF-viewer, and link-node HTML pages directly contained in that Canvas in
   both package and single-HTML exports.
+- Add **Back** beside **Canvas** on HTML pages owned by a subcanvas, returning
+  to that subcanvas while **Canvas** continues to open the main overview.
 
 ### Development
 

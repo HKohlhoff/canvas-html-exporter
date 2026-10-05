@@ -41,12 +41,18 @@ single HTML:
 - follow a Canvas wiki link from a text or Markdown node as well as a Canvas
   file-node card;
 - use browser Back and Forward across overview and subcanvas transitions;
-- open **Contents** on the overview and every subcanvas; confirm the Canvas
+- open **Contents** on the overview and every subcanvas; confirm it remains a
+  fixed left panel, the current page stays visible beside it and regains the
+  full width after closing; confirm the Canvas
   hierarchy is finite, the current Canvas is highlighted, shared targets are
   listed once, and the current Canvas's Markdown, PDF-viewer, and link-node
   cards appear under **Pages in this canvas** and open correctly;
-- close **Contents** with **Close**, the shaded background, and `Esc`; use Tab
-  and Shift+Tab to confirm focus remains inside the open drawer;
+- close **Contents** with **Close** and `Esc`; use Tab
+  and Shift+Tab to confirm focus remains inside the open panel;
+- from a subcanvas open a Markdown page, PDF viewer, and link page; confirm
+  **Back** returns to that subcanvas and **Canvas** returns to the root
+  overview. Repeat in single HTML and confirm a root-owned page has no
+  redundant **Back** link;
 - confirm zoom, pan, fit/reset, search, minimap and folding inside each linked
   Canvas;
 - confirm a shared target is present once and every reference opens it;

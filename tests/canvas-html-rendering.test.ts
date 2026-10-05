@@ -84,7 +84,7 @@ await test("renders markdown file nodes with title link and preview", async () =
   assert.match(html, /class="md-card-preview"><p>Vorschau<\/p>/);
 });
 
-await test("renders an accessible contents drawer with canvas and local page navigation", async () => {
+await test("renders an accessible fixed contents panel with canvas and local page navigation", async () => {
   const html = await convertCanvasToHtml({ nodes: [], edges: [] }, {
     ...baseOptions,
     exportFormat: "single-html",
@@ -105,6 +105,9 @@ await test("renders an accessible contents drawer with canvas and local page nav
   assert.match(html, /href="#page-canvas-c1" data-inline-page="canvas-c1">Act I<\/a>/);
   assert.match(html, /<h3>Pages in this canvas<\/h3>[\s\S]+href="#page-p1" data-inline-page="p1">Chapter 1<\/a>/);
   assert.match(html, /function trapContentsFocus\(event\)/);
+  assert.match(html, /body\.contents-open \{\s+padding-left: var\(--contents-panel-width\)/);
+  assert.match(html, /document\.body\.classList\.add\("contents-open"\)/);
+  assert.match(html, /document\.body\.classList\.remove\("contents-open"\)/);
   assert.match(html, /if \(event\.key === "Escape" && contentsOverlay && !contentsOverlay\.hidden\)/);
   const runtime = html.match(/<script>([\s\S]+)<\/script>/)?.[1] || "";
   assert.doesNotThrow(() => new vm.Script(runtime));

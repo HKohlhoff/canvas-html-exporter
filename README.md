@@ -58,7 +58,7 @@ A **demo-vault** with the complete content showcase can be downloaded from the
 - Show Markdown file nodes with a preview and export them as standalone HTML pages or embedded single-file pages
 - Follow linked Canvas file nodes and Canvas wiki links recursively, with cycle-safe navigation between overview and subcanvases
 - Show linked Canvas cards with an offline diagram preview of their groups, nodes, colors, and connections
-- Open a portable contents drawer with the Canvas hierarchy and the HTML pages directly contained in the current Canvas
+- Open a portable fixed contents panel with the Canvas hierarchy and the HTML pages directly contained in the current Canvas
 - Rewrite internal Markdown links, wiki links, heading links, section embeds, and block references
 - Copy assets into package exports or inline them into single HTML exports
 - Support image, PDF, audio, video, and generic file nodes
@@ -258,7 +258,9 @@ for that target and the rest of the export continues.
 
 ### Exported page contents
 
-Use **Contents** in the Canvas toolbar to open a navigation drawer. The
+Use **Contents** in the Canvas toolbar to open a fixed navigation panel on the
+left. The current page remains visible beside it and returns to the full width
+when the panel is closed. The
 **Canvases** section shows the overview and recursively linked subcanvases as a
 finite hierarchy; shared targets and cycles are listed only once, and the
 current Canvas is highlighted. **Pages in this canvas** lists the Markdown,
@@ -269,8 +271,13 @@ Canvas card.
 The drawer uses real relative links in a package and virtual page links in a
 single HTML export. Each embedded subcanvas keeps its own local page list, so
 its Markdown and other HTML pages open inside the correct embedded page scope.
-Close the drawer with **Close**, by selecting the shaded background, or with
-`Esc`; keyboard focus remains inside it while it is open.
+Close the panel with **Close** or `Esc`; keyboard focus remains inside it while
+it is open.
+
+HTML pages opened from a linked subcanvas show **Back** and **Canvas** together.
+**Back** returns to the owning subcanvas, while **Canvas** returns directly to
+the main overview. Pages opened from the main overview keep the single
+**Canvas** link because both destinations would otherwise be identical.
 
 ## Export Formats
 

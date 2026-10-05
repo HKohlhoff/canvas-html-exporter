@@ -12,12 +12,14 @@ export function buildBrowserContents(): string {
         if (!contentsOverlay) return;
         contentsReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         contentsOverlay.hidden = false;
+        document.body.classList.add("contents-open");
         contentsCloseButton?.focus();
       }
 
       function closeContents() {
         if (!contentsOverlay || contentsOverlay.hidden) return;
         contentsOverlay.hidden = true;
+        document.body.classList.remove("contents-open");
         if (contentsReturnFocus && contentsReturnFocus.isConnected && !contentsReturnFocus.hasAttribute("disabled")) {
           contentsReturnFocus.focus({ preventScroll: true });
         }

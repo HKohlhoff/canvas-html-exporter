@@ -429,6 +429,13 @@ function canvasNavigationTarget(ctx: MarkdownContext): "_parent" | undefined {
     : undefined;
 }
 
+function getPackageBackHref(ctx: MarkdownContext, currentHtmlPath: string): string | undefined {
+  if (ctx.exportFormat !== "package" || ctx.canvasFile.path === ctx.rootCanvasPath) return undefined;
+  const ownerCanvasHref = ctx.canvasRegistry.get(ctx.canvasFile.path)?.href;
+  if (!ownerCanvasHref) return undefined;
+  return normalizeExportHref(getHrefForMarkdownPage(currentHtmlPath, ownerCanvasHref));
+}
+
 async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<CanvasNode | null> {
   const nodeType = (node.type || "").toLowerCase();
 
@@ -558,7 +565,9 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
       : exportPath.split("/").pop() || "";
     const viewerName = uniqueOutputName(ctx, `${file.basename}-viewer`, "html");
     const viewerPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, viewerName);
-    const canvasHrefForViewer = normalizeExportHref(getHrefForMarkdownPage(normalizeExportHref(`assets/files/${viewerName}`), "index.html"));
+    const viewerRel = normalizeExportHref(`assets/files/${viewerName}`);
+    const canvasHrefForViewer = normalizeExportHref(getHrefForMarkdownPage(viewerRel, "index.html"));
+    const backHrefForViewer = getPackageBackHref(ctx, viewerRel);
     const viewerHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -571,13 +580,13 @@ async function prepareNode(ctx: MarkdownContext, node: CanvasNode): Promise<Canv
   <style>
     html,body{margin:0;padding:0;height:100%;}
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f5f8;color:#1b2733;}
-    .pdf-viewer-toolbar{display:flex;justify-content:flex-end;padding:12px 16px;border-bottom:1px solid #d6dde7;background:#fff;}
-    .pdf-viewer-canvas-link{color:#1967d2;text-decoration:none;font-size:0.95em;font-weight:600;}
-    .pdf-viewer-canvas-link:hover{text-decoration:underline;}
+    .pdf-viewer-toolbar{display:flex;justify-content:flex-end;gap:14px;padding:12px 16px;border-bottom:1px solid #d6dde7;background:#fff;}
+    .pdf-viewer-back-link,.pdf-viewer-canvas-link{color:#1967d2;text-decoration:none;font-size:0.95em;font-weight:600;}
+    .pdf-viewer-back-link:hover,.pdf-viewer-canvas-link:hover{text-decoration:underline;}
     iframe{display:block;width:100%;height:calc(100vh - 53px);border:none;}
   </style>
 </head>
-<body><div class="pdf-viewer-toolbar"><a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHrefForViewer)}">Canvas</a></div><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
+<body><div class="pdf-viewer-toolbar">${backHrefForViewer ? `<a class="pdf-viewer-back-link" href="${escapeHtmlAttr(backHrefForViewer)}">Back</a>` : ""}<a class="pdf-viewer-canvas-link" href="${escapeHtmlAttr(canvasHrefForViewer)}">Canvas</a></div><iframe src="${escapeHtmlAttr(pdfFilename)}" title="${escapeHtmlAttr(file.basename)}"></iframe></body>
 </html>`;
     if (ctx.exportFormat !== "single-html") {
       await writeTextFile(ctx.app, viewerPath, viewerHtml, ctx.outputMode);
@@ -665,7 +674,8 @@ async function exportLinkNodePage(ctx: MarkdownContext, node: CanvasNode): Promi
   const outputPath = joinOutputPath(ctx.outputMode, ctx.assetsFilesDir, outputName);
   const rel = normalizeExportHref(toExportRelativePath(outputPath, ctx.outputRoot));
   const canvasHref = normalizeExportHref(getHrefForMarkdownPage(rel, "index.html"));
-  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme, canvasHref);
+  const backHref = getPackageBackHref(ctx, rel);
+  const html = buildLinkDocumentHtml(title, url, ctx.darkMode, ctx.canvasColors, ctx.highlightingTheme, canvasHref, backHref);
   await writeTextFile(ctx.app, outputPath, html, ctx.outputMode);
   return rel;
 }
@@ -857,6 +867,7 @@ async function renderMarkdownFileToHtml(
     }
     const title = (pageTitle || file.basename || file.name).trim();
     const canvasHref = getHrefForMarkdownPage(rel, "index.html");
+    const backHref = getPackageBackHref(ctx, rel);
     const htmlDoc = buildMarkdownDocumentHtml(
       title,
       htmlBody,
@@ -867,6 +878,7 @@ async function renderMarkdownFileToHtml(
       ctx.inlineStyleColors,
       ctx.highlightingTheme,
       canvasHref,
+      backHref,
     );
     await writeTextFile(ctx.app, outputPath, htmlDoc, ctx.outputMode);
     return rel;
@@ -1355,6 +1367,7 @@ function buildLinkDocumentHtml(
   canvasColors?: Record<string, string>,
   highlightingTheme?: HighlightingThemeChoice,
   canvasHref?: string,
+  backHref?: string,
 ): string {
   const theme = getLinkPageTheme(darkMode);
   const safeTitle = escapeHtmlAttr(url || title || "Link");
@@ -1408,12 +1421,19 @@ function buildLinkDocumentHtml(
     .link-page-title:hover {
       text-decoration: underline;
     }
+    .link-page-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .link-page-back-link,
     .link-page-canvas-link {
       color: ${theme.text};
       text-decoration: none;
       font-weight: 600;
       white-space: nowrap;
     }
+    .link-page-back-link:hover,
     .link-page-canvas-link:hover {
       text-decoration: underline;
     }
@@ -1492,7 +1512,10 @@ function buildLinkDocumentHtml(
     <div class="link-page-nav">
       <a class="link-page-title" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
     </div>
-    ${canvasHref ? `<a class="link-page-canvas-link" href="${escapeHtmlAttr(canvasHref)}">Canvas</a>` : ""}
+    <div class="link-page-nav-links">
+      ${backHref ? `<a class="link-page-back-link" href="${escapeHtmlAttr(backHref)}">Back</a>` : ""}
+      ${canvasHref ? `<a class="link-page-canvas-link" href="${escapeHtmlAttr(canvasHref)}">Canvas</a>` : ""}
+    </div>
   </div>
   <div id="link-status" class="link-page-status"></div>
   <div class="link-page-body">
