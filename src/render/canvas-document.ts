@@ -6,6 +6,7 @@ import { getBounds, normalizeEdgeEnd, normalizeEdgeLineStyle, normalizeEdgeWidth
 import { escapeAttribute, escapeHtml } from "./html";
 import { buildExporterBuildMeta, EXPORTER_SIGNATURE } from "./metadata";
 import { buildSearchEntry, renderGroupTitle, renderMinimapNode, renderNode } from "./nodes";
+import { deduplicateSearchEntries } from "./search-entries";
 import { buildCalloutCss, buildCanvasColorVariables, buildCanvasEdgeColorMap, buildHeadingColorCss, buildInlineStyleCss, getTheme } from "./theme";
 import type { CanvasData, ExportOptions } from "./types";
 
@@ -106,10 +107,16 @@ export async function convertCanvasToHtml(data: CanvasData, options: ExportOptio
     label: edge.label ?? "",
     color: edge.color ?? "",
   }));
-  const searchEntries = nodes
-    .map((node) => buildSearchEntry(node, bounds.offsetX, bounds.offsetY))
-    .filter((entry) => entry.text)
-    .concat(options.additionalSearchEntries || []);
+  const searchEntries = deduplicateSearchEntries(
+    nodes
+      .map((node) => buildSearchEntry(node, bounds.offsetX, bounds.offsetY))
+      .filter((entry) => entry.text)
+      .concat(options.additionalSearchEntries || []),
+  ).map((entry) => {
+    const runtimeEntry = { ...entry };
+    delete runtimeEntry.dedupeKey;
+    return runtimeEntry;
+  });
 
   const canvasColorVars = buildCanvasColorVariables(options.canvasColors);
   const minimapHtml = showMinimap

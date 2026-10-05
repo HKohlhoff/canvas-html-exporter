@@ -1511,6 +1511,21 @@ await test("renders descendant search results as navigable page entries", async 
   assert.match(html, /window\.setTimeout\(\(\) => focusNode\(initialSearchNodeId\.trim\(\)\), 0\)/);
 });
 
+await test("lists a referenced file only once in search", async () => {
+  const html = await convertCanvasToHtml({
+    name: "Doppelte Datei",
+    nodes: [
+      { id: "note-a", type: "file", file: "notes/identity.md", fileKind: "markdown", displayName: "Identität", x: 0, y: 0, width: 200, height: 100 },
+      { id: "note-b", type: "file", file: "notes/identity.md", fileKind: "markdown", displayName: "Identität erneut", x: 240, y: 0, width: 200, height: 100 },
+    ],
+    edges: [],
+  }, baseOptions);
+
+  assert.match(html, /"id":"note-a"/);
+  assert.doesNotMatch(html, /"id":"note-b"/);
+  assert.doesNotMatch(html, /dedupeKey/);
+});
+
 await test("omits minimap when disabled", async () => {
   const data: CanvasData = {
     name: "Ohne Mini",

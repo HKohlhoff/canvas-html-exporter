@@ -95,7 +95,8 @@ controls above the Canvas:
   subordinate results open the matching card's HTML page directly when it has
   one. Results without a separate page open their owning Canvas and bring the
   card into view. Markdown cards contribute the full note text to the index,
-  not only their visible preview. Tab and Shift+Tab stay inside
+  not only their visible preview. Multiple cards referencing the same Vault
+  file produce one result, preferring the current Canvas. Tab and Shift+Tab stay inside
   the open search dialog; closing it returns focus to the control used to open
   it.
 

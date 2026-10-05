@@ -61,6 +61,9 @@ first.
 - Preserve and reopen Search after using **Back** or **Canvas** from a search
   result page in both export formats. Fit a newly revealed embedded subcanvas
   only after it is visible, avoiding the compressed return view in single HTML.
+- Deduplicate Search results by their referenced Vault file, preferring a card
+  in the current Canvas over copies in subordinate Canvases while keeping
+  independent text cards as separate results.
 
 ### Development
 

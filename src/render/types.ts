@@ -107,6 +107,7 @@ export interface SearchEntry {
   text: string;
   kindLabel: string;
   positionLabel: string;
+  dedupeKey?: string;
   focusNodeId?: string;
   openHref?: string;
   openTarget?: "_parent";

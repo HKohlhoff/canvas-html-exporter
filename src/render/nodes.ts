@@ -140,6 +140,9 @@ export function buildSearchEntry(
   const title = parts[0] || defaultNodeTitle(node);
   const snippet = parts.slice(1).join(" ").slice(0, 220) || title;
   const fullSearchText = normalizeSearchText(node.searchText);
+  const sourceFile = (node.type || "").toLowerCase() === "file"
+    ? String(node.file || "").trim()
+    : "";
   return {
     id: node.id,
     focusNodeId: node.id,
@@ -148,6 +151,7 @@ export function buildSearchEntry(
     text: [...parts, fullSearchText].filter(Boolean).join(" ").trim(),
     kindLabel: humanizeNodeKind(node),
     positionLabel: `x ${Math.round(frame.left)} · y ${Math.round(frame.top)}`,
+    dedupeKey: sourceFile ? `file:${sourceFile}` : undefined,
     openHref: resolveNodeOpenHref(node),
     openTarget: node.canvasNavigationTarget,
   };
