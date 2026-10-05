@@ -6,6 +6,8 @@ first.
 
 ## [Unreleased]
 
+## [1.5.0] – 2026-10-05
+
 ### Added
 
 - Export Canvas file nodes and Canvas wiki links recursively. Package exports
