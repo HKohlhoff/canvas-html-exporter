@@ -151,13 +151,23 @@ export function buildPackagePageNavigation(
             navigationPageStates = {};
           }
         }
+        const viewportValue = params.get("canvasViews");
+        if (viewportValue) {
+          try {
+            packageViewportStates = normalizePackageViewportStates(JSON.parse(viewportValue));
+          } catch {
+            packageViewportStates = {};
+          }
+        }
         if (!window.name.startsWith(navigationWindowStatePrefix)) return;
         try {
           const stored = JSON.parse(window.name.slice(navigationWindowStatePrefix.length));
           if (!stored || stored.scope !== getPackageNavigationScope()) return;
           if (typeof stored.globalOpen === "boolean") globalNavigationOpen = stored.globalOpen;
           navigationPageStates = normalizeNavigationPageStates(stored.pageStates);
-          packageViewportStates = normalizePackageViewportStates(stored.viewportStates);
+          if (Object.prototype.hasOwnProperty.call(stored, "viewportStates")) {
+            packageViewportStates = normalizePackageViewportStates(stored.viewportStates);
+          }
         } catch {
           // Ignore unrelated or malformed window state.
         }
@@ -170,6 +180,12 @@ export function buildPackagePageNavigation(
           url.searchParams.set("navigationPages", JSON.stringify(Object.fromEntries(pageEntries)));
         } else {
           url.searchParams.delete("navigationPages");
+        }
+        const viewportEntries = Object.entries(packageViewportStates);
+        if (viewportEntries.length) {
+          url.searchParams.set("canvasViews", JSON.stringify(Object.fromEntries(viewportEntries)));
+        } else {
+          url.searchParams.delete("canvasViews");
         }
       }
 

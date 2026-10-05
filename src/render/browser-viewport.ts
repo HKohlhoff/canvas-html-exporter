@@ -52,7 +52,7 @@ export function buildBrowserViewport({ bounds }: Pick<BrowserRuntimeParameters, 
           left: viewport.scrollLeft,
           top: viewport.scrollTop,
         };
-        writePackageWindowState();
+        storePackageNavigationState();
       }
 
       function storePackageViewportBeforeNavigation(event) {

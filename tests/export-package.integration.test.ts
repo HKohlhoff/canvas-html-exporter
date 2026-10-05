@@ -1063,6 +1063,8 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
         assert.match(chapterHtml, /const navigationPageId = "c\d+:page:assets\/files\/\d+_chapter\.html"/);
         assert.match(chapterHtml, /hasLocalState \? navigationPageStates\[navigationPageId\] === true : false/);
         assert.match(chapterHtml, /viewportStates: packageViewportStates/);
+        assert.match(chapterHtml, /const viewportValue = params\.get\("canvasViews"\)/);
+        assert.match(chapterHtml, /url\.searchParams\.set\("canvasViews", JSON\.stringify/);
         assert.match(chapterHtml, /class="contents-link" href="\.\.\/\.\.\/index\.html">root<\/a>/);
         assert.doesNotThrow(() => new vm.Script(chapterHtml.match(/<script>([\s\S]+)<\/script>/)?.[1] || ""));
         assert.match(childHtml, /\.canvas-return-link,\s+\.single-page-back-link,\s+\.single-page-canvas-link \{\s+color: #1967d2;/);

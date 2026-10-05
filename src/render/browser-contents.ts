@@ -52,12 +52,21 @@ export function buildBrowserContents(): string {
         if (globalValue === "open") globalNavigationOpen = true;
         if (globalValue === "closed") globalNavigationOpen = false;
         const pageValue = params.get("navigationPages");
-        if (!pageValue) return;
-        try {
-          const parsed = JSON.parse(pageValue);
-          navigationPageStates = normalizeNavigationPageStates(parsed);
-        } catch {
-          navigationPageStates = {};
+        if (pageValue) {
+          try {
+            const parsed = JSON.parse(pageValue);
+            navigationPageStates = normalizeNavigationPageStates(parsed);
+          } catch {
+            navigationPageStates = {};
+          }
+        }
+        const viewportValue = params.get("canvasViews");
+        if (viewportValue) {
+          try {
+            packageViewportStates = normalizePackageViewportStates(JSON.parse(viewportValue));
+          } catch {
+            packageViewportStates = {};
+          }
         }
       }
 
@@ -76,7 +85,9 @@ export function buildBrowserContents(): string {
           if (!stored || stored.scope !== getPackageNavigationScope()) return;
           if (typeof stored.globalOpen === "boolean") globalNavigationOpen = stored.globalOpen;
           navigationPageStates = normalizeNavigationPageStates(stored.pageStates);
-          packageViewportStates = normalizePackageViewportStates(stored.viewportStates);
+          if (Object.prototype.hasOwnProperty.call(stored, "viewportStates")) {
+            packageViewportStates = normalizePackageViewportStates(stored.viewportStates);
+          }
         } catch {
           // Ignore unrelated or malformed window state.
         }
@@ -99,6 +110,12 @@ export function buildBrowserContents(): string {
           url.searchParams.set("navigationPages", JSON.stringify(Object.fromEntries(pageEntries)));
         } else {
           url.searchParams.delete("navigationPages");
+        }
+        const viewportEntries = Object.entries(packageViewportStates);
+        if (viewportEntries.length) {
+          url.searchParams.set("canvasViews", JSON.stringify(Object.fromEntries(viewportEntries)));
+        } else {
+          url.searchParams.delete("canvasViews");
         }
       }
 
