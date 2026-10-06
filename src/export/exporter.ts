@@ -22,7 +22,8 @@ import { buildUniqueOutputName, normalizeFolder, safeSegment, toExportRelativePa
 import { normalizeCanvasData, shouldRewriteInternalTarget } from "./canvas-data";
 import { safeNavigationUrl, safeWebPreviewUrl, embedSizeAttributes, normalizeWikiTarget, parseWikiReference, splitTargetSuffix } from "../helpers/link-helpers";
 import { getHrefForMarkdownPage } from "../helpers/path-helpers";
-import { buildPreviewText } from "../helpers/preview-helpers";
+import { shouldShowInlineTitle } from "../helpers/obsidian-config";
+import { buildMarkdownSearchText, buildPreviewText } from "../helpers/preview-helpers";
 import type { ExportFormatChoice } from "../settings";
 import type { CanvasFoldState } from "../folding/types";
 import { filterCanvasFoldState } from "../folding/export-state";
@@ -82,6 +83,7 @@ type MarkdownContext = {
   assetsFilesDir: string;
   assetsImagesDir: string;
   darkMode: boolean;
+  showInlineTitle: boolean;
   highlightingTheme?: HighlightingThemeChoice;
   fileMap: Map<string, string>;
   htmlMap: Map<string, string>;
@@ -240,6 +242,7 @@ export async function exportCanvasPackage(
     assetsFilesDir: filesDir,
     assetsImagesDir: imagesDir,
     darkMode: settings.darkMode,
+    showInlineTitle: shouldShowInlineTitle(app),
     highlightingTheme: settings.highlightingTheme,
     fileMap: new Map<string, string>(),
     htmlMap: new Map<string, string>(),
@@ -934,7 +937,7 @@ async function renderMarkdownFileToHtml(
     if (ctx.exportFormat === "single-html") {
       const title = (pageTitle || file.basename || file.name).trim();
       const page = ctx.singleHtmlPages.find((entry) => `#page-${entry.id}` === rel);
-      if (page) page.bodyHtml = buildSingleHtmlMarkdownPageBody(title, htmlBody);
+      if (page) page.bodyHtml = buildSingleHtmlMarkdownPageBody(title, htmlBody, ctx.showInlineTitle);
       return rel;
     }
     const title = (pageTitle || file.basename || file.name).trim();
@@ -957,6 +960,7 @@ async function renderMarkdownFileToHtml(
         backHref,
         contents,
         navigationPageId,
+        ctx.showInlineTitle,
       ),
     });
     return rel;
@@ -1289,7 +1293,7 @@ async function buildMarkdownPreview(ctx: MarkdownContext, file: TFile): Promise<
     html = await markdownToHtml(previewSource, { darkMode: ctx.darkMode, highlightingTheme: ctx.highlightingTheme });
   }
 
-  return { text, html, searchText: raw };
+  return { text, html, searchText: buildMarkdownSearchText(raw) };
 }
 
 async function copyVaultFile(ctx: MarkdownContext, file: TFile, kind: "image" | "file"): Promise<string> {
@@ -1773,8 +1777,9 @@ function buildLinkDocumentHtml(
 </html>`;
 }
 
-function buildSingleHtmlMarkdownPageBody(title: string, bodyHtml: string): string {
-  return `<article class="md-page"><h1>${escapeHtml(title)}</h1>${bodyHtml}</article>`;
+function buildSingleHtmlMarkdownPageBody(title: string, bodyHtml: string, showInlineTitle: boolean): string {
+  const inlineTitle = showInlineTitle ? `<h1>${escapeHtml(title)}</h1>` : "";
+  return `<article class="md-page">${inlineTitle}${bodyHtml}</article>`;
 }
 
 function buildSingleHtmlLinkPageBody(title: string, url: string): string {

@@ -449,6 +449,24 @@ await test("renders standalone markdown documents with wrapper and title", () =>
   assert.match(html, /highlightTarget\.classList\.add\("target-highlight"\)/);
 });
 
+await test("omits only the generated inline title when disabled", () => {
+  const distinct = buildMarkdownDocumentHtml(
+    "File name", "<h1>Content heading</h1>", true,
+    undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, false,
+  );
+  assert.match(distinct, /<title>File name<\/title>/);
+  assert.doesNotMatch(distinct, /<h1>File name<\/h1>/);
+  assert.match(distinct, /<h1>Content heading<\/h1>/);
+
+  const equal = buildMarkdownDocumentHtml(
+    "Same title", "<h1>Same title</h1>", true,
+    undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, false,
+  );
+  assert.equal((equal.match(/<h1>Same title<\/h1>/g) || []).length, 1);
+});
+
 await test("applies exported heading colors to markdown views", async () => {
   const html = await convertCanvasToHtml(
     {
@@ -1412,6 +1430,7 @@ await test("renders search overlay and toolbar button when enabled", async () =>
     name: "Suche",
     nodes: [
       { id: "a", type: "text", x: 0, y: 0, width: 240, height: 120, text: "Alpha Beta Gamma" },
+      { id: "g", type: "group", x: 0, y: 180, width: 240, height: 120, label: "Korb Gruppe" },
       { id: "b", type: "file", x: 280, y: 0, width: 280, height: 160, fileKind: "markdown", displayName: "Suche Notiz", previewText: "Enthaelt Beta und Delta", canvasHref: "assets/files/suche-notiz.html" },
     ],
     edges: [],
@@ -1444,7 +1463,9 @@ await test("renders search overlay and toolbar button when enabled", async () =>
   assert.match(html, /Press Enter to jump to the active result/);
   assert.match(html, /window\.openSearch = openSearch/);
   assert.match(html, /event\.key === "\/"/);
-  assert.match(html, /"title":"Alpha Beta Gamma"/);
+  assert.match(html, /"title":"Suche Notiz"/);
+  assert.doesNotMatch(html, /"text":"Alpha Beta Gamma"/);
+  assert.doesNotMatch(html, /"text":"Korb Gruppe"/);
   assert.match(html, /"openHref":"assets\/files\/suche-notiz\.html"|"openHref":"assets\/files\//);
   assert.match(html, /title\.className = "search-result-title"/);
   assert.match(html, /result\.append\(title, metaEl, snippetEl\)/);

@@ -125,6 +125,8 @@ export function buildSearchEntry(
   offsetY: number,
 ): SearchEntry {
   const frame = getNodeFrame(node, offsetX, offsetY);
+  const nodeType = (node.type || "").toLowerCase();
+  const isSearchableFile = nodeType === "file" && node.fileKind !== "canvas";
   const previewText = node.previewHtml
     ? normalizeSearchText(htmlToSearchText(node.previewHtml))
     : normalizeSearchText(node.previewText);
@@ -140,7 +142,12 @@ export function buildSearchEntry(
   const title = parts[0] || defaultNodeTitle(node);
   const snippet = parts.slice(1).join(" ").slice(0, 220) || title;
   const fullSearchText = normalizeSearchText(node.searchText);
-  const sourceFile = (node.type || "").toLowerCase() === "file"
+  const isMarkdownFile = nodeType === "file" && node.fileKind === "markdown";
+  const markdownContent = node.searchText === undefined ? previewText : fullSearchText;
+  const searchableParts = isMarkdownFile
+    ? [normalizeSearchText(node.displayName), markdownContent].filter(Boolean)
+    : [...parts, fullSearchText].filter(Boolean);
+  const sourceFile = nodeType === "file"
     ? String(node.file || "").trim()
     : "";
   return {
@@ -148,7 +155,7 @@ export function buildSearchEntry(
     focusNodeId: node.id,
     title,
     snippet,
-    text: [...parts, fullSearchText].filter(Boolean).join(" ").trim(),
+    text: isSearchableFile ? searchableParts.join(" ").trim() : "",
     kindLabel: humanizeNodeKind(node),
     positionLabel: `x ${Math.round(frame.left)} · y ${Math.round(frame.top)}`,
     dedupeKey: sourceFile ? `file:${sourceFile}` : undefined,

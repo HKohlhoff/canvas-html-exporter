@@ -11,19 +11,12 @@ import { openCurrentReleaseNotes } from "./ui/release-notes";
 import { openPluginReadme } from "./ui/readme";
 import { collectCanvasColorKeys } from "./export/canvas-data";
 import { escapeAttribute } from "./render/html";
+import { selectDistinctHeadingColors } from "./helpers/heading-colors";
 
 type CanvasColorMap = Record<string, string>;
 type CalloutColorMap = Record<string, string>;
 type HeadingColorMap = Record<string, string>;
 type InlineStyleColorMap = Record<string, string>;
-const FALLBACK_HEADING_COLORS: HeadingColorMap = {
-  h1: "#e63242",
-  h2: "#fa8d3e",
-  h3: "#f9c74f",
-  h4: "#56ae6c",
-  h5: "#04a5e5",
-  h6: "#9c6bae",
-};
 
 export default class CanvasHtmlExporterPlugin extends Plugin {
   settings: PluginSettings = DEFAULT_SETTINGS;
@@ -86,7 +79,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     try {
       const canvasColors = this.readCanvasPaletteColors();
       const calloutColors = this.readCalloutColors();
-      const headingColors = this.readHeadingColors(canvasColors);
+      const headingColors = this.readHeadingColors();
       const inlineStyleColors = this.readInlineStyleColors();
       const initialFoldState = await resolveInitialCanvasFoldState(
         this.app,
@@ -287,13 +280,12 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     return result;
   }
 
-  private readHeadingColors(canvasColors: CanvasColorMap = {}): HeadingColorMap {
+  private readHeadingColors(): HeadingColorMap {
     if (typeof window === "undefined" || typeof activeDocument === "undefined" || !activeDocument.body) {
-      return this.buildHeadingFallbackColors(canvasColors);
+      return {};
     }
 
     const styleScope = this.getThemeStyleScope();
-    const fallbackColors = this.buildHeadingFallbackColors(canvasColors);
     const host = createDiv();
     host.className = "markdown-rendered markdown-preview-view";
     this.applyHiddenProbeStyles(host);
@@ -314,15 +306,7 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
         heading.remove();
       }
 
-      const sampledValues = Object.values(sampledColors);
-      if (!sampledValues.length) {
-        return fallbackColors;
-      }
-
-      const hasDistinctHeadingColor = sampledValues.some((color) => !this.sameCssColor(color, textColor));
-      return hasDistinctHeadingColor
-        ? { ...fallbackColors, ...sampledColors }
-        : fallbackColors;
+      return selectDistinctHeadingColors(sampledColors, textColor);
     } finally {
       host.remove();
     }
@@ -429,19 +413,8 @@ export default class CanvasHtmlExporterPlugin extends Plugin {
     return resolved;
   }
 
-  private buildHeadingFallbackColors(canvasColors: CanvasColorMap): HeadingColorMap {
-    return {
-      h1: canvasColors["1"] || FALLBACK_HEADING_COLORS.h1,
-      h2: canvasColors["2"] || FALLBACK_HEADING_COLORS.h2,
-      h3: canvasColors["3"] || FALLBACK_HEADING_COLORS.h3,
-      h4: canvasColors["4"] || FALLBACK_HEADING_COLORS.h4,
-      h5: canvasColors["5"] || FALLBACK_HEADING_COLORS.h5,
-      h6: canvasColors["6"] || FALLBACK_HEADING_COLORS.h6,
-    };
-  }
-
   private sameCssColor(a: string, b: string): boolean {
-    const normalize = (value: string) => String(value || "").replace(/\s+/g, "").toLowerCase();
+    const normalize = (value: string): string => String(value || "").replace(/\s+/g, "").toLowerCase();
     return normalize(a) === normalize(b);
   }
 

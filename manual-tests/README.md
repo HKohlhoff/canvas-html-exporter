@@ -12,6 +12,9 @@ Test both package and single-HTML export:
 
 - open the documentation Canvas and export through command and ribbon;
 - inspect text, headings, lists, callouts, code, math and tables;
+- compare normal `==highlights==` and all six Obsidian 1.14 colored highlights
+  with Obsidian; confirm the color emoji controls the color but is not visible
+  in package or single-HTML output;
 - confirm that crossing connections remain hidden behind every colored content
   node while transparent group backgrounds still show the surrounding graph;
 - follow web links, internal note links, heading links and block references;
@@ -311,3 +314,18 @@ Where Electron's folder dialogs are unavailable, cancel the fallback directory
 picker and then open it again. Cancellation must leave settings unchanged and
 the second selection must work. This fallback is additionally tested with
 synthetic input events; a real runtime check remains part of release validation.
+# Search ownership regression
+
+- Export the same nested Canvas once as a package and once as single HTML.
+- Put a unique search term only in the parent Canvas title and in links from a
+  Markdown note, then verify that the note is not returned for that term.
+- Put another unique term in the note's own prose and verify that the note is
+  returned in both formats.
+
+## Obsidian inline title
+
+Repeat with **Show inline title** enabled and disabled, in package and
+single-HTML mode. Use one note whose file name and first H1 differ and one where
+they are equal. When enabled, the generated file-name title must appear before
+the note content. When disabled, it must be absent while every H1 written in
+the Markdown remains visible exactly once.

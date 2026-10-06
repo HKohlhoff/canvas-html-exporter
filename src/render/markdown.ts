@@ -413,8 +413,13 @@ function splitTableRow(row: string): string[] {
 }
 
 function renderInline(text: string): string {
+  const smallStore: string[] = [];
+  const withSmallPlaceholders = text.replace(/<small>([\s\S]*?)<\/small>/gi, (_match: string, content: string) => {
+    smallStore.push(content);
+    return `@@SMALL_${smallStore.length - 1}@@`;
+  });
   const codeStore: string[] = [];
-  const withCodePlaceholders = text.replace(/`([^`]+)`/g, (_match: string, content: string) => {
+  const withCodePlaceholders = withSmallPlaceholders.replace(/`([^`]+)`/g, (_match: string, content: string) => {
     codeStore.push(`<code>${escapeHtml(content)}</code>`);
     return `@@CODE_${codeStore.length - 1}@@`;
   });
@@ -451,6 +456,8 @@ function renderInline(text: string): string {
   html = html.replace(/(^|[\s([{>])\*([^*\n]+)\*(?=$|[\s)\]}<.,!?;:])/g, '$1<em>$2</em>');
   html = html.replace(/(^|[\s([{>])_([^_\n]+)_(?=$|[\s)\]}<.,!?;:])/g, '$1<em>$2</em>');
   html = html.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+  html = html.replace(/==([^=\n]+)==/g, (_match: string, content: string) => renderHighlight(content));
+  html = html.replace(/&amp;emsp;/gi, "&emsp;");
   if (codeStore.length > 0) {
     html = html.replace(/@@CODE_(\d+)@@/g, (_m: string, idx: string) => codeStore[parseInt(idx, 10)] ?? "");
   }
@@ -463,7 +470,34 @@ function renderInline(text: string): string {
   if (mathStore.length > 0) {
     html = html.replace(/@@MATH_(\d+)@@/g, (_m: string, idx: string) => mathStore[parseInt(idx, 10)] ?? "");
   }
+  if (smallStore.length > 0) {
+    html = html.replace(
+      /@@SMALL_(\d+)@@/g,
+      (_m: string, idx: string) => `<small>${renderInline(smallStore[parseInt(idx, 10)] ?? "")}</small>`,
+    );
+  }
   return html;
+}
+
+const HIGHLIGHT_COLORS: Record<string, string> = {
+  "🔴": "rgba(255, 82, 82, 0.45)",
+  "🟠": "rgba(255, 152, 0, 0.45)",
+  "🟡": "rgba(255, 214, 10, 0.45)",
+  "🟢": "rgba(76, 175, 80, 0.45)",
+  "🔵": "rgba(33, 150, 243, 0.4)",
+  "🟣": "rgba(156, 39, 176, 0.35)",
+};
+
+function renderHighlight(content: string): string {
+  const colorEmoji = Object.keys(HIGHLIGHT_COLORS).find((emoji) => content.startsWith(emoji));
+  const highlightedContent = colorEmoji ? content.slice(colorEmoji.length) : content;
+  const color = colorEmoji ? HIGHLIGHT_COLORS[colorEmoji] : HIGHLIGHT_COLORS["🟡"];
+  const colorClass = colorEmoji ? ` obsidian-highlight-${highlightColorName(colorEmoji)}` : "";
+  return `<mark class="obsidian-highlight${colorClass}" style="background-color:${color};color:inherit">${highlightedContent}</mark>`;
+}
+
+function highlightColorName(emoji: string): string {
+  return ({ "🔴": "red", "🟠": "orange", "🟡": "yellow", "🟢": "green", "🔵": "blue", "🟣": "purple" })[emoji] ?? "yellow";
 }
 
 function replaceMarkdownMedia(text: string, mediaStore: string[]): string {
