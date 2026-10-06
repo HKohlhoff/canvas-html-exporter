@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildPreviewText } from "../src/helpers/preview-helpers";
+import { buildMarkdownSearchText, buildPreviewText } from "../src/helpers/preview-helpers";
 
 function test(name: string, fn: () => void): void {
   try {
@@ -29,4 +29,14 @@ test("preserves embed targets as plain text labels", () => {
 test("collapses markdown punctuation and whitespace", () => {
   const text = buildPreviewText("# Titel\n> **Wichtig** _hier_");
   assert.equal(text, "Titel Wichtig hier");
+});
+
+test("indexes prose but excludes every link form from markdown search text", () => {
+  const text = buildMarkdownSearchText([
+    "Der eigene Inhalt bleibt sichtbar.",
+    "[[Orte/Wald|Korb im Alias]] ![[Anhang/Korb.png]]",
+    "[Korb als Link](https://example.com/korb) ![Korb im Bild](bilder/korb.png)",
+    "<https://example.com/korb> https://example.com/noch-ein-korb",
+  ].join("\n"));
+  assert.equal(text, "Der eigene Inhalt bleibt sichtbar.");
 });

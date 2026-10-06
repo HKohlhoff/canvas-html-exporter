@@ -68,7 +68,7 @@ export function buildDescendantSearchEntries(
           positionLabel: document.title,
           openHref: directHref && !isLocalSinglePage ? directHref : document.href,
           openTarget,
-          text: `${entry.text} ${document.title}`.trim(),
+          text: entry.text,
         };
       });
   });
