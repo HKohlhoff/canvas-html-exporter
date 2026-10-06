@@ -26,7 +26,7 @@ const documents: ContentsCanvasDocument[] = [
   },
   {
     sourcePath: "child.canvas",
-    title: "Child",
+    title: "Child basket owner",
     href: "canvas-child.html",
     data: {
       nodes: [
@@ -43,7 +43,7 @@ const documents: ContentsCanvasDocument[] = [
     data: {
       nodes: [
         { id: "cycle", type: "file", fileKind: "canvas", canvasSourcePath: "child.canvas", x: 0, y: 0, width: 1, height: 1 },
-        { id: "deep", type: "text", text: "Deep result", x: 2, y: 0, width: 1, height: 1 },
+        { id: "deep", type: "file", fileKind: "markdown", displayName: "Deep note", searchText: "Deep result", x: 2, y: 0, width: 1, height: 1 },
       ],
       edges: [],
     },
@@ -58,8 +58,9 @@ test("indexes every reachable descendant canvas once", () => {
   assert.ok(entries.every((entry) => entry.focusNodeId === undefined));
   assert.ok(entries.some((entry) => entry.openNodeId === "deep"));
   assert.ok(entries.some((entry) => entry.openHref === "assets/files/note.html" && entry.openNodeId === undefined));
-  assert.ok(entries.some((entry) => entry.openHref === "assets/files/note.html" && entry.positionLabel === "Child"));
+  assert.ok(entries.some((entry) => entry.openHref === "assets/files/note.html" && entry.positionLabel === "Child basket owner"));
   assert.ok(entries.some((entry) => entry.openHref === "canvas-grand.html" && entry.positionLabel === "Grand"));
+  assert.ok(entries.every((entry) => !entry.text.toLowerCase().includes("basket owner")));
 });
 
 test("targets the parent document from a single-html subcanvas", () => {
@@ -78,5 +79,5 @@ test("targets the parent document from a single-html subcanvas", () => {
   assert.ok(rootEntries.every((entry) => entry.openTarget === undefined));
   assert.ok(childEntries.every((entry) => entry.openTarget === "_parent"));
   assert.ok(childEntries.every((entry) => entry.openHref === "#page-grand"));
-  assert.ok(rootEntries.some((entry) => entry.openPageHref === "#page-p1" && entry.openHref === "#page-child"));
+  assert.ok(rootEntries.some((entry) => entry.openPageHref === "#page-p1" && entry.openHref === "#page-child basket owner"));
 });

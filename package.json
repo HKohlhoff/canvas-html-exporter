@@ -1,6 +1,6 @@
 {
   "name": "canvas-html-exporter",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Export canvas files as portable interactive HTML package or standalone page.",
   "main": "main.js",
   "engines": {
@@ -41,8 +41,11 @@
   "author": "Holger Kohlhoff",
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "katex": "^0.16.47",
+    "katex": "^0.19.0",
     "shiki": "^4.4.3"
+  },
+  "overrides": {
+    "moment": "2.31.0"
   },
   "devDependencies": {
     "@types/katex": "^0.16.0",
@@ -51,7 +54,7 @@
     "eslint": "^10.9.1",
     "eslint-plugin-obsidianmd": "^0.4.2",
     "globals": "^17.11.0",
-    "obsidian": "https://codeload.github.com/obsidianmd/obsidian-api/tar.gz/cc1744324150c632416857c98964f87b1574a5fc",
+    "obsidian": "https://codeload.github.com/obsidianmd/obsidian-api/tar.gz/9abd9605ce081383674aae1ed111c456edde0688",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.68.0"
   },

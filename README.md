@@ -55,7 +55,12 @@ A **demo-vault** with the complete content showcase can be downloaded from the
 - Add independent collapse controls for Advanced Canvas groups in the exported
   page
 - Render text nodes and Markdown file nodes with Markdown formatting
+- Preserve standard highlights and the six colored highlight variants added in
+  Obsidian 1.14
 - Show Markdown file nodes with a preview and export them as standalone HTML pages or embedded single-file pages
+- Follow Obsidian's **Show inline title** setting on exported Markdown pages:
+  the generated file-name title is shown only when Obsidian shows it, while
+  headings written in the note are always preserved
 - Follow linked Canvas file nodes and Canvas wiki links recursively, with cycle-safe navigation between overview and subcanvases
 - Show linked Canvas cards with an offline diagram preview of their groups, nodes, colors, and connections
 - Open a portable fixed Navigation panel with the alphabetically sorted Canvas hierarchy and the HTML pages directly contained in the current Canvas
@@ -119,8 +124,10 @@ controls above the Canvas:
   revealed in place and marked briefly with a prominent yellow pulse;
   subordinate results open the matching card's HTML page directly when it has
   one. Results without a separate page open their owning Canvas and bring the
-  card into view. Markdown cards contribute the full note text to the index,
-  not only their visible preview. Multiple cards referencing the same Vault
+  card into view. Search results are limited to actual file cards; Canvas text,
+  groups, Canvas references, and web links are not indexed. Markdown cards contribute their own full note text to the
+  index, not only their visible preview. Links, embeds, and the owning Canvas
+  title do not contribute search terms. Multiple cards referencing the same Vault
   file produce one result, preferring the current Canvas. The dialog names its
   current Canvas scope and indicates when subordinate Canvases are included;
   every result identifies its owning Canvas, including after returning with
@@ -232,6 +239,8 @@ Canvas nodes:
 
 Markdown content:
 - headings, lists, tables, blockquotes, callouts, code fences, and horizontal rules
+- standard `==highlights==` and colored highlights beginning with 🔴, 🟠, 🟡,
+  🟢, 🔵, or 🟣
 - LaTeX math
 - internal links, wiki links, section links, embeds, and block references
 

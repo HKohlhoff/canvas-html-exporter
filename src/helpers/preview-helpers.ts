@@ -11,3 +11,15 @@ export function buildPreviewText(raw: string): string {
     .trim()
     .slice(0, 220);
 }
+
+export function buildMarkdownSearchText(raw: string): string {
+  return raw
+    .replace(/!\x5b[^\x5d]*\x5d\([^)]+\)/g, " ")
+    .replace(/!\x5b\x5b[^\x5d]+\x5d\x5d/g, " ")
+    .replace(/\x5b\x5b[^\x5d]+\x5d\x5d/g, " ")
+    .replace(/\x5b[^\x5d]*\x5d\([^)]+\)/g, " ")
+    .replace(/<https?:\/\/[^>]+>/gi, " ")
+    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}

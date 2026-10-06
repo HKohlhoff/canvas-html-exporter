@@ -17,6 +17,7 @@ export function buildMarkdownDocumentHtml(
   backHref?: string,
   contents?: ContentsNavigation,
   navigationPageId?: string,
+  showInlineTitle = true,
 ): string {
   const theme = getTheme(darkMode);
   const pageNavigation = buildPackagePageNavigation(contents, navigationPageId, canvasHref, theme);
@@ -194,7 +195,7 @@ export function buildMarkdownDocumentHtml(
       ${canvasHref ? `<a class="md-page-canvas-link" href="${escapeHtml(canvasHref)}"${canvasRestoreAttr}>Canvas</a>` : ""}
       ${pageNavigation.buttonHtml}
     </div>
-    <h1>${escapeHtml(title)}</h1>
+    ${showInlineTitle ? `<h1>${escapeHtml(title)}</h1>` : ""}
     ${bodyHtml}
   </main>
   ${pageNavigation.contentsHtml}

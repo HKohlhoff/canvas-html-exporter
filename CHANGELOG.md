@@ -6,6 +6,27 @@ first.
 
 ## [Unreleased]
 
+## [1.6.0] – 2026-10-06
+
+### Added
+
+- Export standard `==highlights==` and Obsidian 1.14 colored highlights whose
+  content starts with 🔴, 🟠, 🟡, 🟢, 🔵, or 🟣. The color marker itself is not
+  shown in the exported page.
+
+### Fixed
+
+- Let headings inherit the normal text color when the active Obsidian theme
+  does not define distinct heading colors, instead of substituting the Canvas
+  red-to-violet palette. Deliberate theme heading colors are still preserved.
+- Follow Obsidian's **Show inline title** setting for Markdown pages in package
+  and single-HTML exports. Disabling it removes only the generated file-name
+  heading; headings written in the note remain unchanged.
+- Restrict Markdown search results in package and single-HTML exports to the
+  file name and the file's own content. Wiki links, Markdown links, embeds, and
+  owning Canvas titles no longer create unrelated matches. Canvas text cards,
+  groups, Canvas references, and web links are excluded from search entirely.
+
 ## [1.5.0] – 2026-10-05
 
 ### Added

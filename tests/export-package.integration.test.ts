@@ -43,7 +43,10 @@ function test(name: string, fn: () => Promise<void> | void): Promise<void> | voi
   }
 }
 
-function createMockApp(initialFiles: Array<{ path: string; text?: string; binary?: ArrayBuffer }>) {
+function createMockApp(
+  initialFiles: Array<{ path: string; text?: string; binary?: ArrayBuffer }>,
+  showInlineTitle?: boolean,
+) {
   const files = new Map<string, MockFile>();
   const folders = new Set<string>();
   const encoder = new TextEncoder();
@@ -128,6 +131,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
 
   const app = {
     vault: {
+      getConfig: (key: string) => key === "showInlineTitle" ? showInlineTitle : undefined,
       adapter: {
         exists: async (path: string) => {
           const normalized = normalizePath(path);
@@ -176,6 +180,34 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
 }
 
 (async () => {
+  for (const exportFormat of ["package", "single-html"] as const) {
+    await test(`follows Obsidian's disabled inline-title setting in ${exportFormat}`, async () => {
+      const { app, files } = createMockApp([
+        {
+          path: "inline-title.canvas",
+          text: JSON.stringify({
+            nodes: [{ id: "note", type: "file", file: "notes/File name.md", x: 0, y: 0, width: 320, height: 180 }],
+            edges: [],
+          }),
+        },
+        { path: "notes/File name.md", text: "# Content heading\n\nBody" },
+      ], false);
+
+      const result = await exportCanvasPackage(app as never, files.get("inline-title.canvas") as never, {
+        darkMode: false,
+        outputDir: "Canvas-Exports",
+        exportFormat,
+      });
+      const note = result.data.nodes.find((node) => node.id === "note");
+      const html = exportFormat === "single-html"
+        ? result.options.embeddedPages?.find((page) => page.id === note?.canvasHref?.replace(/^#page-/, ""))?.bodyHtml || ""
+        : files.get(`Canvas-Exports/inline-title/${note?.exportHtmlPath || ""}`)?.text || "";
+
+      assert.doesNotMatch(html, /<h1>File name<\/h1>/);
+      assert.match(html, /<h1 id="content-heading">Content heading<\/h1>/);
+    });
+  }
+
   for (const exportFormat of ["package", "single-html"] as const) {
     await test(`rewrites text-node note links and embeds in ${exportFormat}`, async () => {
       const { app, files } = createMockApp([
@@ -965,7 +997,7 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
             edges: [],
           }),
         },
-        { path: "notes/chapter.md", text: "# Chapter One\n\nText" },
+        { path: "notes/chapter.md", text: "# Chapter One\n\nText eigener Inhalt. [[Orte/Wald|Korb-Link]] [Weiterer Korb](https://example.com/korb)" },
       ]);
 
       const result = await exportCanvasPackage(app as never, files.get("root.canvas") as never, {
@@ -1011,12 +1043,14 @@ function createMockApp(initialFiles: Array<{ path: string; text?: string; binary
       assert.ok(grandCard?.canvasPreview?.nodes.some((node) => node.id === "child-card"));
       assert.equal(grandPage.data.nodes[0].canvasHref, rootCard?.canvasHref);
       assert.match(chapter?.searchText || "", /Chapter One[\s\S]*Text/);
+      assert.doesNotMatch(chapter?.searchText || "", /Korb/);
       assert.ok(result.options.additionalSearchEntries?.some((entry) => entry.text.includes("Chapter One")));
+      assert.ok(result.options.additionalSearchEntries?.every((entry) => !entry.text.includes("Korb")));
       assert.ok(result.options.additionalSearchEntries?.some((entry) => exportFormat === "single-html"
         ? entry.openPageHref === chapter?.canvasHref && entry.openHref === childPage.href
         : entry.openHref === chapter?.canvasHref && entry.openNodeId === undefined));
-      assert.ok(result.options.additionalSearchEntries?.some((entry) => entry.positionLabel === "grand"));
-      assert.ok(childPage.options.additionalSearchEntries?.some((entry) => entry.positionLabel === "grand"));
+      assert.ok(result.options.additionalSearchEntries?.every((entry) => entry.positionLabel !== "grand"));
+      assert.ok(childPage.options.additionalSearchEntries?.every((entry) => entry.positionLabel !== "grand"));
       assert.ok(grandPage.options.additionalSearchEntries?.every((entry) => entry.positionLabel !== "child"));
       assert.match(
         rootLink?.renderedTextHtml || "",

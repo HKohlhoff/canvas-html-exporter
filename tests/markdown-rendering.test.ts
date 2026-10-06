@@ -67,6 +67,37 @@ await test("adds normalized ids to headings", async () => {
   assert.match(html, /<h2 id="uber-cafe">Über Café<\/h2>/);
 });
 
+await test("renders safe small text and em spacing inside headings", async () => {
+  const html = await markdownToHtml("# Kapitel &emsp;<small>(back to: **[[Übersicht|Canvas]]**)</small>");
+  assert.match(html, /Kapitel &emsp;<small>\(back to: <strong>\[\[Übersicht\|Canvas\]\]<\/strong>\)<\/small>/);
+  assert.doesNotMatch(html, /&lt;\/?small|&amp;emsp;/);
+});
+
+await test("escapes unsafe html inside safe small text", async () => {
+  const html = await markdownToHtml("Text <small><script>alert(1)</script></small>");
+  assert.match(html, /<small>&lt;script&gt;alert\(1\)&lt;\/script&gt;<\/small>/);
+  assert.doesNotMatch(html, /<script>/);
+});
+
+await test("renders regular and colored Obsidian highlights", async () => {
+  const html = await markdownToHtml("==Normal== ==🔴Rot== ==🟠Orange== ==🟡Gelb== ==🟢Grün== ==🔵Blau== ==🟣Violett==");
+  assert.match(html, /<mark class="obsidian-highlight"[^>]*>Normal<\/mark>/);
+  assert.match(html, /class="obsidian-highlight obsidian-highlight-red"[^>]*>Rot<\/mark>/);
+  assert.match(html, /class="obsidian-highlight obsidian-highlight-orange"[^>]*>Orange<\/mark>/);
+  assert.match(html, /class="obsidian-highlight obsidian-highlight-yellow"[^>]*>Gelb<\/mark>/);
+  assert.match(html, /class="obsidian-highlight obsidian-highlight-green"[^>]*>Grün<\/mark>/);
+  assert.match(html, /class="obsidian-highlight obsidian-highlight-blue"[^>]*>Blau<\/mark>/);
+  assert.match(html, /class="obsidian-highlight obsidian-highlight-purple"[^>]*>Violett<\/mark>/);
+  assert.doesNotMatch(html, /🔴|🟠|🟡|🟢|🔵|🟣/);
+});
+
+await test("keeps highlight markers literal in code and when escaped", async () => {
+  const html = await markdownToHtml("`==🔴Code==` und \\==Kein Highlight\\==");
+  assert.match(html, /<code>==🔴Code==<\/code>/);
+  assert.match(html, /==Kein Highlight==/);
+  assert.doesNotMatch(html, /<mark[^>]*>Kein Highlight<\/mark>/);
+});
+
 await test("wraps h1 through h6 sections as collapsible heading details", async () => {
   const html = await markdownToHtml("# Titel\nIntro\n## Abschnitt\nText\n###### Klein");
   assert.match(html, /<details class="heading-section heading-section-h1" open><summary class="heading-summary"><h1 id="titel">Titel<\/h1><\/summary>/);
